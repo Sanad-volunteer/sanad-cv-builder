@@ -32,6 +32,3 @@ npm run build
 
 The browser can download the PDF directly. The email endpoint receives the generated PDF as base64 and sends it as an attachment.
 
-## ATS approach
-
-The CV template is intentionally monochrome, single-column, text-based, with conventional headings and no icons, graphics, sidebars, tables, progress bars, or profile photos.
