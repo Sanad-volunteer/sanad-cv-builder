@@ -1,0 +1,188 @@
+import { useEffect, useState } from 'react'
+import logo from './assets/sanad-logo.svg'
+import Preview, { MONTHS } from './Preview.jsx'
+
+const KEY = 'sanad-cv-v1'
+const uid = () => Math.random().toString(36).slice(2, 9)
+const nd = () => ({ m: '', y: '' })
+const blankEdu = () => ({ id: uid(), school: '', major: '', start: nd(), end: nd() })
+const blankJob = () => ({ id: uid(), title: '', company: '', start: nd(), end: nd(), bullets: '' })
+const initial = () => ({
+  lang: 'ar',
+  p: { name: '', title: '', email: '', phone: '', city: '', link: '', summary: '' },
+  tech: [], soft: [], edu: [blankEdu()], exp: [blankJob()], vol: [blankJob()],
+})
+const load = () => {
+  try { const s = localStorage.getItem(KEY); return s ? JSON.parse(s) : initial() } catch { return initial() }
+}
+
+const Card = ({ n, title, children }) => (
+  <div className="card"><h2><span className="n">{n}</span>{title}</h2>{children}</div>
+)
+const Field = ({ label, full, children }) => (
+  <div className={full ? 'full' : ''}><label>{label}</label>{children}</div>
+)
+const Txt = ({ label, full, value, onChange, ...rest }) => (
+  <Field label={label} full={full}>
+    <input dir="auto" value={value} onChange={(e) => onChange(e.target.value)} {...rest} />
+  </Field>
+)
+
+function DateSel({ label, value, onChange, now }) {
+  const years = []
+  for (let y = new Date().getFullYear() + 6; y >= 1980; y--) years.push(y)
+  return (
+    <Field label={label}>
+      <div className="dates">
+        <select value={value.m} disabled={value.y === 'now'} onChange={(e) => onChange({ ...value, m: e.target.value })}>
+          <option value="">الشهر</option>
+          {MONTHS.ar.map((m, i) => <option key={i} value={String(i + 1)}>{m}</option>)}
+        </select>
+        <select value={value.y} onChange={(e) => onChange(e.target.value === 'now' ? { m: '', y: 'now' } : { ...value, y: e.target.value })}>
+          <option value="">السنة</option>
+          {now && <option value="now">حتى الآن</option>}
+          {years.map((y) => <option key={y} value={y}>{y}</option>)}
+        </select>
+      </div>
+    </Field>
+  )
+}
+
+function Chips({ label, items, onChange, placeholder }) {
+  const [v, setV] = useState('')
+  const add = () => {
+    const t = v.trim()
+    if (t && !items.includes(t)) onChange([...items, t])
+    setV('')
+  }
+  return (
+    <Field label={label} full>
+      <input dir="auto" value={v} placeholder={placeholder} onChange={(e) => setV(e.target.value)} onBlur={add}
+        onKeyDown={(e) => { if (['Enter', ',', '،'].includes(e.key)) { e.preventDefault(); add() } }} />
+      <div className="chips">
+        {items.map((s) => (
+          <span className="chip" key={s}>{s}
+            <button type="button" aria-label="حذف" onClick={() => onChange(items.filter((x) => x !== s))}>×</button>
+          </span>
+        ))}
+      </div>
+    </Field>
+  )
+}
+
+function List({ items, onChange, blank, title, addLabel, render }) {
+  const upd = (id, patch) => onChange(items.map((i) => (i.id === id ? { ...i, ...patch } : i)))
+  return (
+    <>
+      {items.map((it, i) => (
+        <div className="entry" key={it.id}>
+          <div className="entry-h">
+            <span>{title} {i + 1}</span>
+            {items.length > 1 && <button type="button" className="link" onClick={() => onChange(items.filter((x) => x.id !== it.id))}>حذف</button>}
+          </div>
+          <div className="g">{render(it, (patch) => upd(it.id, patch))}</div>
+        </div>
+      ))}
+      <button type="button" className="add" onClick={() => onChange([...items, blank()])}>+ {addLabel}</button>
+    </>
+  )
+}
+
+const eduFields = (it, up) => (
+  <>
+    <Txt full label="اسم الجامعة" value={it.school} onChange={(v) => up({ school: v })} />
+    <Txt full label="التخصص" value={it.major} onChange={(v) => up({ major: v })} />
+    <DateSel label="تاريخ البدء" value={it.start} onChange={(v) => up({ start: v })} />
+    <DateSel label="تاريخ الانتهاء" value={it.end} now onChange={(v) => up({ end: v })} />
+  </>
+)
+const jobFields = (a, b) => (it, up) => (
+  <>
+    <Txt label={a} value={it.title} onChange={(v) => up({ title: v })} />
+    <Txt label={b} value={it.company} onChange={(v) => up({ company: v })} />
+    <DateSel label="تاريخ البدء" value={it.start} onChange={(v) => up({ start: v })} />
+    <DateSel label="تاريخ الانتهاء" value={it.end} now onChange={(v) => up({ end: v })} />
+    <Field full label="الإنجازات (كل سطر نقطة)">
+      <textarea dir="auto" value={it.bullets} onChange={(e) => up({ bullets: e.target.value })} />
+    </Field>
+  </>
+)
+
+export default function App() {
+  const [cv, setCv] = useState(load)
+  useEffect(() => { try { localStorage.setItem(KEY, JSON.stringify(cv)) } catch { /* storage unavailable */ } }, [cv])
+
+  const set = (k, v) => setCv((c) => ({ ...c, [k]: v }))
+  const setP = (k) => (v) => setCv((c) => ({ ...c, p: { ...c.p, [k]: v } }))
+  const print = () => {
+    const old = document.title
+    document.title = `CV - ${cv.p.name || 'Sanad'}`
+    window.print()
+    document.title = old
+  }
+  const reset = () => { if (window.confirm('سيتم حذف جميع البيانات. هل أنت متأكد؟')) setCv(initial()) }
+
+  return (
+    <>
+      <header className="top no-print">
+        <div className="logo"><img src={logo} alt="Sanad Youth for Development" /></div>
+        <h1>منشئ السيرة الذاتية</h1>
+        <span className="cp">© 2026 جميع الحقوق محفوظة</span>
+      </header>
+
+      <main className="layout">
+        <section className="no-print">
+          <div className="card">
+            <h2><span className="n">🌐</span>لغة السيرة الذاتية</h2>
+            <div className="tabs">
+              {[['ar', 'العربية'], ['en', 'English']].map(([k, t]) => (
+                <button key={k} type="button" className={cv.lang === k ? 'on' : ''} onClick={() => set('lang', k)}>{t}</button>
+              ))}
+            </div>
+            <p className="note start">تؤثر على المعاينة وملف PDF فقط. واجهة الموقع تبقى بالعربية.</p>
+          </div>
+
+          <Card n="1" title="المعلومات الشخصية">
+            <div className="g">
+              <Txt label="الاسم الكامل" value={cv.p.name} onChange={setP('name')} />
+              <Txt label="المسمى الوظيفي" value={cv.p.title} onChange={setP('title')} />
+              <Txt label="البريد الإلكتروني" type="email" dir="ltr" value={cv.p.email} onChange={setP('email')} />
+              <Txt label="رقم الهاتف" type="tel" dir="ltr" value={cv.p.phone} onChange={setP('phone')} />
+              <Txt label="المدينة، الدولة" value={cv.p.city} onChange={setP('city')} />
+              <Txt label="رابط لينكدإن" dir="ltr" value={cv.p.link} onChange={setP('link')} />
+              <Field full label="نبذة مختصرة">
+                <textarea dir="auto" value={cv.p.summary} onChange={(e) => setP('summary')(e.target.value)} />
+              </Field>
+            </div>
+          </Card>
+
+          <Card n="2" title="المهارات">
+            <Chips label="المهارات التقنية" items={cv.tech} onChange={(v) => set('tech', v)} placeholder="اكتب مهارة واضغط Enter" />
+            <div className="gap" />
+            <Chips label="المهارات الناعمة" items={cv.soft} onChange={(v) => set('soft', v)} placeholder="اكتب مهارة واضغط Enter" />
+          </Card>
+
+          <Card n="3" title="التعليم">
+            <List items={cv.edu} onChange={(v) => set('edu', v)} blank={blankEdu} title="التعليم" addLabel="إضافة تعليم" render={eduFields} />
+          </Card>
+          <Card n="4" title="الخبرة العملية">
+            <List items={cv.exp} onChange={(v) => set('exp', v)} blank={blankJob} title="خبرة" addLabel="إضافة خبرة" render={jobFields('المسمى الوظيفي', 'الشركة')} />
+          </Card>
+          <Card n="5" title="العمل التطوعي">
+            <List items={cv.vol} onChange={(v) => set('vol', v)} blank={blankJob} title="عمل تطوعي" addLabel="إضافة عمل تطوعي" render={jobFields('الدور', 'المنظمة')} />
+          </Card>
+        </section>
+
+        <aside className="side">
+          <div className="ph no-print"><h2>معاينة مباشرة</h2><span className="badge">✓ متوافق مع ATS</span></div>
+          <Preview cv={cv} />
+          <div className="exp no-print">
+            <button type="button" className="btn p" onClick={print}>⬇ تحميل PDF</button>
+            <p className="note">من نافذة الطباعة اختر «حفظ كملف PDF». النص قابل للتحديد وبسيط ليقرأه نظام ATS.</p>
+            <button type="button" className="link" onClick={reset}>مسح جميع البيانات</button>
+          </div>
+        </aside>
+      </main>
+    </>
+  )
+}
