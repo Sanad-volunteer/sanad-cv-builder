@@ -1,0 +1,11 @@
+{
+  "functions": {
+    "api/analyze.js": {
+      "maxDuration": 60
+    },
+    "api/pdf.js": {
+      "maxDuration": 30,
+      "includeFiles": "node_modules/@sparticuz/chromium/bin/**"
+    }
+  }
+}

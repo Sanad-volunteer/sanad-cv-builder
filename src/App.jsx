@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
 import logo from './assets/sanad-logo.svg'
 import Preview, { MONTHS } from './Preview.jsx'
+import Home from './Home.jsx'
+import Analyze from './Analyze.jsx'
+import Export from './Export.jsx'
 
 const KEY = 'sanad-cv-v1'
 const uid = () => Math.random().toString(36).slice(2, 9)
@@ -10,14 +13,14 @@ const blankJob = () => ({ id: uid(), title: '', company: '', start: nd(), end: n
 const initial = () => ({
   lang: 'ar',
   p: { name: '', title: '', email: '', phone: '', city: '', link: '', summary: '' },
-  tech: [], soft: [], edu: [blankEdu()], exp: [blankJob()], vol: [blankJob()],
+  tech: [], soft: [], edu: [blankEdu()], exp: [], vol: [],
 })
 const load = () => {
   try { const s = localStorage.getItem(KEY); return s ? JSON.parse(s) : initial() } catch { return initial() }
 }
 
-const Card = ({ n, title, children }) => (
-  <div className="card"><h2><span className="n">{n}</span>{title}</h2>{children}</div>
+const Card = ({ n, title, opt, children }) => (
+  <div className="card"><h2><span className="n">{n}</span>{title}{opt && <span className="opt-tag">اختياري</span>}</h2>{children}</div>
 )
 const Field = ({ label, full, children }) => (
   <div className={full ? 'full' : ''}><label>{label}</label>{children}</div>
@@ -70,7 +73,7 @@ function Chips({ label, items, onChange, placeholder }) {
   )
 }
 
-function List({ items, onChange, blank, title, addLabel, render }) {
+function List({ items, onChange, blank, title, addLabel, render, optional }) {
   const upd = (id, patch) => onChange(items.map((i) => (i.id === id ? { ...i, ...patch } : i)))
   return (
     <>
@@ -78,11 +81,12 @@ function List({ items, onChange, blank, title, addLabel, render }) {
         <div className="entry" key={it.id}>
           <div className="entry-h">
             <span>{title} {i + 1}</span>
-            {items.length > 1 && <button type="button" className="link" onClick={() => onChange(items.filter((x) => x.id !== it.id))}>حذف</button>}
+            {(optional || items.length > 1) && <button type="button" className="link" onClick={() => onChange(items.filter((x) => x.id !== it.id))}>حذف</button>}
           </div>
           <div className="g">{render(it, (patch) => upd(it.id, patch))}</div>
         </div>
       ))}
+      {!items.length && <p className="note start">قسم اختياري — أضفه عند الحاجة فقط.</p>}
       <button type="button" className="add" onClick={() => onChange([...items, blank()])}>+ {addLabel}</button>
     </>
   )
@@ -110,27 +114,26 @@ const jobFields = (a, b) => (it, up) => (
 
 export default function App() {
   const [cv, setCv] = useState(load)
+  const [view, setView] = useState('home')
   useEffect(() => { try { localStorage.setItem(KEY, JSON.stringify(cv)) } catch { /* storage unavailable */ } }, [cv])
 
   const set = (k, v) => setCv((c) => ({ ...c, [k]: v }))
   const setP = (k) => (v) => setCv((c) => ({ ...c, p: { ...c.p, [k]: v } }))
-  const print = () => {
-    const old = document.title
-    document.title = `CV - ${cv.p.name || 'Sanad'}`
-    window.print()
-    document.title = old
-  }
   const reset = () => { if (window.confirm('سيتم حذف جميع البيانات. هل أنت متأكد؟')) setCv(initial()) }
 
   return (
     <>
       <header className="top no-print">
-        <div className="logo"><img src={logo} alt="Sanad Youth for Development" /></div>
+        <div className="logo" role="button" tabIndex={0} onClick={() => setView('home')}><img src={logo} alt="Sanad Youth for Development" /></div>
         <h1>منشئ السيرة الذاتية</h1>
         <span className="cp">© 2026 جميع الحقوق محفوظة</span>
       </header>
 
+      {view === 'home' && <Home go={setView} />}
+      {view === 'analyze' && <Analyze go={setView} />}
+      {view === 'create' && (
       <main className="layout">
+        <button type="button" className="back no-print" onClick={() => setView('home')}>→ رجوع</button>
         <section className="no-print">
           <div className="card">
             <h2><span className="n">🌐</span>لغة السيرة الذاتية</h2>
@@ -165,24 +168,21 @@ export default function App() {
           <Card n="3" title="التعليم">
             <List items={cv.edu} onChange={(v) => set('edu', v)} blank={blankEdu} title="التعليم" addLabel="إضافة تعليم" render={eduFields} />
           </Card>
-          <Card n="4" title="الخبرة العملية">
-            <List items={cv.exp} onChange={(v) => set('exp', v)} blank={blankJob} title="خبرة" addLabel="إضافة خبرة" render={jobFields('المسمى الوظيفي', 'الشركة')} />
+          <Card n="4" title="الخبرة العملية" opt>
+            <List items={cv.exp} onChange={(v) => set('exp', v)} blank={blankJob} optional title="خبرة" addLabel="إضافة خبرة" render={jobFields('المسمى الوظيفي', 'الشركة')} />
           </Card>
-          <Card n="5" title="العمل التطوعي">
-            <List items={cv.vol} onChange={(v) => set('vol', v)} blank={blankJob} title="عمل تطوعي" addLabel="إضافة عمل تطوعي" render={jobFields('الدور', 'المنظمة')} />
+          <Card n="5" title="العمل التطوعي" opt>
+            <List items={cv.vol} onChange={(v) => set('vol', v)} blank={blankJob} optional title="عمل تطوعي" addLabel="إضافة عمل تطوعي" render={jobFields('الدور', 'المنظمة')} />
           </Card>
         </section>
 
         <aside className="side">
           <div className="ph no-print"><h2>معاينة مباشرة</h2><span className="badge">✓ متوافق مع ATS</span></div>
           <Preview cv={cv} />
-          <div className="exp no-print">
-            <button type="button" className="btn p" onClick={print}>⬇ تحميل PDF</button>
-            <p className="note">من نافذة الطباعة اختر «حفظ كملف PDF». النص قابل للتحديد وبسيط ليقرأه نظام ATS.</p>
-            <button type="button" className="link" onClick={reset}>مسح جميع البيانات</button>
-          </div>
+          <Export cv={cv} onReset={reset} />
         </aside>
       </main>
+      )}
     </>
   )
 }
