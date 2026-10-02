@@ -67,7 +67,6 @@ export default function Export({ cv, onValidate }) {
         <button type="button" className="btn s" onClick={send} disabled={!!busy}>{busy === 'mail' ? 'جارٍ الإرسال…' : '✉ إرسال بالبريد'}</button>
       </div>
       {msg && <p className={msg.ok ? 'ok' : 'err'}>{msg.t}</p>}
-      <p className="note">ملف PDF نصي بسيط، بدون ألوان أو جداول، ليقرأه نظام ATS بسهولة.</p>
     </div>
   )
 }

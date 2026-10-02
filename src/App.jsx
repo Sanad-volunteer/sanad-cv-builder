@@ -128,7 +128,7 @@ export default function App() {
   const { p } = cv
   const bad = {
     name: empty(p.name), title: empty(p.title), email: empty(p.email), phone: empty(p.phone),
-    city: empty(p.city), summary: empty(p.summary),
+    city: empty(p.city), link: empty(p.link), summary: empty(p.summary),
     tech: !cv.tech.length, soft: !cv.soft.length,
   }
   const valid = !Object.values(bad).some(Boolean) && !cv.edu.some((e) => empty(e.school) || empty(e.major) || dEmpty(e.start) || dEmpty(e.end))
@@ -164,6 +164,7 @@ export default function App() {
                 <button key={k} type="button" className={cv.lang === k ? 'on' : ''} onClick={() => set('lang', k)}>{t}</button>
               ))}
             </div>
+            <p className="note start">تؤثر على المعاينة وملف PDF فقط. واجهة الموقع تبقى بالعربية.</p>
           </div>
 
           <Card n="1" title="المعلومات الشخصية">

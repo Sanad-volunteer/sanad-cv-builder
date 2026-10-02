@@ -92,7 +92,7 @@ export default function Analyze({ go }) {
           </div>
           <button type="button" className="btn s" style={{ marginTop: 14 }} disabled={!ready} onClick={run}>{st.busy ? 'جارٍ التحليل…' : '✦ حلّل سيرتي الذاتية'}</button>
           {st.err && <p className="err">{st.err}</p>}
-          <p className="note start">🔒 يُرسل محتوى السيرة إلى خدمة ذكاء اصطناعي للمراجعة فقط. الاقتراحات لا تضيف خبرات أو مهارات غير موجودة.</p>
+          <p className="note start">❗ ملاحظة: الاقتراحات لا تضيف خبرات أو مهارات غير موجودة.</p>
         </div>
       </section>
       <aside className="side">

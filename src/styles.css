@@ -82,3 +82,17 @@ textarea{resize:vertical;min-height:70px}
 /* custom dropdown arrow, moved inward from the edge */
 select{appearance:none;-webkit-appearance:none;cursor:pointer;padding-left:38px;background:#fff url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1.5l5 5 5-5' fill='none' stroke='%235d6079' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/></svg>") no-repeat left 16px center}
 select:disabled{opacity:.6;cursor:not-allowed}
+
+/* ---- motion & hover ---- */
+@keyframes viewIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.home,.layout{animation:viewIn .35s ease backwards}
+.btn,.add,.tabs button,.drop,.link,.chip button,.opt{transition:background .15s,color .15s,border-color .15s,transform .15s,box-shadow .15s,filter .15s,opacity .15s}
+.btn:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 6px 16px rgba(26,20,100,.18)}
+.btn.p:hover:not(:disabled){filter:brightness(1.18)}.btn.s:hover:not(:disabled){filter:brightness(.93)}
+.btn:active:not(:disabled){transform:none;box-shadow:none}
+.add:hover{background:rgba(58,219,192,.14)}
+.link:hover{opacity:.65}
+.chip button:hover{color:#b3261e}
+.drop:hover{background:rgba(58,219,192,.16);border-color:var(--navy)}
+.tabs button:not(.on):hover{background:rgba(26,20,100,.1)}
+@media(prefers-reduced-motion:reduce){.home,.layout{animation:none}*{transition:none!important}}
