@@ -10,7 +10,7 @@ const toDataUri = (blob) => new Promise((ok, no) => {
   r.readAsDataURL(blob)
 })
 
-export default function Export({ cv, onReset }) {
+export default function Export({ cv, onValidate }) {
   const [to, setTo] = useState('')
   const [busy, setBusy] = useState('')
   const [msg, setMsg] = useState(null)
@@ -22,6 +22,7 @@ export default function Export({ cv, onReset }) {
     document.title = old
   }
   const download = async () => {
+    if (!onValidate()) return setMsg({ ok: false, t: 'أكمل الحقول المطلوبة المعلّمة بنجمة حمراء *' })
     setBusy('pdf'); setMsg(null)
     try {
       const r = await post('/api/pdf', { cv })
@@ -34,6 +35,7 @@ export default function Export({ cv, onReset }) {
     } finally { setBusy('') }
   }
   const send = async () => {
+    if (!onValidate()) return setMsg({ ok: false, t: 'أكمل الحقول المطلوبة المعلّمة بنجمة حمراء *' })
     if (!emailReady) return setMsg({ ok: false, t: 'خدمة البريد غير مُعدّة بعد، راجع ملف EMAILJS_SETUP.md' })
     if (!cv.p.name.trim()) return setMsg({ ok: false, t: 'أضف اسمك في السيرة الذاتية أولاً' })
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return setMsg({ ok: false, t: 'أدخل بريدًا إلكترونيًا صحيحًا' })
@@ -66,7 +68,6 @@ export default function Export({ cv, onReset }) {
       </div>
       {msg && <p className={msg.ok ? 'ok' : 'err'}>{msg.t}</p>}
       <p className="note">ملف PDF نصي بسيط، بدون ألوان أو جداول، ليقرأه نظام ATS بسهولة.</p>
-      <button type="button" className="link" onClick={onReset}>مسح جميع البيانات</button>
     </div>
   )
 }
