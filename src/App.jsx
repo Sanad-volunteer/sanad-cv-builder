@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Analytics } from '@vercel/analytics/react'
 import logo from './assets/sanad-logo.svg'
 import Preview, { MONTHS } from './Preview.jsx'
 
@@ -183,6 +184,7 @@ export default function App() {
           </div>
         </aside>
       </main>
+      <Analytics />
     </>
   )
 }
