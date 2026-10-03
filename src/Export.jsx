@@ -39,6 +39,7 @@ export default function Export({ cv, onValidate }) {
       const reasons = {
         rate_limited: 'تجاوزت عدد المحاولات المسموح، حاول بعد قليل',
         missing_mail_config: 'خدمة البريد غير مُعدّة بعد على الخادم',
+        app_password_required: 'يجب استخدام «كلمة مرور التطبيق» (App password) وليس كلمة مرور الحساب',
         auth_failed: 'تعذّر تسجيل الدخول إلى حساب البريد المرسِل',
         smtp_unreachable: 'تعذّر الاتصال بخدمة البريد، حاول لاحقاً',
       }
