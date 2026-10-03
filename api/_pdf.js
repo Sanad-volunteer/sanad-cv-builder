@@ -1,6 +1,8 @@
 import { cvHtml } from './_cv.js'
 
 export async function makePdf(cv) {
+  // On Vercel (AWS Lambda) Chromium must unpack its system libraries; without this it fails with "libnss3.so not found".
+  process.env.AWS_LAMBDA_JS_RUNTIME ||= `nodejs${process.versions.node.split('.')[0]}.x`
   const [{ default: chromium }, { default: puppeteer }] = await Promise.all([import('@sparticuz/chromium'), import('puppeteer-core')])
   const browser = await puppeteer.launch({
     args: chromium.args,

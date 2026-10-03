@@ -58,7 +58,7 @@ export default async function handler(req, res) {
     res.status(200).json({ ok: true, attached: !!pdf })
   } catch (e) {
     console.error('send failed:', e.code, e.message)
-    const code = e.code === 'EAUTH' ? 'auth_failed' : ['ESOCKET', 'ECONNECTION', 'ETIMEDOUT', 'EDNS'].includes(e.code) ? 'smtp_unreachable' : 'send_failed'
+    const code = e.responseCode === 534 ? 'app_password_required' : e.code === 'EAUTH' ? 'auth_failed' : ['ESOCKET', 'ECONNECTION', 'ETIMEDOUT', 'EDNS'].includes(e.code) ? 'smtp_unreachable' : 'send_failed'
     res.status(500).json({ error: code })
   }
 }
