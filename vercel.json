@@ -6,6 +6,10 @@
     "api/pdf.js": {
       "maxDuration": 30,
       "includeFiles": "node_modules/@sparticuz/chromium/bin/**"
+    },
+    "api/send-email.js": {
+      "maxDuration": 30,
+      "includeFiles": "node_modules/@sparticuz/chromium/bin/**"
     }
   }
 }

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import emailjs from '@emailjs/browser'
 import { post } from './api.js'
-import { EMAILJS, emailReady } from './config.js'
+import { EMAILJS, EMAIL_PROVIDER, emailReady } from './config.js'
 
 const toDataUri = (blob) => new Promise((ok, no) => {
   const r = new FileReader()
@@ -36,11 +36,16 @@ export default function Export({ cv, onValidate }) {
   }
   const send = async () => {
     if (!onValidate()) return setMsg({ ok: false, t: 'أكمل الحقول المطلوبة المعلّمة بنجمة حمراء *' })
-    if (!emailReady) return setMsg({ ok: false, t: 'خدمة البريد غير مُعدّة بعد، راجع ملف EMAILJS_SETUP.md' })
+    if (EMAIL_PROVIDER === 'emailjs' && !emailReady) return setMsg({ ok: false, t: 'خدمة البريد غير مُعدّة بعد، راجع ملف EMAILJS_SETUP.md' })
     if (!cv.p.name.trim()) return setMsg({ ok: false, t: 'أضف اسمك في السيرة الذاتية أولاً' })
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return setMsg({ ok: false, t: 'أدخل بريدًا إلكترونيًا صحيحًا' })
     setBusy('mail'); setMsg(null)
     try {
+      if (EMAIL_PROVIDER === 'smtp') {
+        await post('/api/send-email', { cv, to })
+        setMsg({ ok: true, t: 'تم إرسال السيرة الذاتية ✓' })
+        return
+      }
       // Template variables: {{to_email}}, {{cv_name}}, {{{cv_html}}}, and {{cv_pdf}} (only when attachPdf is on)
       const params = {
         to_email: to,
@@ -55,7 +60,7 @@ export default function Export({ cv, onValidate }) {
       setMsg({ ok: true, t: 'تم إرسال السيرة الذاتية ✓' })
     } catch (e) {
       console.error(e)
-      setMsg({ ok: false, t: 'تعذّر الإرسال، حاول مرة أخرى' })
+      setMsg({ ok: false, t: String(e.message).endsWith('429') ? 'تجاوزت عدد المحاولات المسموح، حاول بعد قليل' : 'تعذّر الإرسال، حاول مرة أخرى' })
     } finally { setBusy('') }
   }
 

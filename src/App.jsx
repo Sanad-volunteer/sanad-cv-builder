@@ -31,7 +31,7 @@ const Field = ({ label, full, err, children }) => (
 )
 const Txt = ({ label, full, err, value, onChange, ...rest }) => (
   <Field label={label} full={full} err={err}>
-    <input dir="auto" value={value} onChange={(e) => onChange(e.target.value)} {...rest} />
+    <input dir={value ? 'auto' : 'rtl'} value={value} onChange={(e) => onChange(e.target.value)} {...rest} />
   </Field>
 )
 
@@ -64,7 +64,7 @@ function Chips({ label, items, onChange, placeholder, err }) {
   }
   return (
     <Field label={label} full err={err}>
-      <input dir="auto" value={v} placeholder={placeholder} onChange={(e) => setV(e.target.value)} onBlur={add}
+      <input dir={v ? 'auto' : 'rtl'} value={v} placeholder={placeholder} onChange={(e) => setV(e.target.value)} onBlur={add}
         onKeyDown={(e) => { if (['Enter', ',', '،'].includes(e.key)) { e.preventDefault(); add() } }} />
       <div className="chips">
         {items.map((s) => (

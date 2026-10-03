@@ -67,7 +67,7 @@ export default function Analyze({ go }) {
       setSt({ busy: false, err: '', res: await r.json() })
     } catch { setSt({ busy: false, err: 'تعذّر تحليل السيرة، حاول مرة أخرى', res: null }) }
   }
-  const ready = file && (job.title.trim() || job.desc.trim()) && !st.busy
+  const ready = file && job.title.trim() && !st.busy // job title is required, description is optional
 
   return (
     <main className="layout">
@@ -86,9 +86,9 @@ export default function Analyze({ go }) {
         <div className="card ai">
           <h2><span className="n">2</span>الوظيفة المستهدفة</h2>
           <div className="g">
-            <div><label>المسمى الوظيفي</label><input dir="auto" value={job.title} onChange={setJ('title')} /></div>
-            <div><label>الشركة (اختياري)</label><input dir="auto" value={job.company} onChange={setJ('company')} /></div>
-            <div className="full"><label>وصف الوظيفة</label><textarea dir="auto" placeholder="الصق وصف الوظيفة هنا…" value={job.desc} onChange={setJ('desc')} /></div>
+            <div><label>المسمى الوظيفي</label><input dir={job.title ? 'auto' : 'rtl'} value={job.title} onChange={setJ('title')} /></div>
+            <div><label>الشركة (اختياري)</label><input dir={job.company ? 'auto' : 'rtl'} value={job.company} onChange={setJ('company')} /></div>
+            <div className="full"><label>وصف الوظيفة (اختياري)</label><textarea dir={job.desc ? 'auto' : 'rtl'} placeholder="الصق وصف الوظيفة هنا…" value={job.desc} onChange={setJ('desc')} /></div>
           </div>
           <button type="button" className="btn s" style={{ marginTop: 14 }} disabled={!ready} onClick={run}>{st.busy ? 'جارٍ التحليل…' : '✦ حلّل سيرتي الذاتية'}</button>
           {st.err && <p className="err">{st.err}</p>}
