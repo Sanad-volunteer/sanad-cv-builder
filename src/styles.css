@@ -39,6 +39,7 @@ textarea{resize:vertical;min-height:70px}
 .paper .r{display:flex;justify-content:space-between;gap:12px}.paper .r span{white-space:nowrap}
 .paper section>div+div{margin-top:6px}
 .paper ul{margin:2px 0 4px;padding-inline-start:18px}
+.paper a{color:inherit;text-decoration:underline}
 .paper .hint{color:#777;text-align:center;padding:40px 0}
 @media(max-width:900px){.layout{grid-template-columns:1fr;padding:16px}.side{position:static}.g{grid-template-columns:1fr}.top{padding:12px 16px}}
 @media(max-width:600px){.top h1{display:none}.cp{margin-inline-start:auto;font-size:12px}}

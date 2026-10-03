@@ -10,6 +10,7 @@ const T = {
 const fmt = (d, l) => (!d || !d.y ? '' : d.y === 'now' ? T[l].now : (d.m ? MONTHS[l][d.m - 1] + ' ' : '') + d.y)
 const range = (s, e, l) => [fmt(s, l), fmt(e, l)].filter(Boolean).join(' – ')
 
+const href = (u) => (/^https?:\/\//i.test(u) ? u : `https://${u}`) // add https:// when the user omitted it
 const Sec = ({ h, children }) => <section><h2>{h}</h2>{children}</section>
 const Row = ({ a, b }) => <div className="r"><b>{a}</b><span>{b}</span></div>
 const Bullets = ({ text }) => {
@@ -36,7 +37,7 @@ export default function Preview({ cv }) {
   const { lang, p, tech, soft, edu, exp, vol } = cv
   const t = T[lang]
   const sep = lang === 'ar' ? '، ' : ', '
-  const contact = [p.city, p.email, p.phone, p.link].filter(Boolean)
+  const contact = [[p.city], [p.email], [p.phone], [p.link, true]].filter(([v]) => v) // [text, isLink]
   const eduF = edu.filter((e) => e.school || e.major)
   const hasJobs = [...exp, ...vol].some((i) => i.title || i.company)
   const empty = !p.name && !p.title && !contact.length && !p.summary && !tech.length && !soft.length && !eduF.length && !hasJobs
@@ -50,7 +51,9 @@ export default function Preview({ cv }) {
           {p.name && <h1>{p.name}</h1>}
           {p.title && <p>{p.title}</p>}
           {contact.length > 0 && (
-            <p>{contact.map((c, i) => <span key={i}>{i > 0 && ' · '}<bdi>{c}</bdi></span>)}</p>
+            <p>{contact.map(([v, isLink], i) => (
+                <span key={i}>{i > 0 && ' · '}<bdi>{isLink ? <a href={href(v)} target="_blank" rel="noreferrer">{v}</a> : v}</bdi></span>
+              ))}</p>
           )}
           {p.summary && <Sec h={t.summary}><p>{p.summary}</p></Sec>}
           {(tech.length > 0 || soft.length > 0) && (

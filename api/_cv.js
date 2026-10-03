@@ -8,11 +8,12 @@ const T = {
   en: { summary: 'Summary', skills: 'Skills', tech: 'Technical', soft: 'Soft', edu: 'Education', exp: 'Work Experience', vol: 'Volunteer Work', now: 'Present' },
 }
 const CSS = `body{margin:0;font-family:Cairo,Arial,sans-serif;font-size:12.5px;line-height:1.6;color:#000}
-h1{font-size:21px;margin:0}p{margin:0}
+a{color:inherit;text-decoration:underline}h1{font-size:21px;margin:0}p{margin:0}
 h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;border-bottom:1px solid #000;margin:14px 0 5px;padding-bottom:1px}
 .r{display:flex;justify-content:space-between;gap:12px}.r span{white-space:nowrap}
 section>div+div{margin-top:6px}ul{margin:2px 0 4px;padding-inline-start:18px}`
 
+const href = (u) => (/^https?:\/\//i.test(u) ? u : `https://${u}`)
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
 const list = (x) => (Array.isArray(x) ? x : [])
 const fmt = (d, l) => (!d || !d.y ? '' : d.y === 'now' ? T[l].now : ((d.m && M[l][d.m - 1]) ? M[l][d.m - 1] + ' ' : '') + esc(d.y))
@@ -34,7 +35,10 @@ export function cvHtml(cv) {
   const p = cv.p || {}
   const sep = l === 'ar' ? '، ' : ', '
   const tech = list(cv.tech), soft = list(cv.soft)
-  const contact = [p.city, p.email, p.phone, p.link].filter(Boolean).map((c) => `<bdi>${esc(c)}</bdi>`).join(' · ')
+  const contact = [[p.city], [p.email], [p.phone], [p.link, true]]
+    .filter(([v]) => v)
+    .map(([v, isLink]) => `<bdi>${isLink ? `<a href="${esc(href(v))}">${esc(v)}</a>` : esc(v)}</bdi>`)
+    .join(' · ')
   const edu = list(cv.edu).filter((e) => e.school || e.major)
   const body = [
     p.name ? `<h1>${esc(p.name)}</h1>` : '',

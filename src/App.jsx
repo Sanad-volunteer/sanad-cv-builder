@@ -128,7 +128,7 @@ export default function App() {
   const { p } = cv
   const bad = {
     name: empty(p.name), title: empty(p.title), email: empty(p.email), phone: empty(p.phone),
-    city: empty(p.city), link: empty(p.link), summary: empty(p.summary),
+    city: empty(p.city), summary: empty(p.summary), // LinkedIn is optional
     tech: !cv.tech.length, soft: !cv.soft.length,
   }
   const valid = !Object.values(bad).some(Boolean) && !cv.edu.some((e) => empty(e.school) || empty(e.major) || dEmpty(e.start) || dEmpty(e.end))
@@ -174,7 +174,7 @@ export default function App() {
               <Txt label="البريد الإلكتروني" type="email" dir="ltr" value={cv.p.email} err={ev(bad.email)} onChange={setP('email')} />
               <Txt label="رقم الهاتف" type="tel" dir="ltr" value={cv.p.phone} err={ev(bad.phone)} onChange={setP('phone')} />
               <Txt label="المدينة، الدولة" value={cv.p.city} err={ev(bad.city)} onChange={setP('city')} />
-              <Txt label="رابط لينكدإن" dir="ltr" value={cv.p.link} err={ev(bad.link)} onChange={setP('link')} />
+              <Txt label="رابط لينكدإن (اختياري)" dir="ltr" placeholder="linkedin.com/in/username" value={cv.p.link} onChange={setP('link')} />
               <Field full label="نبذة مختصرة" err={ev(bad.summary)}>
                 <textarea dir="auto" value={cv.p.summary} onChange={(e) => setP('summary')(e.target.value)} />
               </Field>

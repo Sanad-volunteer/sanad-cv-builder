@@ -1,8 +1,7 @@
-import chromium from '@sparticuz/chromium'
-import puppeteer from 'puppeteer-core'
 import { cvHtml } from './_cv.js'
 
 export async function makePdf(cv) {
+  const [{ default: chromium }, { default: puppeteer }] = await Promise.all([import('@sparticuz/chromium'), import('puppeteer-core')])
   const browser = await puppeteer.launch({
     args: chromium.args,
     executablePath: await chromium.executablePath(),

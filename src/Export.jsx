@@ -1,14 +1,7 @@
 import { useState } from 'react'
-import emailjs from '@emailjs/browser'
 import { post } from './api.js'
-import { EMAILJS, EMAIL_PROVIDER, emailReady } from './config.js'
 
-const toDataUri = (blob) => new Promise((ok, no) => {
-  const r = new FileReader()
-  r.onload = () => ok(r.result)
-  r.onerror = no
-  r.readAsDataURL(blob)
-})
+const REQUIRED_MSG = 'أكمل الحقول المطلوبة المعلّمة بنجمة حمراء *'
 
 export default function Export({ cv, onValidate }) {
   const [to, setTo] = useState('')
@@ -22,7 +15,7 @@ export default function Export({ cv, onValidate }) {
     document.title = old
   }
   const download = async () => {
-    if (!onValidate()) return setMsg({ ok: false, t: 'أكمل الحقول المطلوبة المعلّمة بنجمة حمراء *' })
+    if (!onValidate()) return setMsg({ ok: false, t: REQUIRED_MSG })
     setBusy('pdf'); setMsg(null)
     try {
       const r = await post('/api/pdf', { cv })
@@ -35,32 +28,21 @@ export default function Export({ cv, onValidate }) {
     } finally { setBusy('') }
   }
   const send = async () => {
-    if (!onValidate()) return setMsg({ ok: false, t: 'أكمل الحقول المطلوبة المعلّمة بنجمة حمراء *' })
-    if (EMAIL_PROVIDER === 'emailjs' && !emailReady) return setMsg({ ok: false, t: 'خدمة البريد غير مُعدّة بعد، راجع ملف EMAILJS_SETUP.md' })
-    if (!cv.p.name.trim()) return setMsg({ ok: false, t: 'أضف اسمك في السيرة الذاتية أولاً' })
+    if (!onValidate()) return setMsg({ ok: false, t: REQUIRED_MSG })
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return setMsg({ ok: false, t: 'أدخل بريدًا إلكترونيًا صحيحًا' })
     setBusy('mail'); setMsg(null)
     try {
-      if (EMAIL_PROVIDER === 'smtp') {
-        await post('/api/send-email', { cv, to })
-        setMsg({ ok: true, t: 'تم إرسال السيرة الذاتية ✓' })
-        return
-      }
-      // Template variables: {{to_email}}, {{cv_name}}, {{{cv_html}}}, and {{cv_pdf}} (only when attachPdf is on)
-      const params = {
-        to_email: to,
-        cv_name: cv.p.name,
-        cv_html: `<div dir="${cv.lang === 'ar' ? 'rtl' : 'ltr'}">${document.querySelector('.paper')?.innerHTML || ''}</div>`,
-      }
-      if (EMAILJS.attachPdf) {
-        const r = await post('/api/pdf', { cv })
-        params.cv_pdf = await toDataUri(await r.blob())
-      }
-      await emailjs.send(EMAILJS.serviceId, EMAILJS.templateId, params, { publicKey: EMAILJS.publicKey })
+      await post('/api/send-email', { cv, to })
       setMsg({ ok: true, t: 'تم إرسال السيرة الذاتية ✓' })
     } catch (e) {
       console.error(e)
-      setMsg({ ok: false, t: String(e.message).endsWith('429') ? 'تجاوزت عدد المحاولات المسموح، حاول بعد قليل' : 'تعذّر الإرسال، حاول مرة أخرى' })
+      const reasons = {
+        rate_limited: 'تجاوزت عدد المحاولات المسموح، حاول بعد قليل',
+        missing_mail_config: 'خدمة البريد غير مُعدّة بعد على الخادم',
+        auth_failed: 'تعذّر تسجيل الدخول إلى حساب البريد المرسِل',
+        smtp_unreachable: 'تعذّر الاتصال بخدمة البريد، حاول لاحقاً',
+      }
+      setMsg({ ok: false, t: reasons[e.message] || (e.status === 404 ? 'خدمة البريد غير متاحة هنا (تعمل على Vercel فقط)' : `تعذّر الإرسال، حاول مرة أخرى (${e.message})`) })
     } finally { setBusy('') }
   }
 
