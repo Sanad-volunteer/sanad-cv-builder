@@ -29,6 +29,10 @@ const jobs = (items, h, l) => {
   return f.length ? sec(h, f.map((i) => `<div>${row([i.title, i.company].filter(Boolean).join(' – '), range(i.start, i.end, l))}${bullets(i.bullets)}</div>`).join('')) : ''
 }
 
+// "Mouayad alkassas" -> "Mouayad alkassas-cv" (illegal file-name characters removed)
+export const cvFileName = (name) =>
+  (String(name ?? '').replace(/[\\/:*?"<>|\u0000-\u001f]+/g, '').replace(/\s+/g, ' ').trim().slice(0, 60) || 'CV') + '-cv'
+
 export function cvHtml(cv, opts = {}) {
   const l = cv.lang === 'en' ? 'en' : 'ar'
   const t = T[l]

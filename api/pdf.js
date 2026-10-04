@@ -1,4 +1,5 @@
 import { makePdf } from './_pdf.js'
+import { cvFileName } from './_cv.js'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'method_not_allowed' })
@@ -7,7 +8,8 @@ export default async function handler(req, res) {
   try {
     const pdf = await makePdf(cv)
     res.setHeader('Content-Type', 'application/pdf')
-    res.setHeader('Content-Disposition', 'attachment; filename="cv.pdf"')
+    const fn = `${cvFileName(cv.p && cv.p.name)}.pdf`
+    res.setHeader('Content-Disposition', `attachment; filename="cv.pdf"; filename*=UTF-8''${encodeURIComponent(fn)}`)
     res.status(200).send(pdf)
   } catch (e) {
     console.error(e)

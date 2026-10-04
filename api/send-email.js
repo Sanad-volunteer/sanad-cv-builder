@@ -1,6 +1,6 @@
 import nodemailer from 'nodemailer'
 import { makePdf } from './_pdf.js'
-import { cvHtml } from './_cv.js'
+import { cvHtml, cvFileName } from './_cv.js'
 import { makeLimiter, clientIp } from './_limit.js'
 
 // ---------- Edit the email wording here ----------
@@ -8,6 +8,7 @@ const SENDER_NAME = 'Sanad Youth' // the name recipients see as the sender
 const SUBJECT = (name) => (name ? `السيرة الذاتية – ${name}` : 'السيرة الذاتية')
 const TITLE_PDF = 'سيرتك الذاتية بصيغة PDF | مؤسسة سند الشباب' // header shown at the top of the email
 const TITLE_TEXT = 'سيرتك الذاتية | مؤسسة سند الشباب' // header used when the CV is sent inside the email instead of as a PDF
+const ATTACHED_TEXT = 'يمكنك تحميل ملف سيرتك الذاتية بصيغة CV' // sentence under the header when the PDF is attached
 const FOLLOW_US = 'تابع صفحات سند الشباب:'
 const SOCIAL = [
   ['Facebook', 'https://www.facebook.com/SanadTFD/'],
@@ -35,7 +36,7 @@ const EMAIL = (name, cvInner = '') => `<div style="max-width:640px;margin:0 auto
   </div>
   <div dir="rtl" style="font-size:15px;line-height:1.9;text-align:right">
     <p style="margin:0 0 8px">مرحباً،</p>
-    <p style="margin:0">${cvInner ? 'تعذّر إرفاق ملف PDF، وتجد السيرة الذاتية' : 'مرفق ملف السيرة الذاتية'}${name ? ` الخاصة بـ <b>${esc(name)}</b>` : ''}${cvInner ? ' أدناه.' : ' بصيغة PDF.'}</p>
+    <p style="margin:0">${cvInner ? `تعذّر إرفاق ملف PDF، وتجد السيرة الذاتية${name ? ` الخاصة بـ <b>${esc(name)}</b>` : ''} أدناه.` : ATTACHED_TEXT}</p>
   </div>
   ${cvInner ? `<div style="margin-top:22px;padding-top:6px;border-top:1px solid #e5e5e5">${cvInner}</div>` : ''}
   ${FOOTER}
@@ -67,7 +68,7 @@ export default async function handler(req, res) {
       to,
       subject: SUBJECT(name),
       html: pdf ? EMAIL(name) : cvHtml(cv, { wrap: (inner) => EMAIL(name, inner) }),
-      attachments: pdf ? [{ filename: 'CV.pdf', content: pdf, contentType: 'application/pdf' }] : [],
+      attachments: pdf ? [{ filename: `${cvFileName(name)}.pdf`, content: pdf, contentType: 'application/pdf' }] : [],
     })
     res.status(200).json({ ok: true, attached: !!pdf })
   } catch (e) {
