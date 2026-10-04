@@ -6,17 +6,40 @@ import { makeLimiter, clientIp } from './_limit.js'
 // ---------- Edit the email wording here ----------
 const SENDER_NAME = 'Sanad Youth' // the name recipients see as the sender
 const SUBJECT = (name) => (name ? `السيرة الذاتية – ${name}` : 'السيرة الذاتية')
+const TITLE_PDF = 'سيرتك الذاتية بصيغة PDF | مؤسسة سند الشباب' // header shown at the top of the email
+const TITLE_TEXT = 'سيرتك الذاتية | مؤسسة سند الشباب' // header used when the CV is sent inside the email instead of as a PDF
+const FOLLOW_US = 'تابع صفحات سند الشباب:'
+const SOCIAL = [
+  ['Facebook', 'https://www.facebook.com/SanadTFD/'],
+  ['Instagram', 'https://www.instagram.com/SanadTFD'],
+  ['LinkedIn', 'https://www.linkedin.com/company/sanadtfd1/mycompany'],
+]
+// -------------------------------------------------
+
 const esc = (t) => String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
+
 // The logo is public/logo.png of this site. SITE_URL is optional (Vercel's production URL is used when it is not set).
 const SITE = process.env.SITE_URL || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : '')
 const LOGO_URL = SITE ? `${SITE.replace(/\/$/, '')}/logo.png` : ''
-const BODY_HTML = (name) => `<div dir="rtl" style="font-family:Tahoma,Arial,sans-serif;font-size:15px;line-height:1.8;color:#1A1A2E">
-  ${LOGO_URL ? `<img src="${LOGO_URL}" width="170" alt="Sanad Youth" style="display:block;margin:0 0 18px">` : ''}
-  <p>مرحباً،</p>
-  <p>مرفق ملف السيرة الذاتية${name ? ` الخاصة بـ <b>${esc(name)}</b>` : ''} بصيغة PDF.</p>
-  <p style="color:#5d6079;font-size:13px">تم إنشاؤها عبر منشئ السيرة الذاتية – سند الشباب.</p>
+
+const FOOTER = `<div style="margin-top:34px;font-size:15px;line-height:1.8;text-align:left">
+  <div dir="rtl" style="text-align:left">${FOLLOW_US}</div>
+  ${SOCIAL.map(([n, u]) => `<div>${n}<br><a href="${u}" style="color:#1a5fc9">${u}</a></div>`).join('<div>---</div>')}
 </div>`
-// -------------------------------------------------
+
+// cvInner is empty when the PDF is attached; otherwise it holds the CV itself (fallback).
+const EMAIL = (name, cvInner = '') => `<div style="max-width:640px;margin:0 auto;font-family:Tahoma,Arial,sans-serif;color:#1a1a1a">
+  ${LOGO_URL ? `<img src="${LOGO_URL}" width="170" alt="Sanad Youth" style="display:block;margin:0 auto 18px">` : ''}
+  <div style="border-top:1px dashed #d5d5d5;padding-top:22px">
+    <h1 dir="rtl" style="margin:0 0 26px;text-align:center;font-size:21px;line-height:1.5;color:#2c3e50">${cvInner ? TITLE_TEXT : TITLE_PDF}</h1>
+  </div>
+  <div dir="rtl" style="font-size:15px;line-height:1.9;text-align:right">
+    <p style="margin:0 0 8px">مرحباً،</p>
+    <p style="margin:0">${cvInner ? 'تعذّر إرفاق ملف PDF، وتجد السيرة الذاتية' : 'مرفق ملف السيرة الذاتية'}${name ? ` الخاصة بـ <b>${esc(name)}</b>` : ''}${cvInner ? ' أدناه.' : ' بصيغة PDF.'}</p>
+  </div>
+  ${cvInner ? `<div style="margin-top:22px;padding-top:6px;border-top:1px solid #e5e5e5">${cvInner}</div>` : ''}
+  ${FOOTER}
+</div>`
 
 const limited = makeLimiter('mail', 5) // 5 emails per hour per visitor
 
@@ -43,7 +66,7 @@ export default async function handler(req, res) {
       from: `"${SENDER_NAME}" <${user}>`,
       to,
       subject: SUBJECT(name),
-      html: pdf ? BODY_HTML(name) : cvHtml(cv, { logo: LOGO_URL }),
+      html: pdf ? EMAIL(name) : cvHtml(cv, { wrap: (inner) => EMAIL(name, inner) }),
       attachments: pdf ? [{ filename: 'CV.pdf', content: pdf, contentType: 'application/pdf' }] : [],
     })
     res.status(200).json({ ok: true, attached: !!pdf })

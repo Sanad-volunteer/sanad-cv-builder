@@ -8,7 +8,7 @@ const T = {
   en: { summary: 'Summary', skills: 'Skills', tech: 'Technical', soft: 'Soft', edu: 'Education', exp: 'Work Experience', vol: 'Volunteer Work', now: 'Present' },
 }
 const CSS = `body{margin:0;font-family:Cairo,Arial,sans-serif;font-size:12.5px;line-height:1.6;color:#000}
-a{color:inherit;text-decoration:underline}h1{font-size:21px;margin:0}p{margin:0}
+a{color:inherit;text-decoration:underline}h1{font-size:21px;margin:0;color:#1A1464}p{margin:0}
 h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;border-bottom:1px solid #000;margin:14px 0 5px;padding-bottom:1px}
 .r{display:flex;justify-content:space-between;gap:12px}.r span{white-space:nowrap}
 section>div+div{margin-top:6px}ul{margin:2px 0 4px;padding-inline-start:18px}`
@@ -41,7 +41,6 @@ export function cvHtml(cv, opts = {}) {
     .join(' · ')
   const edu = list(cv.edu).filter((e) => e.school || e.major)
   const body = [
-    opts.logo ? `<img src="${esc(opts.logo)}" width="170" alt="Sanad Youth" style="display:block;margin:0 0 18px">` : '',
     p.name ? `<h1>${esc(p.name)}</h1>` : '',
     p.title ? `<p>${esc(p.title)}</p>` : '',
     contact ? `<p>${contact}</p>` : '',
@@ -53,5 +52,5 @@ export function cvHtml(cv, opts = {}) {
     jobs(cv.exp, t.exp, l),
     jobs(cv.vol, t.vol, l),
   ].join('')
-  return `<!doctype html><html lang="${l}" dir="${l === 'ar' ? 'rtl' : 'ltr'}"><head><meta charset="utf-8"><style>${opts.fontCss || ''}${CSS}</style></head><body>${body}</body></html>`
+  return `<!doctype html><html lang="${l}" dir="${l === 'ar' ? 'rtl' : 'ltr'}"><head><meta charset="utf-8"><style>${opts.fontCss || ''}${CSS}</style></head><body>${opts.wrap ? opts.wrap(body) : body}</body></html>`
 }
