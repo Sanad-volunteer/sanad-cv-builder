@@ -85,7 +85,7 @@ function List({ items, onChange, blank, title, addLabel, render, optional }) {
         <div className="entry" key={it.id}>
           <div className="entry-h">
             <span>{title} {i + 1}</span>
-            {(optional || items.length > 1) && <button type="button" className="link" onClick={() => onChange(items.filter((x) => x.id !== it.id))}>حذف</button>}
+            {(optional || items.length > 1) && <button type="button" className="del" onClick={() => onChange(items.filter((x) => x.id !== it.id))}>حذف</button>}
           </div>
           <div className="g">{render(it, (patch) => upd(it.id, patch))}</div>
         </div>
