@@ -24,14 +24,14 @@ const load = () => {
 const Card = ({ n, title, opt, children }) => (
   <div className="card"><h2><span className="n">{n}</span>{title}{opt && <span className="opt-tag">اختياري</span>}</h2>{children}</div>
 )
-const Field = ({ label, full, err, children }) => (
+const Field = ({ label, full, err, htmlFor, children }) => (
   <div className={[full && 'full', err && 'invalid'].filter(Boolean).join(' ')}>
-    <label>{label}{err && <span className="star"> *</span>}</label>{children}
+    <label htmlFor={htmlFor}>{label}{err && <span className="star"> *</span>}</label>{children}
   </div>
 )
-const Txt = ({ label, full, err, value, onChange, ...rest }) => (
-  <Field label={label} full={full} err={err}>
-    <input dir={value ? 'auto' : 'rtl'} value={value} onChange={(e) => onChange(e.target.value)} {...rest} />
+const Txt = ({ label, full, err, name, value, onChange, ...rest }) => (
+  <Field label={label} full={full} err={err} htmlFor={name}>
+    <input id={name} name={name} autoComplete="off" dir={value ? 'auto' : 'rtl'} value={value} onChange={(e) => onChange(e.target.value)} {...rest} />
   </Field>
 )
 
@@ -169,12 +169,12 @@ export default function App() {
 
           <Card n="1" title="المعلومات الشخصية">
             <div className="g">
-              <Txt label="الاسم الكامل" value={cv.p.name} err={ev(bad.name)} onChange={setP('name')} />
-              <Txt label="المسمى الوظيفي" value={cv.p.title} err={ev(bad.title)} onChange={setP('title')} />
-              <Txt label="البريد الإلكتروني" type="email" dir="ltr" value={cv.p.email} err={ev(bad.email)} onChange={setP('email')} />
-              <Txt label="رقم الهاتف" type="tel" dir="ltr" value={cv.p.phone} err={ev(bad.phone)} onChange={setP('phone')} />
-              <Txt label="المدينة، الدولة" value={cv.p.city} err={ev(bad.city)} onChange={setP('city')} />
-              <Txt label="رابط لينكدإن (اختياري)" dir="ltr" placeholder="linkedin.com/in/username" value={cv.p.link} onChange={setP('link')} />
+              <Txt name="name" autoComplete="name" label="الاسم الكامل" value={cv.p.name} err={ev(bad.name)} onChange={setP('name')} />
+              <Txt name="job-title" autoComplete="organization-title" label="المسمى الوظيفي" value={cv.p.title} err={ev(bad.title)} onChange={setP('title')} />
+              <Txt name="email" autoComplete="email" label="البريد الإلكتروني" type="email" dir="ltr" value={cv.p.email} err={ev(bad.email)} onChange={setP('email')} />
+              <Txt name="phone" autoComplete="tel" label="رقم الهاتف" type="tel" dir="ltr" value={cv.p.phone} err={ev(bad.phone)} onChange={setP('phone')} />
+              <Txt name="city" autoComplete="address-level2" label="المدينة، الدولة" value={cv.p.city} err={ev(bad.city)} onChange={setP('city')} />
+              <Txt name="linkedin" autoComplete="url" label="رابط لينكدإن (اختياري)" dir="ltr" placeholder="linkedin.com/in/username" value={cv.p.link} onChange={setP('link')} />
               <Field full label="نبذة مختصرة" err={ev(bad.summary)}>
                 <textarea dir="auto" value={cv.p.summary} onChange={(e) => setP('summary')(e.target.value)} />
               </Field>

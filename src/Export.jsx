@@ -51,7 +51,7 @@ export default function Export({ cv, onValidate }) {
     <div className="exp no-print">
       <button type="button" className="btn p" onClick={download} disabled={!!busy}>{busy === 'pdf' ? 'جارٍ التجهيز…' : '⬇ تحميل PDF'}</button>
       <div className="mail">
-        <input type="email" dir="ltr" placeholder="recipient@email.com" value={to} onChange={(e) => setTo(e.target.value)} />
+        <input type="email" name="recipient" autoComplete="email" dir="ltr" placeholder="recipient@email.com" value={to} onChange={(e) => setTo(e.target.value)} />
         <button type="button" className="btn s" onClick={send} disabled={!!busy}>{busy === 'mail' ? 'جارٍ الإرسال…' : '✉ إرسال بالبريد'}</button>
       </div>
       {msg && <p className={msg.ok ? 'ok' : 'err'}>{msg.t}</p>}
