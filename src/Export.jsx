@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { post } from './api.js'
 
+const fileName = (n) => (String(n || '').replace(/[\\/:*?"<>|\u0000-\u001f]+/g, '').replace(/\s+/g, ' ').trim().slice(0, 60) || 'CV') + '-cv'
 const REQUIRED_MSG = 'أكمل الحقول المطلوبة المعلّمة بنجمة حمراء *'
 
 function Success({ email, onClose }) {
@@ -32,7 +33,7 @@ export default function Export({ cv, onValidate }) {
 
   const print = () => {
     const old = document.title
-    document.title = `CV - ${cv.p.name || 'Sanad'}`
+    document.title = fileName(cv.p.name)
     window.print()
     document.title = old
   }
@@ -43,7 +44,7 @@ export default function Export({ cv, onValidate }) {
       const r = await post('/api/pdf', { cv })
       const url = URL.createObjectURL(await r.blob())
       const a = document.createElement('a')
-      a.href = url; a.download = `CV - ${cv.p.name || 'Sanad'}.pdf`; a.click()
+      a.href = url; a.download = `${fileName(cv.p.name)}.pdf`; a.click()
       URL.revokeObjectURL(url)
     } catch {
       print() // fallback: browser print dialog -> "Save as PDF"
