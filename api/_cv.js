@@ -29,7 +29,7 @@ const jobs = (items, h, l) => {
   return f.length ? sec(h, f.map((i) => `<div>${row([i.title, i.company].filter(Boolean).join(' – '), range(i.start, i.end, l))}${bullets(i.bullets)}</div>`).join('')) : ''
 }
 
-export function cvHtml(cv) {
+export function cvHtml(cv, opts = {}) {
   const l = cv.lang === 'en' ? 'en' : 'ar'
   const t = T[l]
   const p = cv.p || {}
@@ -41,6 +41,7 @@ export function cvHtml(cv) {
     .join(' · ')
   const edu = list(cv.edu).filter((e) => e.school || e.major)
   const body = [
+    opts.logo ? `<img src="${esc(opts.logo)}" width="170" alt="Sanad Youth" style="display:block;margin:0 0 18px">` : '',
     p.name ? `<h1>${esc(p.name)}</h1>` : '',
     p.title ? `<p>${esc(p.title)}</p>` : '',
     contact ? `<p>${contact}</p>` : '',
@@ -52,5 +53,5 @@ export function cvHtml(cv) {
     jobs(cv.exp, t.exp, l),
     jobs(cv.vol, t.vol, l),
   ].join('')
-  return `<!doctype html><html lang="${l}" dir="${l === 'ar' ? 'rtl' : 'ltr'}"><head><meta charset="utf-8"><link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet"><style>${CSS}</style></head><body>${body}</body></html>`
+  return `<!doctype html><html lang="${l}" dir="${l === 'ar' ? 'rtl' : 'ltr'}"><head><meta charset="utf-8"><style>${opts.fontCss || ''}${CSS}</style></head><body>${body}</body></html>`
 }

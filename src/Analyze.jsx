@@ -65,7 +65,7 @@ export default function Analyze({ go }) {
     try {
       const r = await post('/api/analyze', { file: { type: file.type, data: file.data }, job })
       setSt({ busy: false, err: '', res: await r.json() })
-    } catch { setSt({ busy: false, err: 'تعذّر تحليل السيرة، حاول مرة أخرى', res: null }) }
+    } catch (e) { setSt({ busy: false, err: e.status === 429 ? 'تجاوزت عدد المحاولات المسموح، حاول بعد قليل' : 'تعذّر تحليل السيرة، حاول مرة أخرى', res: null }) }
   }
   const ready = file && job.title.trim() && !st.busy // job title is required, description is optional
 

@@ -10,12 +10,16 @@ Scoring guide for "score": 40% match of skills/keywords to the job, 25% relevanc
 Rules: be honest and specific; give 3-6 suggestions and 3-5 ATS checks. Never invent skills, experience or achievements.
 Only rephrase or emphasize what already exists; for gaps say "consider adding if true".`
 
+import { makeLimiter, clientIp } from './_limit.js'
+const limited = makeLimiter('ai', 10) // 10 analyses per hour per visitor
+
 const str = (v, n = 600) => String(v ?? '').slice(0, n)
 const arr = (v) => (Array.isArray(v) ? v : [])
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'method_not_allowed' })
   if (!process.env.GEMINI_API_KEY) return res.status(500).json({ error: 'missing_api_key' })
+  if (await limited(clientIp(req))) return res.status(429).json({ error: 'rate_limited' })
   const { file, job } = req.body || {}
   if (!file || !job || !['pdf', 'text'].includes(file.type) || typeof file.data !== 'string' || file.data.length > 4_000_000)
     return res.status(400).json({ error: 'bad_request' })

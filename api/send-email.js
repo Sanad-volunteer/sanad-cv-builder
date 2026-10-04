@@ -1,6 +1,7 @@
 import nodemailer from 'nodemailer'
 import { makePdf } from './_pdf.js'
 import { cvHtml } from './_cv.js'
+import { makeLimiter, clientIp } from './_limit.js'
 
 // ---------- Edit the email wording here ----------
 const SENDER_NAME = 'Sanad Youth' // the name recipients see as the sender
@@ -17,16 +18,7 @@ const BODY_HTML = (name) => `<div dir="rtl" style="font-family:Tahoma,Arial,sans
 </div>`
 // -------------------------------------------------
 
-// Best-effort limiter (per warm server instance): max 5 emails per hour per IP.
-const hits = new Map()
-const limited = (ip) => {
-  const now = Date.now()
-  const recent = (hits.get(ip) || []).filter((t) => now - t < 3600e3)
-  if (recent.length >= 5) return true
-  recent.push(now)
-  hits.set(ip, recent)
-  return false
-}
+const limited = makeLimiter('mail', 5) // 5 emails per hour per visitor
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'method_not_allowed' })
@@ -38,8 +30,7 @@ export default async function handler(req, res) {
   const pass = (process.env.GMAIL_APP_PASSWORD || '').replace(/\s+/g, '') // Google shows the app password in groups with spaces
   if (!user || !pass) return res.status(500).json({ error: 'missing_mail_config' })
 
-  const ip = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || 'unknown'
-  if (limited(ip)) return res.status(429).json({ error: 'rate_limited' })
+  if (await limited(clientIp(req))) return res.status(429).json({ error: 'rate_limited' })
 
   try {
     // Preferred: the CV as a PDF attachment. If PDF generation fails, send the CV inside the email body instead.
@@ -52,7 +43,7 @@ export default async function handler(req, res) {
       from: `"${SENDER_NAME}" <${user}>`,
       to,
       subject: SUBJECT(name),
-      html: pdf ? BODY_HTML(name) : cvHtml(cv),
+      html: pdf ? BODY_HTML(name) : cvHtml(cv, { logo: LOGO_URL }),
       attachments: pdf ? [{ filename: 'CV.pdf', content: pdf, contentType: 'application/pdf' }] : [],
     })
     res.status(200).json({ ok: true, attached: !!pdf })

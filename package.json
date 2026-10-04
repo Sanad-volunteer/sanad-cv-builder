@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@sparticuz/chromium": "^131.0.1",
+    "@upstash/ratelimit": "^2.2.0",
+    "@upstash/redis": "^1.39.0",
     "mammoth": "^1.8.0",
     "nodemailer": "^6.10.1",
     "puppeteer-core": "^23.11.1",
