@@ -220,7 +220,7 @@ export default function App() {
         </section>
 
         <aside className="side">
-          <div className="ph no-print"><h2>معاينة مباشرة</h2><span className="badge">✓ متوافق مع ATS</span></div>
+          <div className="ph no-print"><h2>معاينة مباشرة</h2></div>
           <Preview cv={cv} />
           <Export cv={cv} onValidate={validate} />
         </aside>
