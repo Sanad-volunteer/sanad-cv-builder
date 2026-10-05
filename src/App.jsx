@@ -1,24 +1,29 @@
-import { useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useState } from 'react'
 import logo from './assets/sanad-logo.svg'
-import Preview, { MONTHS } from './Preview.jsx'
+import Preview, { MONTH_NAMES, LEVELS } from './Preview.jsx'
 import Home from './Home.jsx'
 import Analyze from './Analyze.jsx'
 import Export from './Export.jsx'
 
+const LangCtx = createContext('ar') // language of the CV being written; the date pickers follow it
 const KEY = 'sanad-cv-v1'
 const uid = () => Math.random().toString(36).slice(2, 9)
 const nd = () => ({ m: '', y: '' })
 const empty = (v) => !String(v ?? '').trim()
 const dEmpty = (d) => !d.y || (d.y !== 'now' && !d.m) // a date needs a year, and a month unless "until now"
 const blankEdu = () => ({ id: uid(), school: '', major: '', start: nd(), end: nd() })
+const blankLang = () => ({ id: uid(), name: '', level: '' })
 const blankJob = () => ({ id: uid(), title: '', company: '', start: nd(), end: nd(), bullets: '' })
 const initial = () => ({
   lang: 'ar',
   p: { name: '', title: '', email: '', phone: '', city: '', link: '', summary: '' },
-  tech: [], soft: [], edu: [blankEdu()], exp: [], vol: [],
+  tech: [], soft: [], langs: [blankLang()], edu: [blankEdu()], exp: [], vol: [],
 })
 const load = () => {
-  try { const s = localStorage.getItem(KEY); return s ? JSON.parse(s) : initial() } catch { return initial() }
+  try { const s = localStorage.getItem(KEY); if (!s) return initial()
+    const d = { ...initial(), ...JSON.parse(s) }
+    if (!d.langs || !d.langs.length) d.langs = [blankLang()] // languages are required: always show one row
+    return d } catch { return initial() }
 }
 
 const Card = ({ n, title, opt, children }) => (
@@ -36,6 +41,7 @@ const Txt = ({ label, full, err, name, value, onChange, ...rest }) => (
 )
 
 function DateSel({ label, value, onChange, now, err }) {
+  const lang = useContext(LangCtx)
   const years = []
   for (let y = new Date().getFullYear() + 6; y >= 1980; y--) years.push(y)
   return (
@@ -43,7 +49,7 @@ function DateSel({ label, value, onChange, now, err }) {
       <div className="dates">
         <select value={value.m} disabled={value.y === 'now'} onChange={(e) => onChange({ ...value, m: e.target.value })}>
           <option value="">الشهر</option>
-          {MONTHS.ar.map((m, i) => <option key={i} value={String(i + 1)}>{m}</option>)}
+          {MONTH_NAMES[lang].map((m, i) => <option key={i} value={String(i + 1)}>{m}</option>)}
         </select>
         <select value={value.y} onChange={(e) => onChange(e.target.value === 'now' ? { m: '', y: 'now' } : { ...value, y: e.target.value })}>
           <option value="">السنة</option>
@@ -104,6 +110,17 @@ const eduFields = (tried) => (it, up) => (
     <DateSel label="تاريخ الانتهاء" value={it.end} now err={tried && dEmpty(it.end)} onChange={(v) => up({ end: v })} />
   </>
 )
+const langFields = (tried) => (it, up) => (
+  <>
+    <Txt label="اللغة" placeholder="مثال: الإنجليزية" value={it.name} err={tried && empty(it.name)} onChange={(v) => up({ name: v })} />
+    <Field label="المستوى" err={tried && empty(it.level)}>
+      <select value={it.level} onChange={(e) => up({ level: e.target.value })}>
+        <option value="">اختر المستوى</option>
+        {LEVELS.map(([k, label]) => <option key={k} value={k}>{label}</option>)}
+      </select>
+    </Field>
+  </>
+)
 const jobFields = (a, b) => (it, up) => (
   <>
     <Txt label={a} value={it.title} onChange={(v) => up({ title: v })} />
@@ -131,7 +148,7 @@ export default function App() {
     city: empty(p.city), summary: empty(p.summary), // LinkedIn is optional
     tech: !cv.tech.length, soft: !cv.soft.length,
   }
-  const valid = !Object.values(bad).some(Boolean) && !cv.edu.some((e) => empty(e.school) || empty(e.major) || dEmpty(e.start) || dEmpty(e.end))
+  const valid = !Object.values(bad).some(Boolean) && !cv.edu.some((e) => empty(e.school) || empty(e.major) || dEmpty(e.start) || dEmpty(e.end)) && !cv.langs.some((x) => empty(x.name) || empty(x.level))
   const ev = (b) => tried && b
   const validate = () => {
     setTried(true)
@@ -151,6 +168,7 @@ export default function App() {
       {view === 'home' && <Home go={setView} />}
       {view === 'analyze' && <Analyze go={setView} />}
       {view === 'create' && (
+      <LangCtx.Provider value={cv.lang}>
       <main className="layout">
         <div className="topbar no-print">
           <button type="button" className="back" onClick={() => setView('home')}>→ رجوع</button>
@@ -196,6 +214,9 @@ export default function App() {
           <Card n="5" title="العمل التطوعي" opt>
             <List items={cv.vol} onChange={(v) => set('vol', v)} blank={blankJob} optional title="عمل تطوعي" addLabel="إضافة عمل تطوعي" render={jobFields('الدور', 'المنظمة')} />
           </Card>
+          <Card n="6" title="اللغات">
+            <List items={cv.langs} onChange={(v) => set('langs', v)} blank={blankLang} title="لغة" addLabel="إضافة لغة" render={langFields(tried)} />
+          </Card>
         </section>
 
         <aside className="side">
@@ -204,6 +225,7 @@ export default function App() {
           <Export cv={cv} onValidate={validate} />
         </aside>
       </main>
+      </LangCtx.Provider>
       )}
     </>
   )
