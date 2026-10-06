@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import logo from './assets/sanad-logo.svg'
 import Preview, { MONTH_NAMES, LEVELS } from './Preview.jsx'
 import Home from './Home.jsx'
@@ -40,22 +40,63 @@ const Txt = ({ label, full, err, name, value, onChange, ...rest }) => (
   </Field>
 )
 
+const MIN_Y = 1980
+const MAX_Y = new Date().getFullYear() + 6
+const numeric = (y) => /^\d+$/.test(y)
+
+// Month + year picker (pop-up). Month names follow the CV language.
 function DateSel({ label, value, onChange, now, err }) {
   const lang = useContext(LangCtx)
-  const years = []
-  for (let y = new Date().getFullYear() + 6; y >= 1980; y--) years.push(y)
+  const months = MONTH_NAMES[lang]
+  const [open, setOpen] = useState(false)
+  const [vy, setVy] = useState(() => (numeric(value.y) ? +value.y : new Date().getFullYear()))
+  const box = useRef(null)
+
+  useEffect(() => {
+    if (!open) return
+    const away = (e) => { if (!box.current?.contains(e.target)) setOpen(false) }
+    const esc = (e) => { if (e.key === 'Escape') setOpen(false) }
+    document.addEventListener('mousedown', away)
+    document.addEventListener('keydown', esc)
+    return () => { document.removeEventListener('mousedown', away); document.removeEventListener('keydown', esc) }
+  }, [open])
+
+  const toggle = () => { if (!open && numeric(value.y)) setVy(+value.y); setOpen(!open) }
+  const text = value.y === 'now' ? 'حتى الآن' : value.y ? `${value.m ? months[value.m - 1] + ' ' : ''}${value.y}` : ''
+  const pick = (i) => { onChange({ m: String(i + 1), y: String(vy) }); setOpen(false) }
+  const clear = () => { onChange({ m: '', y: '' }); setOpen(false) }
+  const stroke = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round' }
+
   return (
     <Field label={label} err={err}>
-      <div className="dates">
-        <select value={value.m} disabled={value.y === 'now'} onChange={(e) => onChange({ ...value, m: e.target.value })}>
-          <option value="">الشهر</option>
-          {MONTH_NAMES[lang].map((m, i) => <option key={i} value={String(i + 1)}>{m}</option>)}
-        </select>
-        <select value={value.y} onChange={(e) => onChange(e.target.value === 'now' ? { m: '', y: 'now' } : { ...value, y: e.target.value })}>
-          <option value="">السنة</option>
-          {now && <option value="now">حتى الآن</option>}
-          {years.map((y) => <option key={y} value={y}>{y}</option>)}
-        </select>
+      <div className="dp" ref={box}>
+        <button type="button" className="dp-btn" aria-haspopup="dialog" aria-expanded={open} onClick={toggle}>
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3" {...stroke} /><path d="M3 10h18M8 3v4M16 3v4" {...stroke} /></svg>
+          <span className={text ? '' : 'ph'}>{text || 'اختر التاريخ'}</span>
+          <svg viewBox="0 0 12 8" width="12" height="8" aria-hidden="true"><path d="M1 1.5l5 5 5-5" {...stroke} /></svg>
+        </button>
+        {open && (
+          <div className="dp-pop" role="dialog" aria-label={label}>
+            <div className="dp-head">
+              <button type="button" aria-label="السنة السابقة" disabled={vy <= MIN_Y} onClick={() => setVy(vy - 1)}>›</button>
+              <b>{vy}</b>
+              <button type="button" aria-label="السنة التالية" disabled={vy >= MAX_Y} onClick={() => setVy(vy + 1)}>‹</button>
+            </div>
+            <div className={`dp-grid${value.y === 'now' ? ' off' : ''}`} dir={lang === 'en' ? 'ltr' : 'rtl'}>
+              {months.map((m, i) => (
+                <button type="button" key={i} className={value.y === String(vy) && value.m === String(i + 1) ? 'on' : ''} onClick={() => pick(i)}>{m}</button>
+              ))}
+            </div>
+            {now && (
+              <button type="button" className={`dp-now${value.y === 'now' ? ' on' : ''}`}
+                onClick={() => { onChange(value.y === 'now' ? { m: '', y: '' } : { m: '', y: 'now' }); setOpen(false) }}>حتى الآن</button>
+            )}
+            <div className="dp-foot">
+              <button type="button" className="dp-done" onClick={() => setOpen(false)}>تم</button>
+              <button type="button" className="dp-clear" onClick={clear}>مسح</button>
+            </div>
+          </div>
+        )}
       </div>
     </Field>
   )
@@ -220,7 +261,7 @@ export default function App() {
         </section>
 
         <aside className="side">
-          <div className="ph no-print"><h2>معاينة مباشرة</h2></div>
+          <div className="ph no-print"><h2>معاينة مباشرة</h2><span className="badge">✓ متوافق مع ATS</span></div>
           <Preview cv={cv} />
           <Export cv={cv} onValidate={validate} />
         </aside>
