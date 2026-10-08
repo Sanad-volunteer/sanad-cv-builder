@@ -1,4 +1,5 @@
 import { makeLimiter, clientIp } from './_limit.js'
+import { callGemini } from './_gemini.js'
 
 const limited = makeLimiter('translate', 10) // 10 translations per hour per visitor
 
@@ -16,23 +17,11 @@ export default async function handler(req, res) {
   if (await limited(clientIp(req))) return res.status(429).json({ error: 'rate_limited' })
 
   try {
-    const model = process.env.GEMINI_MODEL || 'gemini-3.8-flash'
-    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-goog-api-key': process.env.GEMINI_API_KEY },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: SYSTEM(to) }] },
-        contents: [{ role: 'user', parts: [{ text: JSON.stringify(items) }] }],
-        generationConfig: { responseMimeType: 'application/json', temperature: 0.2, maxOutputTokens: 8000 },
-      }),
+    const data = await callGemini({
+      systemInstruction: { parts: [{ text: SYSTEM(to) }] },
+      contents: [{ role: 'user', parts: [{ text: JSON.stringify(items) }] }],
+      generationConfig: { responseMimeType: 'application/json', temperature: 0.2, maxOutputTokens: 8000 },
     })
-    if (!r.ok) {
-      const j = await r.json().catch(() => ({}))
-      const err = new Error((j.error && j.error.message) || `HTTP ${r.status}`)
-      err.status = r.status
-      throw err
-    }
-    const data = await r.json()
     const text = (data.candidates?.[0]?.content?.parts || []).map((p) => p.text || '').join('')
     const out = JSON.parse(text.slice(text.indexOf('['), text.lastIndexOf(']') + 1))
     if (!Array.isArray(out) || out.length !== items.length || out.some((t) => typeof t !== 'string')) throw new Error('length mismatch')

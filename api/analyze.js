@@ -11,6 +11,7 @@ Rules: be honest and specific; give 3-6 suggestions and 3-5 ATS checks. Never in
 Only rephrase or emphasize what already exists; for gaps say "consider adding if true".`
 
 import { makeLimiter, clientIp } from './_limit.js'
+import { callGemini } from './_gemini.js'
 const limited = makeLimiter('ai', 10) // 10 analyses per hour per visitor
 
 const str = (v, n = 600) => String(v ?? '').slice(0, n)
@@ -34,23 +35,11 @@ export default async function handler(req, res) {
     : [{ text: `${jobText}\n<cv>${file.data.slice(0, 20000)}</cv>\nReview this CV for the job.` }]
 
   try {
-    const model = process.env.GEMINI_MODEL || 'gemini-3.8-flash'
-    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-goog-api-key': process.env.GEMINI_API_KEY },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: SYSTEM }] },
-        contents: [{ role: 'user', parts }],
-        generationConfig: { responseMimeType: 'application/json', temperature: 0.3, maxOutputTokens: 6000 },
-      }),
+    const data = await callGemini({
+      systemInstruction: { parts: [{ text: SYSTEM }] },
+      contents: [{ role: 'user', parts }],
+      generationConfig: { responseMimeType: 'application/json', temperature: 0.3, maxOutputTokens: 6000 },
     })
-    if (!r.ok) {
-      const j = await r.json().catch(() => ({}))
-      const err = new Error((j.error && j.error.message) || `HTTP ${r.status}`)
-      err.status = r.status
-      throw err
-    }
-    const data = await r.json()
     const text = arr(data.candidates?.[0]?.content?.parts).map((p) => p.text || '').join('')
     const j = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1))
     res.status(200).json({

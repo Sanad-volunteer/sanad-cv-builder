@@ -8,8 +8,29 @@ const T = {
   en: { summary: 'Summary', skills: 'Skills', tech: 'Technical', soft: 'Soft', langs: 'Languages', courses: 'Courses & Workshops', edu: 'Education', exp: 'Work Experience', vol: 'Volunteer Work', now: 'Present' },
 }
 const LV = {
-  ar: { beginner: 'مبتدئ', intermediate: 'متوسط', upper: 'فوق المتوسط', fluent: 'طليق', native: 'لغة أم' },
-  en: { beginner: 'Beginner', intermediate: 'Intermediate', upper: 'Upper-intermediate', fluent: 'Fluent', native: 'Native' },
+  ar: { beginner: 'مبتدئ', intermediate: 'متوسط', upper: 'فوق المتوسط', fluent: 'متمرس', native: 'لغة أم' },
+  en: { beginner: 'Beginner', intermediate: 'Intermediate', upper: 'Upper-intermediate', fluent: 'Proficient', native: 'Native' },
+}
+const FULL = { ar: M.ar, en: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'] }
+const SKILLS = ['read', 'write', 'listen', 'speak']
+const SK = {
+  ar: { read: 'القراءة', write: 'الكتابة', listen: 'الاستماع', speak: 'المحادثة' },
+  en: { read: 'Reading', write: 'Writing', listen: 'Listening', speak: 'Speaking' },
+}
+const langLine = (x, l) => {
+  const vals = SKILLS.map((k) => LV[l][x[k]] || '')
+  if (!vals.some(Boolean)) return ''
+  if (vals.every((v) => v && v === vals[0])) return ` – ${vals[0]}`
+  return ' – ' + SKILLS.filter((k, i) => vals[i]).map((k) => `${SK[l][k]}: ${LV[l][x[k]]}`).join(l === 'ar' ? '، ' : ', ')
+}
+const DETAILS = {
+  ar: { dob: 'تاريخ الميلاد', gender: 'الجنس', marital: 'الحالة الاجتماعية', male: 'ذكر', female: 'أنثى', single: 'أعزب', singleF: 'عزباء', married: 'متزوج', marriedF: 'متزوجة' },
+  en: { dob: 'Date of birth', gender: 'Gender', marital: 'Marital status', male: 'Male', female: 'Female', single: 'Single', singleF: 'Single', married: 'Married', marriedF: 'Married' },
+}
+const dobText = (iso, l) => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || ''))
+  const month = m && FULL[l][+m[2] - 1]
+  return month ? `${+m[3]} ${month} ${m[1]}` : ''
 }
 const CSS = `body{margin:0;font-family:Cairo,Arial,sans-serif;font-size:12.5px;line-height:1.6;color:#000}
 a{color:inherit;text-decoration:underline}h1{font-size:21px;margin:0;color:#1A1464}p{margin:0}
@@ -48,17 +69,24 @@ export function cvHtml(cv, opts = {}) {
     .map(([v, isLink]) => `<bdi>${isLink ? `<a href="${esc(href(v))}">${esc(v)}</a>` : esc(v)}</bdi>`)
     .join(' · ')
   const courses = list(cv.courses).filter((c) => c && (c.title || c.org))
+  const d = DETAILS[l]
+  const details = [
+    dobText(p.dob, l) && `${d.dob}: ${dobText(p.dob, l)}`,
+    (p.gender === 'male' || p.gender === 'female') && `${d.gender}: ${d[p.gender]}`,
+    (p.marital === 'single' || p.marital === 'married') && `${d.marital}: ${d[p.marital + (p.gender === 'female' ? 'F' : '')]}`,
+  ].filter(Boolean)
   const langs = list(cv.langs).filter((x) => x && String(x.name || '').trim())
   const edu = list(cv.edu).filter((e) => e.school || e.major)
   const body = [
     p.name ? `<h1>${esc(p.name)}</h1>` : '',
     p.title ? `<p>${esc(p.title)}</p>` : '',
     contact ? `<p>${contact}</p>` : '',
+    details.length ? `<p>${details.map(esc).join(' · ')}</p>` : '',
     p.summary ? sec(t.summary, `<p>${esc(p.summary)}</p>`) : '',
     tech.length || soft.length
       ? sec(t.skills, (tech.length ? `<p><b>${t.tech}:</b> ${esc(tech.join(sep))}</p>` : '') + (soft.length ? `<p><b>${t.soft}:</b> ${esc(soft.join(sep))}</p>` : ''))
       : '',
-    langs.length ? sec(t.langs, langs.map((x) => `<p><b>${esc(x.name)}</b>${LV[l][x.level] ? ` – ${LV[l][x.level]}` : ''}</p>`).join('')) : '',
+    langs.length ? sec(t.langs, langs.map((x) => `<p><b>${esc(x.name)}</b>${esc(langLine(x, l))}</p>`).join('')) : '',
     edu.length ? sec(t.edu, edu.map((e) => `<div>${row(e.school, range(e.start, e.end, l))}${e.major ? `<p>${esc(e.major)}</p>` : ''}</div>`).join('')) : '',
     jobs(cv.exp, t.exp, l),
     courses.length ? sec(t.courses, courses.map((c) => `<div>${row([c.title, c.org].filter(Boolean).join(' – '), fmt(c.date, l))}</div>`).join('')) : '',
