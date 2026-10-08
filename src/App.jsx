@@ -43,18 +43,22 @@ const nd = () => ({ m: '', y: '' })
 const empty = (v) => !String(v ?? '').trim()
 const dEmpty = (d) => !d.y || (d.y !== 'now' && !d.m) // a date needs a year, and a month unless "until now"
 const blankEdu = () => ({ id: uid(), school: '', major: '', start: nd(), end: nd() })
-const blankLang = () => ({ id: uid(), name: '', level: '' })
+const TODAY = new Date().toISOString().slice(0, 10)
+const SKILLS = [['read', 'القراءة'], ['write', 'الكتابة'], ['listen', 'الاستماع'], ['speak', 'المحادثة']] // each language is rated on all four
+const blankLang = () => ({ id: uid(), name: '', read: '', write: '', listen: '', speak: '' })
 const blankCourse = () => ({ id: uid(), title: '', org: '', date: nd() })
 const blankJob = () => ({ id: uid(), title: '', company: '', start: nd(), end: nd(), bullets: '' })
 const initial = () => ({
   lang: 'ar',
-  p: { name: '', title: '', email: '', phone: '', city: '', link: '', summary: '' },
+  p: { name: '', title: '', email: '', phone: '', city: '', link: '', summary: '', dob: '', gender: '', marital: '' },
   tech: [], soft: [], courses: [], langs: [blankLang()], edu: [blankEdu()], exp: [], vol: [],
 })
 const load = () => {
   try { const s = localStorage.getItem(KEY); if (!s) return initial()
     const d = { ...initial(), ...JSON.parse(s) }
-    if (!d.langs || !d.langs.length) d.langs = [blankLang()] // languages are required: always show one row
+    d.p = { ...initial().p, ...d.p } // fields added in newer versions
+    d.langs = (d.langs || []).map((x) => (x.read === undefined ? { ...x, read: x.level || '', write: x.level || '', listen: x.level || '', speak: x.level || '' } : x)) // old single level -> four skills
+    if (!d.langs.length) d.langs = [blankLang()] // languages are required: always show one row
     return d } catch { return initial() }
 }
 
@@ -74,11 +78,11 @@ const Txt = ({ label, full, err, name, value, onChange, ...rest }) => {
     </Field>
   )
 }
-const Area = ({ label, full, err, value, onChange }) => {
+const Area = ({ label, full, err, value, onChange, placeholder }) => {
   const guard = useGuard()
   return (
     <Field label={label} full={full} err={err}>
-      <textarea dir={value ? 'auto' : 'rtl'} value={value} onChange={(e) => onChange(guard(e.target.value, value))} />
+      <textarea dir={value ? 'auto' : 'rtl'} placeholder={placeholder} value={value} onChange={(e) => onChange(guard(e.target.value, value))} />
     </Field>
   )
 }
@@ -198,12 +202,20 @@ const eduFields = (tried) => (it, up) => (
 const langFields = (tried) => (it, up) => (
   <>
     <Txt label="اللغة" placeholder="مثال: الإنجليزية" value={it.name} err={tried && empty(it.name)} onChange={(v) => up({ name: v })} />
-    <Field label="المستوى" err={tried && empty(it.level)}>
-      <select value={it.level} onChange={(e) => up({ level: e.target.value })}>
-        <option value="">اختر المستوى</option>
+    <Field label="تعبئة سريعة">
+      <select value="" onChange={(e) => e.target.value && up({ read: e.target.value, write: e.target.value, listen: e.target.value, speak: e.target.value })}>
+        <option value="">مستوى واحد للمهارات الأربع</option>
         {LEVELS.map(([k, label]) => <option key={k} value={k}>{label}</option>)}
       </select>
     </Field>
+    {SKILLS.map(([k, label]) => (
+      <Field key={k} label={label} err={tried && empty(it[k])}>
+        <select value={it[k] || ''} onChange={(e) => up({ [k]: e.target.value })}>
+          <option value="">اختر المستوى</option>
+          {LEVELS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+        </select>
+      </Field>
+    ))}
   </>
 )
 const courseFields = (it, up) => (
@@ -243,7 +255,7 @@ export default function App() {
     city: empty(p.city), summary: empty(p.summary), // LinkedIn is optional
     tech: !cv.tech.length, soft: !cv.soft.length,
   }
-  const valid = !Object.values(bad).some(Boolean) && !cv.edu.some((e) => empty(e.school) || empty(e.major) || dEmpty(e.start) || dEmpty(e.end)) && !cv.langs.some((x) => empty(x.name) || empty(x.level))
+  const valid = !Object.values(bad).some(Boolean) && !cv.edu.some((e) => empty(e.school) || empty(e.major) || dEmpty(e.start) || dEmpty(e.end)) && !cv.langs.some((x) => empty(x.name) || SKILLS.some(([k]) => empty(x[k])))
   const ev = (b) => tried && b
   const validate = () => {
     setTried(true)
@@ -263,7 +275,7 @@ export default function App() {
       setCv((c) => ({ ...walk(c, (t) => items[i++] ?? t), lang: k }))
     } catch (e) {
       set('lang', k) // translation failed: still switch the language, keep the text as it is
-      flash(e.status === 429 ? 'تجاوزت عدد الترجمات المسموح، تم تغيير اللغة فقط' : `تعذّرت الترجمة، تم تغيير اللغة فقط${e.body && e.body.reason ? ` (${e.body.status || ''} ${e.body.reason})` : ''}`)
+      flash(e.status === 429 ? 'تجاوزت عدد الترجمات المسموح، تم تغيير اللغة فقط' : e.body && e.body.status === 503 ? 'خدمة الترجمة مزدحمة حالياً، تم تغيير اللغة فقط' : `تعذّرت الترجمة، تم تغيير اللغة فقط${e.body && e.body.reason ? ` (${e.body.status || ''} ${e.body.reason})` : ''}`)
     } finally { setTranslating(false) }
   }
   const reset = () => { if (window.confirm('سيتم حذف جميع البيانات. هل أنت متأكد؟')) { setCv(initial()); setTried(false) } }
@@ -305,7 +317,24 @@ export default function App() {
               <Txt name="phone" autoComplete="tel" label="رقم الهاتف" type="tel" dir="ltr" value={cv.p.phone} err={ev(bad.phone)} onChange={setP('phone')} />
               <Txt name="city" autoComplete="address-level2" label="المدينة، الدولة" value={cv.p.city} err={ev(bad.city)} onChange={setP('city')} />
               <Txt name="linkedin" autoComplete="url" label="رابط لينكدإن (اختياري)" dir="ltr" placeholder="linkedin.com/in/username" value={cv.p.link} onChange={setP('link')} />
-              <Area full label="نبذة مختصرة" err={ev(bad.summary)} value={cv.p.summary} onChange={setP('summary')} />
+              <Field label="تاريخ الميلاد (اختياري)">
+                <input type="date" name="bday" autoComplete="bday" dir="ltr" min="1940-01-01" max={TODAY} value={cv.p.dob} onChange={(e) => setP('dob')(e.target.value)} />
+              </Field>
+              <Field label="الجنس (اختياري)">
+                <select value={cv.p.gender} onChange={(e) => setP('gender')(e.target.value)}>
+                  <option value="">اختر</option>
+                  <option value="male">ذكر</option>
+                  <option value="female">أنثى</option>
+                </select>
+              </Field>
+              <Field label="الحالة الاجتماعية (اختياري)">
+                <select value={cv.p.marital} onChange={(e) => setP('marital')(e.target.value)}>
+                  <option value="">اختر</option>
+                  <option value="single">{cv.p.gender === 'female' ? 'عزباء' : 'أعزب'}</option>
+                  <option value="married">{cv.p.gender === 'female' ? 'متزوجة' : 'متزوج'}</option>
+                </select>
+              </Field>
+              <Area full label="نبذة مختصرة (تعريف قصير بك وبهدفك المهني في جملتين أو ثلاث)" placeholder="مثال: طالب هندسة برمجيات مهتم بتطوير تطبيقات الجوال، أبحث عن فرصة تدريب أنمّي فيها مهاراتي." err={ev(bad.summary)} value={cv.p.summary} onChange={setP('summary')} />
             </div>
           </Card>
 

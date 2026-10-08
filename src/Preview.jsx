@@ -9,10 +9,34 @@ export const MONTH_NAMES = {
 }
 
 // Language levels: the key is stored, the label depends on the CV language.
-export const LEVELS = [['beginner', 'مبتدئ'], ['intermediate', 'متوسط'], ['upper', 'فوق المتوسط'], ['fluent', 'طليق'], ['native', 'لغة أم']]
+export const LEVELS = [['beginner', 'مبتدئ'], ['intermediate', 'متوسط'], ['upper', 'فوق المتوسط'], ['fluent', 'متمرس'], ['native', 'لغة أم']]
 const LEVEL = {
   ar: Object.fromEntries(LEVELS),
-  en: { beginner: 'Beginner', intermediate: 'Intermediate', upper: 'Upper-intermediate', fluent: 'Fluent', native: 'Native' },
+  en: { beginner: 'Beginner', intermediate: 'Intermediate', upper: 'Upper-intermediate', fluent: 'Proficient', native: 'Native' },
+}
+// The four language skills, rated one by one.
+const SKILLS = ['read', 'write', 'listen', 'speak']
+const SK = {
+  ar: { read: 'القراءة', write: 'الكتابة', listen: 'الاستماع', speak: 'المحادثة' },
+  en: { read: 'Reading', write: 'Writing', listen: 'Listening', speak: 'Speaking' },
+}
+// "English – Proficient" when all four skills are equal, otherwise "Reading: …, Writing: …"
+const langLine = (x, l) => {
+  const vals = SKILLS.map((k) => LEVEL[l][x[k]] || '')
+  if (!vals.some(Boolean)) return ''
+  if (vals.every((v) => v && v === vals[0])) return ` – ${vals[0]}`
+  return ' – ' + SKILLS.filter((k, i) => vals[i]).map((k) => `${SK[l][k]}: ${LEVEL[l][x[k]]}`).join(l === 'ar' ? '، ' : ', ')
+}
+
+// Optional personal details line (date of birth, gender, marital status)
+const DETAILS = {
+  ar: { dob: 'تاريخ الميلاد', gender: 'الجنس', marital: 'الحالة الاجتماعية', male: 'ذكر', female: 'أنثى', single: 'أعزب', singleF: 'عزباء', married: 'متزوج', marriedF: 'متزوجة' },
+  en: { dob: 'Date of birth', gender: 'Gender', marital: 'Marital status', male: 'Male', female: 'Female', single: 'Single', singleF: 'Single', married: 'Married', marriedF: 'Married' },
+}
+const dobText = (iso, l) => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || ''))
+  const month = m && MONTH_NAMES[l][+m[2] - 1]
+  return month ? `${+m[3]} ${month} ${m[1]}` : ''
 }
 const T = {
   ar: { summary: 'نبذة', skills: 'المهارات', tech: 'المهارات التقنية', soft: 'المهارات الناعمة', langs: 'اللغات', courses: 'الدورات وورش العمل', edu: 'التعليم', exp: 'الخبرة العملية', vol: 'العمل التطوعي', now: 'حتى الآن' },
@@ -50,11 +74,17 @@ export default function Preview({ cv }) {
   const courseF = (cv.courses || []).filter((c) => c.title || c.org)
   const langF = (cv.langs || []).filter((x) => x.name && x.name.trim())
   const t = T[lang]
+  const d = DETAILS[lang]
+  const details = [
+    dobText(p.dob, lang) && `${d.dob}: ${dobText(p.dob, lang)}`,
+    (p.gender === 'male' || p.gender === 'female') && `${d.gender}: ${d[p.gender]}`,
+    (p.marital === 'single' || p.marital === 'married') && `${d.marital}: ${d[p.marital + (p.gender === 'female' ? 'F' : '')]}`,
+  ].filter(Boolean)
   const sep = lang === 'ar' ? '، ' : ', '
   const contact = [[p.city], [p.email], [p.phone], [p.link, true]].filter(([v]) => v) // [text, isLink]
   const eduF = edu.filter((e) => e.school || e.major)
   const hasJobs = [...exp, ...vol].some((i) => i.title || i.company)
-  const empty = !p.name && !p.title && !contact.length && !p.summary && !tech.length && !soft.length && !langF.length && !courseF.length && !eduF.length && !hasJobs
+  const empty = !p.name && !p.title && !contact.length && !p.summary && !details.length && !tech.length && !soft.length && !langF.length && !courseF.length && !eduF.length && !hasJobs
 
   return (
     <div className="paper" dir={lang === 'ar' ? 'rtl' : 'ltr'} lang={lang}>
@@ -69,6 +99,7 @@ export default function Preview({ cv }) {
                 <span key={i}>{i > 0 && ' · '}<bdi>{isLink ? <a href={href(v)} target="_blank" rel="noreferrer">{v}</a> : v}</bdi></span>
               ))}</p>
           )}
+          {details.length > 0 && <p>{details.join(' · ')}</p>}
           {p.summary && <Sec h={t.summary}><p>{p.summary}</p></Sec>}
           {(tech.length > 0 || soft.length > 0) && (
             <Sec h={t.skills}>
@@ -78,7 +109,7 @@ export default function Preview({ cv }) {
           )}
           {langF.length > 0 && (
             <Sec h={t.langs}>
-              {langF.map((x) => <p key={x.id}><b>{x.name}</b>{LEVEL[lang][x.level] ? ` – ${LEVEL[lang][x.level]}` : ''}</p>)}
+              {langF.map((x) => <p key={x.id}><b>{x.name}</b>{langLine(x, lang)}</p>)}
             </Sec>
           )}
           {eduF.length > 0 && (
