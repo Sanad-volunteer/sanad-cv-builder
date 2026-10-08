@@ -44,7 +44,12 @@ export default async function handler(req, res) {
         generationConfig: { responseMimeType: 'application/json', temperature: 0.3, maxOutputTokens: 6000 },
       }),
     })
-    if (!r.ok) throw new Error(await r.text())
+    if (!r.ok) {
+      const j = await r.json().catch(() => ({}))
+      const err = new Error((j.error && j.error.message) || `HTTP ${r.status}`)
+      err.status = r.status
+      throw err
+    }
     const data = await r.json()
     const text = arr(data.candidates?.[0]?.content?.parts).map((p) => p.text || '').join('')
     const j = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1))
@@ -58,6 +63,6 @@ export default async function handler(req, res) {
     })
   } catch (e) {
     console.error(e)
-    res.status(500).json({ error: 'analyze_failed' })
+    res.status(500).json({ error: 'analyze_failed', status: e.status || 0, reason: String(e.message).slice(0, 200) })
   }
 }
