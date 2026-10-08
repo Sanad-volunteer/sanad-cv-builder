@@ -263,7 +263,7 @@ export default function App() {
       setCv((c) => ({ ...walk(c, (t) => items[i++] ?? t), lang: k }))
     } catch (e) {
       set('lang', k) // translation failed: still switch the language, keep the text as it is
-      flash(e.status === 429 ? 'تجاوزت عدد الترجمات المسموح، تم تغيير اللغة فقط' : 'تعذّرت الترجمة، تم تغيير اللغة فقط')
+      flash(e.status === 429 ? 'تجاوزت عدد الترجمات المسموح، تم تغيير اللغة فقط' : `تعذّرت الترجمة، تم تغيير اللغة فقط${e.body && e.body.reason ? ` (${e.body.status || ''} ${e.body.reason})` : ''}`)
     } finally { setTranslating(false) }
   }
   const reset = () => { if (window.confirm('سيتم حذف جميع البيانات. هل أنت متأكد؟')) { setCv(initial()); setTried(false) } }
