@@ -13,7 +13,7 @@ export default async function handler(req, res) {
   }
   if (req.query && req.query.ai !== undefined) {
     if (await limited(clientIp(req))) return res.status(429).json({ error: 'rate_limited' })
-    const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash'
+    const model = process.env.GEMINI_MODEL || 'gemini-3.8-flash'
     if (!process.env.GEMINI_API_KEY) {
       out.gemini = { ok: false, reason: 'missing_api_key' }
     } else {
