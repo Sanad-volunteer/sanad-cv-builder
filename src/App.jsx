@@ -4,8 +4,39 @@ import Preview, { MONTH_NAMES, LEVELS } from './Preview.jsx'
 import Home from './Home.jsx'
 import Analyze from './Analyze.jsx'
 import Export from './Export.jsx'
+import { post } from './api.js'
 
 const LangCtx = createContext('ar') // language of the CV being written; the date pickers follow it
+const WarnCtx = createContext(() => {}) // shows the "wrong language" toast
+
+// English CV: refuse input that would ADD Arabic letters (text that is already there is never touched).
+const ARABIC = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/g
+const arCount = (s) => (String(s).match(ARABIC) || []).length
+function useGuard() {
+  const lang = useContext(LangCtx)
+  const warn = useContext(WarnCtx)
+  return (next, prev) => {
+    if (lang === 'en' && arCount(next) > arCount(prev)) { warn(); return prev }
+    return next
+  }
+}
+
+// Applies fn to every translatable text of the CV (email, phone and links are never touched).
+function walk(cv, fn) {
+  const f = (t) => fn(t ?? '')
+  return {
+    ...cv,
+    p: { ...cv.p, name: f(cv.p.name), title: f(cv.p.title), city: f(cv.p.city), summary: f(cv.p.summary) },
+    tech: cv.tech.map(f),
+    soft: cv.soft.map(f),
+    langs: cv.langs.map((x) => ({ ...x, name: f(x.name) })),
+    edu: cv.edu.map((e) => ({ ...e, school: f(e.school), major: f(e.major) })),
+    exp: cv.exp.map((j) => ({ ...j, title: f(j.title), company: f(j.company), bullets: f(j.bullets) })),
+    vol: cv.vol.map((j) => ({ ...j, title: f(j.title), company: f(j.company), bullets: f(j.bullets) })),
+    courses: (cv.courses || []).map((c) => ({ ...c, title: f(c.title), org: f(c.org) })),
+  }
+}
+const textsOf = (cv) => { const out = []; walk(cv, (t) => { out.push(t); return t }); return out }
 const KEY = 'sanad-cv-v1'
 const uid = () => Math.random().toString(36).slice(2, 9)
 const nd = () => ({ m: '', y: '' })
@@ -13,11 +44,12 @@ const empty = (v) => !String(v ?? '').trim()
 const dEmpty = (d) => !d.y || (d.y !== 'now' && !d.m) // a date needs a year, and a month unless "until now"
 const blankEdu = () => ({ id: uid(), school: '', major: '', start: nd(), end: nd() })
 const blankLang = () => ({ id: uid(), name: '', level: '' })
+const blankCourse = () => ({ id: uid(), title: '', org: '', date: nd() })
 const blankJob = () => ({ id: uid(), title: '', company: '', start: nd(), end: nd(), bullets: '' })
 const initial = () => ({
   lang: 'ar',
   p: { name: '', title: '', email: '', phone: '', city: '', link: '', summary: '' },
-  tech: [], soft: [], langs: [blankLang()], edu: [blankEdu()], exp: [], vol: [],
+  tech: [], soft: [], courses: [], langs: [blankLang()], edu: [blankEdu()], exp: [], vol: [],
 })
 const load = () => {
   try { const s = localStorage.getItem(KEY); if (!s) return initial()
@@ -34,11 +66,22 @@ const Field = ({ label, full, err, htmlFor, children }) => (
     <label htmlFor={htmlFor}>{label}{err && <span className="star"> *</span>}</label>{children}
   </div>
 )
-const Txt = ({ label, full, err, name, value, onChange, ...rest }) => (
-  <Field label={label} full={full} err={err} htmlFor={name}>
-    <input id={name} name={name} autoComplete="off" dir={value ? 'auto' : 'rtl'} value={value} onChange={(e) => onChange(e.target.value)} {...rest} />
-  </Field>
-)
+const Txt = ({ label, full, err, name, value, onChange, ...rest }) => {
+  const guard = useGuard()
+  return (
+    <Field label={label} full={full} err={err} htmlFor={name}>
+      <input id={name} name={name} autoComplete="off" dir={value ? 'auto' : 'rtl'} value={value} onChange={(e) => onChange(guard(e.target.value, value))} {...rest} />
+    </Field>
+  )
+}
+const Area = ({ label, full, err, value, onChange }) => {
+  const guard = useGuard()
+  return (
+    <Field label={label} full={full} err={err}>
+      <textarea dir={value ? 'auto' : 'rtl'} value={value} onChange={(e) => onChange(guard(e.target.value, value))} />
+    </Field>
+  )
+}
 
 const MIN_Y = 1980
 const MAX_Y = new Date().getFullYear() + 6
@@ -78,9 +121,9 @@ function DateSel({ label, value, onChange, now, err }) {
         {open && (
           <div className="dp-pop" role="dialog" aria-label={label}>
             <div className="dp-head">
-              <button type="button" aria-label="السنة السابقة" disabled={vy <= MIN_Y} onClick={() => setVy(vy - 1)}>›</button>
+              <button type="button" aria-label="السنة التالية" disabled={vy >= MAX_Y} onClick={() => setVy(vy + 1)}><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M9 5l7 7-7 7" {...stroke} strokeWidth={2.6} /></svg></button>
               <b>{vy}</b>
-              <button type="button" aria-label="السنة التالية" disabled={vy >= MAX_Y} onClick={() => setVy(vy + 1)}>‹</button>
+              <button type="button" aria-label="السنة السابقة" disabled={vy <= MIN_Y} onClick={() => setVy(vy - 1)}><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M15 5l-7 7 7 7" {...stroke} strokeWidth={2.6} /></svg></button>
             </div>
             <div className={`dp-grid${value.y === 'now' ? ' off' : ''}`} dir={lang === 'en' ? 'ltr' : 'rtl'}>
               {months.map((m, i) => (
@@ -103,6 +146,7 @@ function DateSel({ label, value, onChange, now, err }) {
 }
 
 function Chips({ label, items, onChange, placeholder, err }) {
+  const guard = useGuard()
   const [v, setV] = useState('')
   const add = () => {
     const t = v.trim()
@@ -111,7 +155,7 @@ function Chips({ label, items, onChange, placeholder, err }) {
   }
   return (
     <Field label={label} full err={err}>
-      <input dir={v ? 'auto' : 'rtl'} value={v} placeholder={placeholder} onChange={(e) => setV(e.target.value)} onBlur={add}
+      <input dir={v ? 'auto' : 'rtl'} value={v} placeholder={placeholder} onChange={(e) => setV(guard(e.target.value, v))} onBlur={add}
         onKeyDown={(e) => { if (['Enter', ',', '،'].includes(e.key)) { e.preventDefault(); add() } }} />
       <div className="chips">
         {items.map((s) => (
@@ -162,21 +206,30 @@ const langFields = (tried) => (it, up) => (
     </Field>
   </>
 )
+const courseFields = (it, up) => (
+  <>
+    <Txt full label="اسم الدورة أو الورشة" value={it.title} onChange={(v) => up({ title: v })} />
+    <Txt label="الجهة المنظِّمة" value={it.org} onChange={(v) => up({ org: v })} />
+    <DateSel label="تاريخ الإنجاز" value={it.date} onChange={(v) => up({ date: v })} />
+  </>
+)
 const jobFields = (a, b) => (it, up) => (
   <>
     <Txt label={a} value={it.title} onChange={(v) => up({ title: v })} />
     <Txt label={b} value={it.company} onChange={(v) => up({ company: v })} />
     <DateSel label="تاريخ البدء" value={it.start} onChange={(v) => up({ start: v })} />
     <DateSel label="تاريخ الانتهاء" value={it.end} now onChange={(v) => up({ end: v })} />
-    <Field full label="الإنجازات (كل سطر نقطة)">
-      <textarea dir="auto" value={it.bullets} onChange={(e) => up({ bullets: e.target.value })} />
-    </Field>
+    <Area full label="الإنجازات (كل سطر نقطة)" value={it.bullets} onChange={(v) => up({ bullets: v })} />
   </>
 )
 
 export default function App() {
   const [cv, setCv] = useState(load)
   const [view, setView] = useState('home')
+  const [toast, setToast] = useState(false)
+  const toastTimer = useRef(null)
+  const warn = () => { setToast(true); clearTimeout(toastTimer.current); toastTimer.current = setTimeout(() => setToast(false), 2800) }
+  const [tr, setTr] = useState(null) // { to, busy, err } while the "translate the content?" dialog is open
   const [tried, setTried] = useState(false) // red asterisks appear only after the first export attempt
   useEffect(() => { try { localStorage.setItem(KEY, JSON.stringify(cv)) } catch { /* storage unavailable */ } }, [cv])
 
@@ -196,6 +249,24 @@ export default function App() {
     if (!valid) setTimeout(() => document.querySelector('.invalid')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60)
     return valid
   }
+  const switchLang = (k) => {
+    if (k === cv.lang) return
+    if (textsOf(cv).every((t) => !String(t).trim())) return set('lang', k) // nothing written yet
+    setTr({ to: k, busy: false, err: '' })
+  }
+  const doTranslate = async () => {
+    const to = tr.to
+    setTr({ to, busy: true, err: '' })
+    try {
+      const r = await post('/api/translate', { to, items: textsOf(cv) })
+      const { items } = await r.json()
+      let i = 0
+      setCv((c) => ({ ...walk(c, (t) => items[i++] ?? t), lang: to }))
+      setTr(null)
+    } catch (e) {
+      setTr({ to, busy: false, err: e.status === 429 ? 'تجاوزت عدد المحاولات المسموح، حاول بعد قليل' : 'تعذّرت الترجمة، يمكنك تغيير اللغة فقط' })
+    }
+  }
   const reset = () => { if (window.confirm('سيتم حذف جميع البيانات. هل أنت متأكد؟')) { setCv(initial()); setTried(false) } }
 
   return (
@@ -210,6 +281,7 @@ export default function App() {
       {view === 'analyze' && <Analyze go={setView} />}
       {view === 'create' && (
       <LangCtx.Provider value={cv.lang}>
+      <WarnCtx.Provider value={warn}>
       <main className="layout">
         <div className="topbar no-print">
           <button type="button" className="back" onClick={() => setView('home')}>→ رجوع</button>
@@ -220,7 +292,7 @@ export default function App() {
             <h2><span className="n">🌐</span>لغة السيرة الذاتية</h2>
             <div className="tabs">
               {[['ar', 'العربية'], ['en', 'English']].map(([k, t]) => (
-                <button key={k} type="button" className={cv.lang === k ? 'on' : ''} onClick={() => set('lang', k)}>{t}</button>
+                <button key={k} type="button" className={cv.lang === k ? 'on' : ''} onClick={() => switchLang(k)}>{t}</button>
               ))}
             </div>
             <p className="note start">تؤثر على المعاينة وملف PDF فقط. واجهة الموقع تبقى بالعربية.</p>
@@ -234,9 +306,7 @@ export default function App() {
               <Txt name="phone" autoComplete="tel" label="رقم الهاتف" type="tel" dir="ltr" value={cv.p.phone} err={ev(bad.phone)} onChange={setP('phone')} />
               <Txt name="city" autoComplete="address-level2" label="المدينة، الدولة" value={cv.p.city} err={ev(bad.city)} onChange={setP('city')} />
               <Txt name="linkedin" autoComplete="url" label="رابط لينكدإن (اختياري)" dir="ltr" placeholder="linkedin.com/in/username" value={cv.p.link} onChange={setP('link')} />
-              <Field full label="نبذة مختصرة" err={ev(bad.summary)}>
-                <textarea dir="auto" value={cv.p.summary} onChange={(e) => setP('summary')(e.target.value)} />
-              </Field>
+              <Area full label="نبذة مختصرة" err={ev(bad.summary)} value={cv.p.summary} onChange={setP('summary')} />
             </div>
           </Card>
 
@@ -258,6 +328,9 @@ export default function App() {
           <Card n="6" title="اللغات">
             <List items={cv.langs} onChange={(v) => set('langs', v)} blank={blankLang} title="لغة" addLabel="إضافة لغة" render={langFields(tried)} />
           </Card>
+          <Card n="7" title="الدورات وورش العمل" opt>
+            <List items={cv.courses} onChange={(v) => set('courses', v)} blank={blankCourse} optional title="دورة" addLabel="إضافة دورة أو ورشة" render={courseFields} />
+          </Card>
         </section>
 
         <aside className="side">
@@ -266,6 +339,20 @@ export default function App() {
           <Export cv={cv} onValidate={validate} />
         </aside>
       </main>
+      {tr && (
+        <div className="modal-bg no-print" onClick={() => !tr.busy && setTr(null)}>
+          <div className="modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+            <h3>تغيير لغة السيرة إلى {tr.to === 'en' ? 'الإنجليزية' : 'العربية'}</h3>
+            <p>هل تريد ترجمة المحتوى الذي كتبته تلقائياً؟ راجع الأسماء والمصطلحات بعد الترجمة.</p>
+            {tr.err && <p className="err">{tr.err}</p>}
+            <button type="button" className="btn p" disabled={tr.busy} onClick={doTranslate}>{tr.busy ? 'جارٍ الترجمة…' : 'ترجمة المحتوى'}</button>
+            <button type="button" className="btn ghost" disabled={tr.busy} onClick={() => { set('lang', tr.to); setTr(null) }}>تغيير اللغة فقط</button>
+            <button type="button" className="link" disabled={tr.busy} onClick={() => setTr(null)}>إلغاء</button>
+          </div>
+        </div>
+      )}
+      {toast && <div className="toast no-print" role="status">لغة السيرة الحالية هي الإنجليزية، اكتب بالأحرف الإنجليزية فقط</div>}
+      </WarnCtx.Provider>
       </LangCtx.Provider>
       )}
     </>

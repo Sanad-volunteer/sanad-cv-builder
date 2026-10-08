@@ -139,3 +139,15 @@ select:disabled{opacity:.6;cursor:not-allowed}
 .dp-foot button:hover{filter:brightness(.94)}
 .dp-clear{background:var(--line);color:var(--ink)}.dp-done{background:var(--navy);color:#fff}
 @media(prefers-reduced-motion:reduce){.dp-pop{animation:none}}
+
+/* ---- bigger chip delete, year arrows, toast, dialog buttons ---- */
+.chip{display:inline-flex;align-items:center;gap:4px}
+.chip:has(> button){padding-inline:12px 4px}
+.chip button{width:26px;height:26px;margin:0;border-radius:50%;font-size:22px;line-height:1;display:grid;place-items:center;color:var(--ink);transition:background .15s,color .15s}
+.chip button:hover{background:rgba(179,38,30,.13);color:#b3261e}
+.dp-head button{width:40px;height:40px;display:grid;place-items:center;font-size:inherit}
+.dp-head button svg{display:block}
+.toast{position:fixed;bottom:24px;inset-inline:0;margin-inline:auto;width:fit-content;max-width:calc(100vw - 32px);background:var(--navy);color:#fff;padding:10px 20px;border-radius:12px;font-size:14px;font-weight:600;z-index:60;box-shadow:0 10px 30px rgba(26,20,100,.35);animation:dpIn .2s ease}
+.btn.ghost{background:var(--line);color:var(--ink)}
+.modal .btn+.btn{margin-top:10px}.modal .link{display:block;margin:14px auto 0}
+.modal .err{color:#b3261e;font-weight:600;margin:0 0 14px}

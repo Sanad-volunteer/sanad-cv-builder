@@ -15,8 +15,8 @@ const LEVEL = {
   en: { beginner: 'Beginner', intermediate: 'Intermediate', upper: 'Upper-intermediate', fluent: 'Fluent', native: 'Native' },
 }
 const T = {
-  ar: { summary: 'نبذة', skills: 'المهارات', tech: 'المهارات التقنية', soft: 'المهارات الناعمة', langs: 'اللغات', edu: 'التعليم', exp: 'الخبرة العملية', vol: 'العمل التطوعي', now: 'حتى الآن' },
-  en: { summary: 'Summary', skills: 'Skills', tech: 'Technical', soft: 'Soft', langs: 'Languages', edu: 'Education', exp: 'Work Experience', vol: 'Volunteer Work', now: 'Present' },
+  ar: { summary: 'نبذة', skills: 'المهارات', tech: 'المهارات التقنية', soft: 'المهارات الناعمة', langs: 'اللغات', courses: 'الدورات وورش العمل', edu: 'التعليم', exp: 'الخبرة العملية', vol: 'العمل التطوعي', now: 'حتى الآن' },
+  en: { summary: 'Summary', skills: 'Skills', tech: 'Technical', soft: 'Soft', langs: 'Languages', courses: 'Courses & Workshops', edu: 'Education', exp: 'Work Experience', vol: 'Volunteer Work', now: 'Present' },
 }
 
 const fmt = (d, l) => (!d || !d.y ? '' : d.y === 'now' ? T[l].now : (d.m ? MONTHS[l][d.m - 1] + ' ' : '') + d.y)
@@ -47,13 +47,14 @@ const Jobs = ({ items, h, l }) => {
 // Plain, single-column, black-on-white markup so ATS parsers read it cleanly.
 export default function Preview({ cv }) {
   const { lang, p, tech, soft, edu, exp, vol } = cv
+  const courseF = (cv.courses || []).filter((c) => c.title || c.org)
   const langF = (cv.langs || []).filter((x) => x.name && x.name.trim())
   const t = T[lang]
   const sep = lang === 'ar' ? '، ' : ', '
   const contact = [[p.city], [p.email], [p.phone], [p.link, true]].filter(([v]) => v) // [text, isLink]
   const eduF = edu.filter((e) => e.school || e.major)
   const hasJobs = [...exp, ...vol].some((i) => i.title || i.company)
-  const empty = !p.name && !p.title && !contact.length && !p.summary && !tech.length && !soft.length && !langF.length && !eduF.length && !hasJobs
+  const empty = !p.name && !p.title && !contact.length && !p.summary && !tech.length && !soft.length && !langF.length && !courseF.length && !eduF.length && !hasJobs
 
   return (
     <div className="paper" dir={lang === 'ar' ? 'rtl' : 'ltr'} lang={lang}>
@@ -91,6 +92,11 @@ export default function Preview({ cv }) {
             </Sec>
           )}
           <Jobs items={exp} h={t.exp} l={lang} />
+          {courseF.length > 0 && (
+            <Sec h={t.courses}>
+              {courseF.map((c) => <div key={c.id}><Row a={[c.title, c.org].filter(Boolean).join(' – ')} b={fmt(c.date, lang)} /></div>)}
+            </Sec>
+          )}
           <Jobs items={vol} h={t.vol} l={lang} />
         </>
       )}
