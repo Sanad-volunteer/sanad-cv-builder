@@ -226,10 +226,11 @@ const jobFields = (a, b) => (it, up) => (
 export default function App() {
   const [cv, setCv] = useState(load)
   const [view, setView] = useState('home')
-  const [toast, setToast] = useState(false)
+  const [toast, setToast] = useState('')
   const toastTimer = useRef(null)
-  const warn = () => { setToast(true); clearTimeout(toastTimer.current); toastTimer.current = setTimeout(() => setToast(false), 2800) }
-  const [tr, setTr] = useState(null) // { to, busy, err } while the "translate the content?" dialog is open
+  const flash = (msg) => { setToast(msg); clearTimeout(toastTimer.current); toastTimer.current = setTimeout(() => setToast(''), 3000) }
+  const warn = () => flash('لغة السيرة الحالية هي الإنجليزية، اكتب بالأحرف الإنجليزية فقط')
+  const [translating, setTranslating] = useState(false)
   const [tried, setTried] = useState(false) // red asterisks appear only after the first export attempt
   useEffect(() => { try { localStorage.setItem(KEY, JSON.stringify(cv)) } catch { /* storage unavailable */ } }, [cv])
 
@@ -249,23 +250,21 @@ export default function App() {
     if (!valid) setTimeout(() => document.querySelector('.invalid')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60)
     return valid
   }
-  const switchLang = (k) => {
-    if (k === cv.lang) return
-    if (textsOf(cv).every((t) => !String(t).trim())) return set('lang', k) // nothing written yet
-    setTr({ to: k, busy: false, err: '' })
-  }
-  const doTranslate = async () => {
-    const to = tr.to
-    setTr({ to, busy: true, err: '' })
+  // Changing the CV language translates what is already written (if anything), without asking.
+  const switchLang = async (k) => {
+    if (k === cv.lang || translating) return
+    const texts = textsOf(cv)
+    if (texts.every((t) => !String(t).trim())) return set('lang', k)
+    setTranslating(true)
     try {
-      const r = await post('/api/translate', { to, items: textsOf(cv) })
+      const r = await post('/api/translate', { to: k, items: texts })
       const { items } = await r.json()
       let i = 0
-      setCv((c) => ({ ...walk(c, (t) => items[i++] ?? t), lang: to }))
-      setTr(null)
+      setCv((c) => ({ ...walk(c, (t) => items[i++] ?? t), lang: k }))
     } catch (e) {
-      setTr({ to, busy: false, err: e.status === 429 ? 'تجاوزت عدد المحاولات المسموح، حاول بعد قليل' : 'تعذّرت الترجمة، يمكنك تغيير اللغة فقط' })
-    }
+      set('lang', k) // translation failed: still switch the language, keep the text as it is
+      flash(e.status === 429 ? 'تجاوزت عدد الترجمات المسموح، تم تغيير اللغة فقط' : 'تعذّرت الترجمة، تم تغيير اللغة فقط')
+    } finally { setTranslating(false) }
   }
   const reset = () => { if (window.confirm('سيتم حذف جميع البيانات. هل أنت متأكد؟')) { setCv(initial()); setTried(false) } }
 
@@ -285,9 +284,9 @@ export default function App() {
       <main className="layout">
         <div className="topbar no-print">
           <button type="button" className="back" onClick={() => setView('home')}>→ رجوع</button>
-          <button type="button" className="link" onClick={reset}>مسح جميع البيانات</button>
         </div>
         <section className="no-print">
+          <div className="clear-row"><button type="button" className="link" onClick={reset}>مسح جميع البيانات</button></div>
           <div className="card">
             <h2><span className="n">🌐</span>لغة السيرة الذاتية</h2>
             <div className="tabs">
@@ -334,24 +333,13 @@ export default function App() {
         </section>
 
         <aside className="side">
-          <div className="ph no-print"><h2>معاينة مباشرة</h2><span className="badge">✓ متوافق مع ATS</span></div>
+          <div className="ph no-print"><h2>معاينة مباشرة</h2></div>
           <Preview cv={cv} />
           <Export cv={cv} onValidate={validate} />
         </aside>
       </main>
-      {tr && (
-        <div className="modal-bg no-print" onClick={() => !tr.busy && setTr(null)}>
-          <div className="modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
-            <h3>تغيير لغة السيرة إلى {tr.to === 'en' ? 'الإنجليزية' : 'العربية'}</h3>
-            <p>هل تريد ترجمة المحتوى الذي كتبته تلقائياً؟ راجع الأسماء والمصطلحات بعد الترجمة.</p>
-            {tr.err && <p className="err">{tr.err}</p>}
-            <button type="button" className="btn p" disabled={tr.busy} onClick={doTranslate}>{tr.busy ? 'جارٍ الترجمة…' : 'ترجمة المحتوى'}</button>
-            <button type="button" className="btn ghost" disabled={tr.busy} onClick={() => { set('lang', tr.to); setTr(null) }}>تغيير اللغة فقط</button>
-            <button type="button" className="link" disabled={tr.busy} onClick={() => setTr(null)}>إلغاء</button>
-          </div>
-        </div>
-      )}
-      {toast && <div className="toast no-print" role="status">لغة السيرة الحالية هي الإنجليزية، اكتب بالأحرف الإنجليزية فقط</div>}
+      {translating && <div className="busy-bg no-print" />}
+      {(translating || toast) && <div className="toast no-print" role="status">{translating ? 'جارٍ ترجمة المحتوى…' : toast}</div>}
       </WarnCtx.Provider>
       </LangCtx.Provider>
       )}

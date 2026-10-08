@@ -151,3 +151,5 @@ select:disabled{opacity:.6;cursor:not-allowed}
 .btn.ghost{background:var(--line);color:var(--ink)}
 .modal .btn+.btn{margin-top:10px}.modal .link{display:block;margin:14px auto 0}
 .modal .err{color:#b3261e;font-weight:600;margin:0 0 14px}
+.busy-bg{position:fixed;inset:0;z-index:40;cursor:progress}
+.clear-row{display:flex;justify-content:flex-end;margin:0 0 8px}
