@@ -14,6 +14,12 @@ const LEVEL = {
   ar: Object.fromEntries(LEVELS),
   en: { beginner: 'Beginner', intermediate: 'Intermediate', upper: 'Upper-intermediate', fluent: 'Proficient', native: 'Native' },
 }
+// Education levels (basic education -> doctorate): the key is stored, the label depends on the CV language.
+export const EDU_LEVELS = [['basic', 'تعليم أساسي'], ['secondary', 'تعليم ثانوي'], ['diploma', 'دبلوم'], ['bachelor', 'بكالوريوس'], ['master', 'ماجستير'], ['doctorate', 'دكتوراه']]
+const EDU_LEVEL = {
+  ar: Object.fromEntries(EDU_LEVELS),
+  en: { basic: 'Basic Education', secondary: 'Secondary Education', diploma: 'Diploma', bachelor: "Bachelor's Degree", master: "Master's Degree", doctorate: 'Doctorate (PhD)' },
+}
 // The four language skills, rated one by one.
 const SKILLS = ['read', 'write', 'listen', 'speak']
 const SK = {
@@ -81,8 +87,8 @@ export default function Preview({ cv }) {
     (p.marital === 'single' || p.marital === 'married') && `${d.marital}: ${d[p.marital + (p.gender === 'female' ? 'F' : '')]}`,
   ].filter(Boolean)
   const sep = lang === 'ar' ? '، ' : ', '
-  const contact = [[p.city], [p.email], [p.phone], [p.link, true]].filter(([v]) => v) // [text, isLink]
-  const eduF = edu.filter((e) => e.school || e.major)
+  const contact = [[p.residence], [p.city], [p.email], [p.phone], [p.link, true]].filter(([v]) => v) // [text, isLink]
+  const eduF = edu.filter((e) => e.school || e.major || e.level || e.field)
   const hasJobs = [...exp, ...vol].some((i) => i.title || i.company)
   const empty = !p.name && !p.title && !contact.length && !p.summary && !details.length && !tech.length && !soft.length && !langF.length && !courseF.length && !eduF.length && !hasJobs
 
@@ -101,6 +107,20 @@ export default function Preview({ cv }) {
           )}
           {details.length > 0 && <p>{details.join(' · ')}</p>}
           {p.summary && <Sec h={t.summary}><p>{p.summary}</p></Sec>}
+          {eduF.length > 0 && (
+            <Sec h={t.edu}>
+              {eduF.map((e) => {
+                const line = [EDU_LEVEL[lang][e.level], e.field].filter(Boolean).join(' – ') // "Bachelor's Degree – Economics"
+                return (
+                  <div key={e.id}>
+                    <Row a={e.school} b={range(e.start, e.end, lang)} />
+                    {line && <p>{line}</p>}
+                    {e.major && <p>{e.major}</p>}
+                  </div>
+                )
+              })}
+            </Sec>
+          )}
           {(tech.length > 0 || soft.length > 0) && (
             <Sec h={t.skills}>
               {tech.length > 0 && <p><b>{t.tech}:</b> {tech.join(sep)}</p>}
@@ -110,16 +130,6 @@ export default function Preview({ cv }) {
           {langF.length > 0 && (
             <Sec h={t.langs}>
               {langF.map((x) => <p key={x.id}><b>{x.name}</b>{langLine(x, lang)}</p>)}
-            </Sec>
-          )}
-          {eduF.length > 0 && (
-            <Sec h={t.edu}>
-              {eduF.map((e) => (
-                <div key={e.id}>
-                  <Row a={e.school} b={range(e.start, e.end, lang)} />
-                  {e.major && <p>{e.major}</p>}
-                </div>
-              ))}
             </Sec>
           )}
           <Jobs items={exp} h={t.exp} l={lang} />

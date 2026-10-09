@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import logo from './assets/sanad-logo.svg'
-import Preview, { MONTH_NAMES, LEVELS } from './Preview.jsx'
+import Preview, { MONTH_NAMES, LEVELS, EDU_LEVELS } from './Preview.jsx'
 import Home from './Home.jsx'
 import Analyze from './Analyze.jsx'
 import Export from './Export.jsx'
@@ -26,11 +26,11 @@ function walk(cv, fn) {
   const f = (t) => fn(t ?? '')
   return {
     ...cv,
-    p: { ...cv.p, name: f(cv.p.name), title: f(cv.p.title), city: f(cv.p.city), summary: f(cv.p.summary) },
+    p: { ...cv.p, name: f(cv.p.name), title: f(cv.p.title), city: f(cv.p.city), residence: f(cv.p.residence), summary: f(cv.p.summary) },
     tech: cv.tech.map(f),
     soft: cv.soft.map(f),
     langs: cv.langs.map((x) => ({ ...x, name: f(x.name) })),
-    edu: cv.edu.map((e) => ({ ...e, school: f(e.school), major: f(e.major) })),
+    edu: cv.edu.map((e) => ({ ...e, field: f(e.field), school: f(e.school), major: f(e.major) })),
     exp: cv.exp.map((j) => ({ ...j, title: f(j.title), company: f(j.company), bullets: f(j.bullets) })),
     vol: cv.vol.map((j) => ({ ...j, title: f(j.title), company: f(j.company), bullets: f(j.bullets) })),
     courses: (cv.courses || []).map((c) => ({ ...c, title: f(c.title), org: f(c.org) })),
@@ -42,7 +42,7 @@ const uid = () => Math.random().toString(36).slice(2, 9)
 const nd = () => ({ m: '', y: '' })
 const empty = (v) => !String(v ?? '').trim()
 const dEmpty = (d) => !d.y || (d.y !== 'now' && !d.m) // a date needs a year, and a month unless "until now"
-const blankEdu = () => ({ id: uid(), school: '', major: '', start: nd(), end: nd() })
+const blankEdu = () => ({ id: uid(), level: '', field: '', school: '', major: '', start: nd(), end: nd() })
 const TODAY = new Date().toISOString().slice(0, 10)
 const SKILLS = [['read', 'القراءة'], ['write', 'الكتابة'], ['listen', 'الاستماع'], ['speak', 'المحادثة']] // each language is rated on all four
 const blankLang = () => ({ id: uid(), name: '', read: '', write: '', listen: '', speak: '' })
@@ -50,7 +50,7 @@ const blankCourse = () => ({ id: uid(), title: '', org: '', date: nd() })
 const blankJob = () => ({ id: uid(), title: '', company: '', start: nd(), end: nd(), bullets: '' })
 const initial = () => ({
   lang: 'ar',
-  p: { name: '', title: '', email: '', phone: '', city: '', link: '', summary: '', dob: '', gender: '', marital: '' },
+  p: { name: '', title: '', email: '', phone: '', city: '', residence: '', link: '', summary: '', dob: '', gender: '', marital: '' },
   tech: [], soft: [], courses: [], langs: [blankLang()], edu: [blankEdu()], exp: [], vol: [],
 })
 const load = () => {
@@ -58,6 +58,7 @@ const load = () => {
     const d = { ...initial(), ...JSON.parse(s) }
     d.p = { ...initial().p, ...d.p } // fields added in newer versions
     d.langs = (d.langs || []).map((x) => (x.read === undefined ? { ...x, read: x.level || '', write: x.level || '', listen: x.level || '', speak: x.level || '' } : x)) // old single level -> four skills
+    d.edu = (d.edu || []).map((e) => ({ level: '', field: '', ...e })) // education fields added in newer versions
     if (!d.langs.length) d.langs = [blankLang()] // languages are required: always show one row
     return d } catch { return initial() }
 }
@@ -193,8 +194,15 @@ function List({ items, onChange, blank, title, addLabel, render, optional }) {
 
 const eduFields = (tried) => (it, up) => (
   <>
+    <Field label="المرحلة الدراسية" err={tried && empty(it.level)}>
+      <select value={it.level || ''} onChange={(e) => up({ level: e.target.value })}>
+        <option value="">اختر المرحلة</option>
+        {EDU_LEVELS.map(([k, label]) => <option key={k} value={k}>{label}</option>)}
+      </select>
+    </Field>
+    <Txt label="ماذا تدرس؟" placeholder="مثال: اقتصاد، آداب، فنون" value={it.field} err={tried && empty(it.field)} onChange={(v) => up({ field: v })} />
     <Txt full label="اسم الجامعة" value={it.school} err={tried && empty(it.school)} onChange={(v) => up({ school: v })} />
-    <Txt full label="التخصص" value={it.major} err={tried && empty(it.major)} onChange={(v) => up({ major: v })} />
+    <Txt full label="اسم التخصص" value={it.major} err={tried && empty(it.major)} onChange={(v) => up({ major: v })} />
     <DateSel label="تاريخ البدء" value={it.start} err={tried && dEmpty(it.start)} onChange={(v) => up({ start: v })} />
     <DateSel label="تاريخ الانتهاء" value={it.end} now err={tried && dEmpty(it.end)} onChange={(v) => up({ end: v })} />
   </>
@@ -252,10 +260,10 @@ export default function App() {
   const { p } = cv
   const bad = {
     name: empty(p.name), title: empty(p.title), email: empty(p.email), phone: empty(p.phone),
-    city: empty(p.city), summary: empty(p.summary), // LinkedIn is optional
+    city: empty(p.city), residence: empty(p.residence), summary: empty(p.summary), // LinkedIn is optional
     tech: !cv.tech.length, soft: !cv.soft.length,
   }
-  const valid = !Object.values(bad).some(Boolean) && !cv.edu.some((e) => empty(e.school) || empty(e.major) || dEmpty(e.start) || dEmpty(e.end)) && !cv.langs.some((x) => empty(x.name) || SKILLS.some(([k]) => empty(x[k])))
+  const valid = !Object.values(bad).some(Boolean) && !cv.edu.some((e) => empty(e.level) || empty(e.field) || empty(e.school) || empty(e.major) || dEmpty(e.start) || dEmpty(e.end)) && !cv.langs.some((x) => empty(x.name) || SKILLS.some(([k]) => empty(x[k])))
   const ev = (b) => tried && b
   const validate = () => {
     setTried(true)
@@ -316,6 +324,7 @@ export default function App() {
               <Txt name="email" autoComplete="email" label="البريد الإلكتروني" type="email" dir="ltr" value={cv.p.email} err={ev(bad.email)} onChange={setP('email')} />
               <Txt name="phone" autoComplete="tel" label="رقم الهاتف" type="tel" dir="ltr" value={cv.p.phone} err={ev(bad.phone)} onChange={setP('phone')} />
               <Txt name="city" autoComplete="address-level2" label="المدينة، الدولة" value={cv.p.city} err={ev(bad.city)} onChange={setP('city')} />
+              <Txt name="residence" autoComplete="off" label="مكان السكن الحالي" value={cv.p.residence} err={ev(bad.residence)} onChange={setP('residence')} />
               <Txt name="linkedin" autoComplete="url" label="رابط لينكدإن (اختياري)" dir="ltr" placeholder="linkedin.com/in/username" value={cv.p.link} onChange={setP('link')} />
               <Field label="تاريخ الميلاد (اختياري)">
                 <input type="date" name="bday" autoComplete="bday" dir="ltr" min="1940-01-01" max={TODAY} value={cv.p.dob} onChange={(e) => setP('dob')(e.target.value)} />
@@ -338,15 +347,15 @@ export default function App() {
             </div>
           </Card>
 
-          <Card n="2" title="المهارات">
+          <Card n="2" title="التعليم">
+            <List items={cv.edu} onChange={(v) => set('edu', v)} blank={blankEdu} title="التعليم" addLabel="إضافة تعليم" render={eduFields(tried)} />
+          </Card>
+          <Card n="3" title="المهارات">
             <Chips label="المهارات التقنية" items={cv.tech} err={ev(bad.tech)} onChange={(v) => set('tech', v)} placeholder="اكتب مهارة واضغط Enter" />
             <div className="gap" />
             <Chips label="المهارات الناعمة" items={cv.soft} err={ev(bad.soft)} onChange={(v) => set('soft', v)} placeholder="اكتب مهارة واضغط Enter" />
           </Card>
 
-          <Card n="3" title="التعليم">
-            <List items={cv.edu} onChange={(v) => set('edu', v)} blank={blankEdu} title="التعليم" addLabel="إضافة تعليم" render={eduFields(tried)} />
-          </Card>
           <Card n="4" title="الخبرة العملية" opt>
             <List items={cv.exp} onChange={(v) => set('exp', v)} blank={blankJob} optional title="خبرة" addLabel="إضافة خبرة" render={jobFields('المسمى الوظيفي', 'الشركة')} />
           </Card>
