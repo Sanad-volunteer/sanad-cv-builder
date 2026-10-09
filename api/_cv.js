@@ -11,6 +11,11 @@ const LV = {
   ar: { beginner: 'مبتدئ', intermediate: 'متوسط', upper: 'فوق المتوسط', fluent: 'متمرس', native: 'لغة أم' },
   en: { beginner: 'Beginner', intermediate: 'Intermediate', upper: 'Upper-intermediate', fluent: 'Proficient', native: 'Native' },
 }
+// Education levels (basic education -> doctorate)
+const EL = {
+  ar: { basic: 'تعليم أساسي', secondary: 'تعليم ثانوي', diploma: 'دبلوم', bachelor: 'بكالوريوس', master: 'ماجستير', doctorate: 'دكتوراه' },
+  en: { basic: 'Basic Education', secondary: 'Secondary Education', diploma: 'Diploma', bachelor: "Bachelor's Degree", master: "Master's Degree", doctorate: 'Doctorate (PhD)' },
+}
 const FULL = { ar: M.ar, en: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'] }
 const SKILLS = ['read', 'write', 'listen', 'speak']
 const SK = {
@@ -64,7 +69,7 @@ export function cvHtml(cv, opts = {}) {
   const p = cv.p || {}
   const sep = l === 'ar' ? '، ' : ', '
   const tech = list(cv.tech), soft = list(cv.soft)
-  const contact = [[p.city], [p.email], [p.phone], [p.link, true]]
+  const contact = [[p.residence], [p.city], [p.email], [p.phone], [p.link, true]]
     .filter(([v]) => v)
     .map(([v, isLink]) => `<bdi>${isLink ? `<a href="${esc(href(v))}">${esc(v)}</a>` : esc(v)}</bdi>`)
     .join(' · ')
@@ -76,18 +81,23 @@ export function cvHtml(cv, opts = {}) {
     (p.marital === 'single' || p.marital === 'married') && `${d.marital}: ${d[p.marital + (p.gender === 'female' ? 'F' : '')]}`,
   ].filter(Boolean)
   const langs = list(cv.langs).filter((x) => x && String(x.name || '').trim())
-  const edu = list(cv.edu).filter((e) => e.school || e.major)
+  const edu = list(cv.edu).filter((e) => e && (e.school || e.major || e.level || e.field))
   const body = [
     p.name ? `<h1>${esc(p.name)}</h1>` : '',
     p.title ? `<p>${esc(p.title)}</p>` : '',
     contact ? `<p>${contact}</p>` : '',
     details.length ? `<p>${details.map(esc).join(' · ')}</p>` : '',
     p.summary ? sec(t.summary, `<p>${esc(p.summary)}</p>`) : '',
+    edu.length
+      ? sec(t.edu, edu.map((e) => {
+          const line = [EL[l][e.level], e.field].filter(Boolean).join(' – ') // "Bachelor's Degree – Economics"
+          return `<div>${row(e.school, range(e.start, e.end, l))}${line ? `<p>${esc(line)}</p>` : ''}${e.major ? `<p>${esc(e.major)}</p>` : ''}</div>`
+        }).join(''))
+      : '',
     tech.length || soft.length
       ? sec(t.skills, (tech.length ? `<p><b>${t.tech}:</b> ${esc(tech.join(sep))}</p>` : '') + (soft.length ? `<p><b>${t.soft}:</b> ${esc(soft.join(sep))}</p>` : ''))
       : '',
     langs.length ? sec(t.langs, langs.map((x) => `<p><b>${esc(x.name)}</b>${esc(langLine(x, l))}</p>`).join('')) : '',
-    edu.length ? sec(t.edu, edu.map((e) => `<div>${row(e.school, range(e.start, e.end, l))}${e.major ? `<p>${esc(e.major)}</p>` : ''}</div>`).join('')) : '',
     jobs(cv.exp, t.exp, l),
     courses.length ? sec(t.courses, courses.map((c) => `<div>${row([c.title, c.org].filter(Boolean).join(' – '), fmt(c.date, l))}</div>`).join('')) : '',
     jobs(cv.vol, t.vol, l),
