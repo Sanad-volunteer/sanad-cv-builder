@@ -30,7 +30,7 @@ const TODAY = new Date().toISOString().slice(0, 10)
 const SKILLS = [['read', 'القراءة'], ['write', 'الكتابة'], ['listen', 'الاستماع'], ['speak', 'المحادثة']] // each language is rated on all four
 const blankLang = () => ({ id: uid(), name: '', read: '', write: '', listen: '', speak: '' })
 const blankCourse = () => ({ id: uid(), title: '', org: '', date: nd() })
-const blankConf = () => ({ id: uid(), title: '', org: '', date: nd() })
+const blankConf = () => ({ id: uid(), title: '', date: nd() })
 const blankJob = () => ({ id: uid(), title: '', company: '', start: nd(), end: nd(), bullets: '' })
 const initial = () => ({
   lang: 'ar',
@@ -76,6 +76,7 @@ const MIN_Y = 1980
 const MAX_Y = new Date().getFullYear() + 6
 const numeric = (y) => /^\d+$/.test(y)
 
+const CHECK = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7'/%3E%3C/svg%3E\")" // white tick drawn inside the checked "until now" box
 // Month + year picker (pop-up). Month names follow the CV language.
 function DateSel({ label, value, onChange, now, err }) {
   const lang = useContext(LangCtx)
@@ -128,8 +129,14 @@ function DateSel({ label, value, onChange, now, err }) {
         )}
       </div>
       {now && (
-        <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6, fontWeight: 'normal', cursor: 'pointer' }}>
-          <input type="checkbox" style={{ width: 'auto', margin: 0, flex: 'none' }} checked={value.y === 'now'}
+        <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, marginTop: 10, fontWeight: 'normal', cursor: 'pointer', userSelect: 'none' }}>
+          <input type="checkbox" checked={value.y === 'now'}
+            style={{
+              appearance: 'none', WebkitAppearance: 'none', width: 24, height: 24, padding: 0, margin: 0, flex: 'none', cursor: 'pointer',
+              borderRadius: 8, border: `2px solid ${value.y === 'now' ? '#1A1464' : '#cfd0e4'}`, background: value.y === 'now' ? '#1A1464' : '#fff',
+              backgroundImage: value.y === 'now' ? CHECK : 'none', backgroundRepeat: 'no-repeat', backgroundPosition: 'center', backgroundSize: '16px',
+              transition: 'background-color .15s, border-color .15s',
+            }}
             onChange={(e) => { setOpen(false); onChange(e.target.checked ? { m: '', y: 'now' } : { m: '', y: '' }) }} />
           حتى الآن
         </label>
@@ -277,7 +284,6 @@ const langFields = (tried) => (it, up) => (
 const confFields = (it, up) => (
   <>
     <Txt full label="اسم المؤتمر" value={it.title} onChange={(v) => up({ title: v })} />
-    <Txt label="الجهة المنظِّمة" value={it.org} onChange={(v) => up({ org: v })} />
     <DateSel label="التاريخ" value={it.date} onChange={(v) => up({ date: v })} />
   </>
 )
@@ -319,11 +325,23 @@ function PhotoField({ value, onChange, flash }) {
   return (
     <Field full label="الصورة الشخصية (اختياري)">
       <input ref={input} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={choose} />
-      {value && <img src={value} alt="الصورة الشخصية" style={{ width: 72, height: 96, objectFit: 'cover', display: 'block', marginBottom: 6 }} />}
-      <div>
-        <button type="button" className="link" onClick={() => input.current.click()}>{value ? 'تغيير الصورة' : 'إضافة صورة'}</button>
-        {value && <>{' · '}<button type="button" className="link" onClick={() => onChange('')}>حذف الصورة</button></>}
-      </div>
+      {value ? (
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 14 }}>
+          <img src={value} alt="الصورة الشخصية" style={{ width: 120, height: 160, objectFit: 'cover', display: 'block', borderRadius: 12, border: '1.5px solid var(--line)' }} />
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 8 }}>
+            <button type="button" className="link" onClick={() => input.current.click()}>تغيير الصورة</button>
+            <button type="button" className="link" onClick={() => onChange('')}>حذف الصورة</button>
+          </div>
+        </div>
+      ) : (
+        <button type="button" className="drop" onClick={() => input.current.click()}
+          style={{ width: 160, height: 160, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, padding: 0, color: 'var(--navy)', font: 'inherit' }}>
+          <svg viewBox="0 0 24 24" width="46" height="46" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 16V4M7 9l5-5 5 5M4 20h16" />
+          </svg>
+          <b style={{ fontSize: 13, margin: 0 }}>اختر صورة من جهازك</b>
+        </button>
+      )}
       <p className="note start">أضف صورة شخصية فقط إذا طلبت الجهة المتقدَّم إليها ذلك صراحةً، أو إذا كانت طبيعة الوظيفة يهمّ فيها المظهر الخارجي.</p>
     </Field>
   )
@@ -422,8 +440,8 @@ export default function App() {
                   <option value="married">{cv.p.gender === 'female' ? 'متزوجة' : 'متزوج'}</option>
                 </select>
               </Field>
-              <PhotoField value={cv.p.photo} onChange={setP('photo')} flash={flash} />
               <Area full label="نبذة مختصرة (تعريف قصير بك وبهدفك المهني في جملتين أو ثلاث)" placeholder="مثال: طالب هندسة برمجيات مهتم بتطوير تطبيقات الجوال، أبحث عن فرصة تدريب أنمّي فيها مهاراتي." err={ev(bad.summary)} value={cv.p.summary} onChange={setP('summary')} />
+              <PhotoField value={cv.p.photo} onChange={setP('photo')} flash={flash} />
             </div>
           </Card>
 

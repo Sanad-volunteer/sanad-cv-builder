@@ -41,8 +41,8 @@ const DETAILS = {
 }
 // Labels printed (in bold) before each contact line
 const CONTACT = {
-  ar: { residence: 'مكان السكن', city: 'المدينة والدولة', email: 'البريد الإلكتروني', phone: 'الهاتف', link: 'لينكدإن' },
-  en: { residence: 'Residence', city: 'City, Country', email: 'Email', phone: 'Phone', link: 'LinkedIn' },
+  ar: { residence: 'مكان السكن', city: 'المدينة', email: 'البريد الإلكتروني', phone: 'الهاتف', link: 'لينكدإن' },
+  en: { residence: 'Residence', city: 'City', email: 'Email', phone: 'Phone', link: 'LinkedIn' },
 }
 const dobText = (iso, l) => {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || ''))
@@ -83,7 +83,7 @@ const Jobs = ({ items, h, l }) => {
 export default function Preview({ cv }) {
   const { lang, p, tech, soft, edu, exp, vol } = cv
   const courseF = (cv.courses || []).filter((c) => c.title || c.org)
-  const confF = (cv.confs || []).filter((c) => c.title || c.org)
+  const confF = (cv.confs || []).filter((c) => c.title)
   const langF = (cv.langs || []).filter((x) => x.name && x.name.trim())
   const t = T[lang]
   const d = DETAILS[lang]
@@ -100,8 +100,8 @@ export default function Preview({ cv }) {
 
   const head = (
     <>
-    {p.name && <h1>{p.name}</h1>}
-    {p.title && <p style={{ fontSize: '1.3em' }}>{p.title}</p>}
+    {p.name && <h1 style={{ lineHeight: 1.25 }}>{p.name}</h1>}
+    {p.title && <p style={{ fontSize: '1.3em', lineHeight: 1.3 }}>{p.title}</p>}
     {contact.map(([k, v, isLink]) => (
       <p key={k}><b>{CONTACT[lang][k]}:</b> <bdi>{isLink ? <a href={href(v)} target="_blank" rel="noreferrer">{v}</a> : v}</bdi></p>
     ))}
@@ -156,7 +156,7 @@ export default function Preview({ cv }) {
           <Jobs items={vol} h={t.vol} l={lang} />
           {confF.length > 0 && (
             <Sec h={t.confs}>
-              {confF.map((c) => <div key={c.id}><Row a={[c.title, c.org].filter(Boolean).join(' – ')} b={fmt(c.date, lang)} /></div>)}
+              {confF.map((c) => <div key={c.id}><Row a={c.title} b={fmt(c.date, lang)} /></div>)}
             </Sec>
           )}
         </>
