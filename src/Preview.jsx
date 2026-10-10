@@ -81,16 +81,28 @@ export default function Preview({ cv }) {
   const langF = (cv.langs || []).filter((x) => x.name && x.name.trim())
   const t = T[lang]
   const d = DETAILS[lang]
+  const genderLine = (p.gender === 'male' || p.gender === 'female') && `${d.gender}: ${d[p.gender]}`
   const details = [
     dobText(p.dob, lang) && `${d.dob}: ${dobText(p.dob, lang)}`,
-    (p.gender === 'male' || p.gender === 'female') && `${d.gender}: ${d[p.gender]}`,
     (p.marital === 'single' || p.marital === 'married') && `${d.marital}: ${d[p.marital + (p.gender === 'female' ? 'F' : '')]}`,
   ].filter(Boolean)
   const sep = lang === 'ar' ? '، ' : ', '
   const contact = [[p.residence], [p.city], [p.email], [p.phone], [p.link, true]].filter(([v]) => v) // [text, isLink]
   const eduF = edu.filter((e) => e.school || e.major || e.level || e.field)
   const hasJobs = [...exp, ...vol].some((i) => i.title || i.company)
-  const empty = !p.name && !p.title && !contact.length && !p.summary && !details.length && !tech.length && !soft.length && !langF.length && !courseF.length && !eduF.length && !hasJobs
+  const empty = !p.name && !p.title && !contact.length && !p.summary && !p.photo && !genderLine && !details.length && !tech.length && !soft.length && !langF.length && !courseF.length && !eduF.length && !hasJobs
+
+  const head = (
+    <>
+    {p.name && <h1>{p.name}</h1>}
+    {p.title && <p>{p.title}</p>}
+    {contact.map(([v, isLink], i) => (
+      <p key={i}><bdi>{isLink ? <a href={href(v)} target="_blank" rel="noreferrer">{v}</a> : v}</bdi></p>
+    ))}
+    {genderLine && <p>{genderLine}</p>}
+    {details.length > 0 && <p>{details.join(' · ')}</p>}
+    </>
+  )
 
   return (
     <div className="paper" dir={lang === 'ar' ? 'rtl' : 'ltr'} lang={lang}>
@@ -98,14 +110,12 @@ export default function Preview({ cv }) {
         <p className="hint">ابدأ بتعبئة النموذج لتظهر سيرتك الذاتية هنا</p>
       ) : (
         <>
-          {p.name && <h1>{p.name}</h1>}
-          {p.title && <p>{p.title}</p>}
-          {contact.length > 0 && (
-            <p>{contact.map(([v, isLink], i) => (
-                <span key={i}>{i > 0 && ' · '}<bdi>{isLink ? <a href={href(v)} target="_blank" rel="noreferrer">{v}</a> : v}</bdi></span>
-              ))}</p>
-          )}
-          {details.length > 0 && <p>{details.join(' · ')}</p>}
+          {p.photo && /^data:image\//.test(p.photo) ? (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+              <div>{head}</div>
+              <img src={p.photo} alt="" style={{ width: 96, height: 128, objectFit: 'cover', flex: 'none' }} />
+            </div>
+          ) : head}
           {p.summary && <Sec h={t.summary}><p>{p.summary}</p></Sec>}
           {eduF.length > 0 && (
             <Sec h={t.edu}>
@@ -121,6 +131,7 @@ export default function Preview({ cv }) {
               })}
             </Sec>
           )}
+          <Jobs items={exp} h={t.exp} l={lang} />
           {(tech.length > 0 || soft.length > 0) && (
             <Sec h={t.skills}>
               {tech.length > 0 && <p><b>{t.tech}:</b> {tech.join(sep)}</p>}
@@ -132,7 +143,6 @@ export default function Preview({ cv }) {
               {langF.map((x) => <p key={x.id}><b>{x.name}</b>{langLine(x, lang)}</p>)}
             </Sec>
           )}
-          <Jobs items={exp} h={t.exp} l={lang} />
           {courseF.length > 0 && (
             <Sec h={t.courses}>
               {courseF.map((c) => <div key={c.id}><Row a={[c.title, c.org].filter(Boolean).join(' – ')} b={fmt(c.date, lang)} /></div>)}

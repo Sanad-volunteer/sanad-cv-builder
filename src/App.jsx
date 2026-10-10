@@ -4,7 +4,6 @@ import Preview, { MONTH_NAMES, LEVELS, EDU_LEVELS } from './Preview.jsx'
 import Home from './Home.jsx'
 import Analyze from './Analyze.jsx'
 import Export from './Export.jsx'
-import { post } from './api.js'
 
 const LangCtx = createContext('ar') // language of the CV being written; the date pickers follow it
 const WarnCtx = createContext(() => {}) // shows the "wrong language" toast
@@ -21,22 +20,6 @@ function useGuard() {
   }
 }
 
-// Applies fn to every translatable text of the CV (email, phone and links are never touched).
-function walk(cv, fn) {
-  const f = (t) => fn(t ?? '')
-  return {
-    ...cv,
-    p: { ...cv.p, name: f(cv.p.name), title: f(cv.p.title), city: f(cv.p.city), residence: f(cv.p.residence), summary: f(cv.p.summary) },
-    tech: cv.tech.map(f),
-    soft: cv.soft.map(f),
-    langs: cv.langs.map((x) => ({ ...x, name: f(x.name) })),
-    edu: cv.edu.map((e) => ({ ...e, field: f(e.field), school: f(e.school), major: f(e.major) })),
-    exp: cv.exp.map((j) => ({ ...j, title: f(j.title), company: f(j.company), bullets: f(j.bullets) })),
-    vol: cv.vol.map((j) => ({ ...j, title: f(j.title), company: f(j.company), bullets: f(j.bullets) })),
-    courses: (cv.courses || []).map((c) => ({ ...c, title: f(c.title), org: f(c.org) })),
-  }
-}
-const textsOf = (cv) => { const out = []; walk(cv, (t) => { out.push(t); return t }); return out }
 const KEY = 'sanad-cv-v1'
 const uid = () => Math.random().toString(36).slice(2, 9)
 const nd = () => ({ m: '', y: '' })
@@ -50,7 +33,7 @@ const blankCourse = () => ({ id: uid(), title: '', org: '', date: nd() })
 const blankJob = () => ({ id: uid(), title: '', company: '', start: nd(), end: nd(), bullets: '' })
 const initial = () => ({
   lang: 'ar',
-  p: { name: '', title: '', email: '', phone: '', city: '', residence: '', link: '', summary: '', dob: '', gender: '', marital: '' },
+  p: { name: '', title: '', email: '', phone: '', city: '', residence: '', link: '', photo: '', summary: '', dob: '', gender: '', marital: '' },
   tech: [], soft: [], courses: [], langs: [blankLang()], edu: [blankEdu()], exp: [], vol: [],
 })
 const load = () => {
@@ -150,18 +133,47 @@ function DateSel({ label, value, onChange, now, err }) {
   )
 }
 
-function Chips({ label, items, onChange, placeholder, err }) {
+// Most common skills offered in the drop-down (shown in the CV language). "غير ذلك" lets the user type their own.
+const OTHER = '__other__'
+const SKILL_OPTS = {
+  ar: {
+    tech: ['مايكروسوفت أوفيس', 'مايكروسوفت وورد', 'مايكروسوفت إكسل', 'مايكروسوفت باوربوينت', 'جوجل وورك سبيس', 'كانفا (Canva)', 'فوتوشوب', 'إليستريتور', 'تحرير الفيديو', 'التصميم الجرافيكي', 'إدارة وسائل التواصل الاجتماعي', 'التسويق الرقمي', 'تحسين محركات البحث (SEO)', 'كتابة المحتوى', 'تحليل البيانات', 'إدخال البيانات', 'الكتابة السريعة على الكمبيوتر', 'البرمجة', 'تطوير المواقع', 'قواعد البيانات (SQL)', 'إدارة المشاريع', 'المحاسبة', 'استخدام أدوات الذكاء الاصطناعي'],
+    soft: ['التواصل الفعّال', 'العمل ضمن فريق', 'القيادة', 'حل المشكلات', 'إدارة الوقت', 'التفكير النقدي', 'الإبداع', 'المرونة والتكيّف', 'الذكاء العاطفي', 'اتخاذ القرار', 'التفاوض', 'العمل تحت الضغط', 'الالتزام وتحمّل المسؤولية', 'التنظيم', 'سرعة التعلّم', 'الإقناع', 'خدمة العملاء', 'مهارات العرض والتقديم'],
+  },
+  en: {
+    tech: ['Microsoft Office', 'Microsoft Word', 'Microsoft Excel', 'Microsoft PowerPoint', 'Google Workspace', 'Canva', 'Photoshop', 'Illustrator', 'Video Editing', 'Graphic Design', 'Social Media Management', 'Digital Marketing', 'SEO', 'Content Writing', 'Data Analysis', 'Data Entry', 'Fast Typing', 'Programming', 'Web Development', 'SQL Databases', 'Project Management', 'Accounting', 'Using AI Tools'],
+    soft: ['Effective Communication', 'Teamwork', 'Leadership', 'Problem Solving', 'Time Management', 'Critical Thinking', 'Creativity', 'Adaptability', 'Emotional Intelligence', 'Decision Making', 'Negotiation', 'Working Under Pressure', 'Responsibility & Commitment', 'Organization', 'Fast Learning', 'Persuasion', 'Customer Service', 'Presentation Skills'],
+  },
+}
+
+function Chips({ label, items, onChange, placeholder, err, options }) {
   const guard = useGuard()
   const [v, setV] = useState('')
+  const [other, setOther] = useState(!options) // without a list, typing is always available
   const add = () => {
     const t = v.trim()
     if (t && !items.includes(t)) onChange([...items, t])
     setV('')
   }
+  const pick = (e) => {
+    const s = e.target.value
+    if (s === OTHER) setOther(true)
+    else if (s && !items.includes(s)) onChange([...items, s])
+  }
   return (
     <Field label={label} full err={err}>
-      <input dir={v ? 'auto' : 'rtl'} value={v} placeholder={placeholder} onChange={(e) => setV(guard(e.target.value, v))} onBlur={add}
-        onKeyDown={(e) => { if (['Enter', ',', '،'].includes(e.key)) { e.preventDefault(); add() } }} />
+      {options && (
+        <select value="" onChange={pick}>
+          <option value="">اختر مهارة</option>
+          {options.filter((o) => !items.includes(o)).map((o) => <option key={o} value={o}>{o}</option>)}
+          <option value={OTHER}>غير ذلك</option>
+        </select>
+      )}
+      {options && other && <div className="gap" />}
+      {other && (
+        <input dir={v ? 'auto' : 'rtl'} value={v} placeholder={placeholder} onChange={(e) => setV(guard(e.target.value, v))} onBlur={add}
+          onKeyDown={(e) => { if (['Enter', ',', '،'].includes(e.key)) { e.preventDefault(); add() } }} />
+      )}
       <div className="chips">
         {items.map((s) => (
           <span className="chip" key={s}>{s}
@@ -209,13 +221,7 @@ const eduFields = (tried) => (it, up) => (
 )
 const langFields = (tried) => (it, up) => (
   <>
-    <Txt label="اللغة" placeholder="مثال: الإنجليزية" value={it.name} err={tried && empty(it.name)} onChange={(v) => up({ name: v })} />
-    <Field label="تعبئة سريعة">
-      <select value="" onChange={(e) => e.target.value && up({ read: e.target.value, write: e.target.value, listen: e.target.value, speak: e.target.value })}>
-        <option value="">مستوى واحد للمهارات الأربع</option>
-        {LEVELS.map(([k, label]) => <option key={k} value={k}>{label}</option>)}
-      </select>
-    </Field>
+    <Txt full label="اللغة" placeholder="مثال: الإنجليزية" value={it.name} err={tried && empty(it.name)} onChange={(v) => up({ name: v })} />
     {SKILLS.map(([k, label]) => (
       <Field key={k} label={label} err={tried && empty(it[k])}>
         <select value={it[k] || ''} onChange={(e) => up({ [k]: e.target.value })}>
@@ -233,13 +239,54 @@ const courseFields = (it, up) => (
     <DateSel label="تاريخ الإنجاز" value={it.date} onChange={(v) => up({ date: v })} />
   </>
 )
-const jobFields = (a, b) => (it, up) => (
+// Reads the chosen image, crops it to 3:4 and shrinks it to a small JPEG (keeps storage and the PDF request light).
+const readPhoto = (file) => new Promise((resolve, reject) => {
+  const url = URL.createObjectURL(file)
+  const img = new Image()
+  img.onload = () => {
+    const W = 300, H = 400
+    const k = Math.max(W / img.width, H / img.height)
+    const w = img.width * k, h = img.height * k
+    const c = document.createElement('canvas')
+    c.width = W; c.height = H
+    const g = c.getContext('2d')
+    g.fillStyle = '#fff'; g.fillRect(0, 0, W, H)
+    g.drawImage(img, (W - w) / 2, (H - h) / 2, w, h)
+    URL.revokeObjectURL(url)
+    resolve(c.toDataURL('image/jpeg', 0.85))
+  }
+  img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('bad image')) }
+  img.src = url
+})
+function PhotoField({ value, onChange, flash }) {
+  const input = useRef(null)
+  const choose = async (e) => {
+    const file = e.target.files && e.target.files[0]
+    e.target.value = ''
+    if (!file) return
+    if (!/^image\//.test(file.type)) return flash('اختر ملف صورة (JPG أو PNG)')
+    try { onChange(await readPhoto(file)) } catch { flash('تعذّر قراءة الصورة، جرّب صورة أخرى') }
+  }
+  return (
+    <Field full label="الصورة الشخصية (اختياري)">
+      <input ref={input} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={choose} />
+      {value && <img src={value} alt="الصورة الشخصية" style={{ width: 72, height: 96, objectFit: 'cover', display: 'block', marginBottom: 6 }} />}
+      <div>
+        <button type="button" className="link" onClick={() => input.current.click()}>{value ? 'تغيير الصورة' : 'إضافة صورة'}</button>
+        {value && <>{' · '}<button type="button" className="link" onClick={() => onChange('')}>حذف الصورة</button></>}
+      </div>
+      <p className="note start">أضف صورة شخصية فقط إذا طلبت الجهة المتقدَّم إليها ذلك صراحةً، أو إذا كانت طبيعة الوظيفة يهمّ فيها المظهر الخارجي.</p>
+    </Field>
+  )
+}
+
+const jobFields = (a, b, c = 'الإنجازات (كل سطر نقطة)') => (it, up) => (
   <>
     <Txt label={a} value={it.title} onChange={(v) => up({ title: v })} />
     <Txt label={b} value={it.company} onChange={(v) => up({ company: v })} />
     <DateSel label="تاريخ البدء" value={it.start} onChange={(v) => up({ start: v })} />
     <DateSel label="تاريخ الانتهاء" value={it.end} now onChange={(v) => up({ end: v })} />
-    <Area full label="الإنجازات (كل سطر نقطة)" value={it.bullets} onChange={(v) => up({ bullets: v })} />
+    <Area full label={c} value={it.bullets} onChange={(v) => up({ bullets: v })} />
   </>
 )
 
@@ -250,7 +297,6 @@ export default function App() {
   const toastTimer = useRef(null)
   const flash = (msg) => { setToast(msg); clearTimeout(toastTimer.current); toastTimer.current = setTimeout(() => setToast(''), 3000) }
   const warn = () => flash('لغة السيرة الحالية هي الإنجليزية، اكتب بالأحرف الإنجليزية فقط')
-  const [translating, setTranslating] = useState(false)
   const [tried, setTried] = useState(false) // red asterisks appear only after the first export attempt
   useEffect(() => { try { localStorage.setItem(KEY, JSON.stringify(cv)) } catch { /* storage unavailable */ } }, [cv])
 
@@ -269,22 +315,6 @@ export default function App() {
     setTried(true)
     if (!valid) setTimeout(() => document.querySelector('.invalid')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60)
     return valid
-  }
-  // Changing the CV language translates what is already written (if anything), without asking.
-  const switchLang = async (k) => {
-    if (k === cv.lang || translating) return
-    const texts = textsOf(cv)
-    if (texts.every((t) => !String(t).trim())) return set('lang', k)
-    setTranslating(true)
-    try {
-      const r = await post('/api/translate', { to: k, items: texts })
-      const { items } = await r.json()
-      let i = 0
-      setCv((c) => ({ ...walk(c, (t) => items[i++] ?? t), lang: k }))
-    } catch (e) {
-      set('lang', k) // translation failed: still switch the language, keep the text as it is
-      flash(e.status === 429 ? 'تجاوزت عدد الترجمات المسموح، تم تغيير اللغة فقط' : e.body && e.body.status === 503 ? 'خدمة الترجمة مزدحمة حالياً، تم تغيير اللغة فقط' : `تعذّرت الترجمة، تم تغيير اللغة فقط${e.body && e.body.reason ? ` (${e.body.status || ''} ${e.body.reason})` : ''}`)
-    } finally { setTranslating(false) }
   }
   const reset = () => { if (window.confirm('سيتم حذف جميع البيانات. هل أنت متأكد؟')) { setCv(initial()); setTried(false) } }
 
@@ -311,7 +341,7 @@ export default function App() {
             <h2><span className="n">🌐</span>لغة السيرة الذاتية</h2>
             <div className="tabs">
               {[['ar', 'العربية'], ['en', 'English']].map(([k, t]) => (
-                <button key={k} type="button" className={cv.lang === k ? 'on' : ''} onClick={() => switchLang(k)}>{t}</button>
+                <button key={k} type="button" className={cv.lang === k ? 'on' : ''} onClick={() => set('lang', k)}>{t}</button>
               ))}
             </div>
             <p className="note start">تؤثر على المعاينة وملف PDF فقط. واجهة الموقع تبقى بالعربية.</p>
@@ -343,6 +373,7 @@ export default function App() {
                   <option value="married">{cv.p.gender === 'female' ? 'متزوجة' : 'متزوج'}</option>
                 </select>
               </Field>
+              <PhotoField value={cv.p.photo} onChange={setP('photo')} flash={flash} />
               <Area full label="نبذة مختصرة (تعريف قصير بك وبهدفك المهني في جملتين أو ثلاث)" placeholder="مثال: طالب هندسة برمجيات مهتم بتطوير تطبيقات الجوال، أبحث عن فرصة تدريب أنمّي فيها مهاراتي." err={ev(bad.summary)} value={cv.p.summary} onChange={setP('summary')} />
             </div>
           </Card>
@@ -350,15 +381,15 @@ export default function App() {
           <Card n="2" title="التعليم">
             <List items={cv.edu} onChange={(v) => set('edu', v)} blank={blankEdu} title="التعليم" addLabel="إضافة تعليم" render={eduFields(tried)} />
           </Card>
-          <Card n="3" title="المهارات">
-            <Chips label="المهارات التقنية" items={cv.tech} err={ev(bad.tech)} onChange={(v) => set('tech', v)} placeholder="اكتب مهارة واضغط Enter" />
+          <Card n="3" title="الخبرة العملية" opt>
+            <List items={cv.exp} onChange={(v) => set('exp', v)} blank={blankJob} optional title="خبرة" addLabel="إضافة خبرة" render={jobFields('المسمى الوظيفي', 'الشركة', 'المهام والمسؤوليات (كل سطر نقطة)')} />
+          </Card>
+          <Card n="4" title="المهارات">
+            <Chips label="المهارات التقنية" items={cv.tech} options={SKILL_OPTS[cv.lang].tech} err={ev(bad.tech)} onChange={(v) => set('tech', v)} placeholder="اكتب مهارة واضغط Enter" />
             <div className="gap" />
-            <Chips label="المهارات الناعمة" items={cv.soft} err={ev(bad.soft)} onChange={(v) => set('soft', v)} placeholder="اكتب مهارة واضغط Enter" />
+            <Chips label="المهارات الناعمة" items={cv.soft} options={SKILL_OPTS[cv.lang].soft} err={ev(bad.soft)} onChange={(v) => set('soft', v)} placeholder="اكتب مهارة واضغط Enter" />
           </Card>
 
-          <Card n="4" title="الخبرة العملية" opt>
-            <List items={cv.exp} onChange={(v) => set('exp', v)} blank={blankJob} optional title="خبرة" addLabel="إضافة خبرة" render={jobFields('المسمى الوظيفي', 'الشركة')} />
-          </Card>
           <Card n="5" title="العمل التطوعي" opt>
             <List items={cv.vol} onChange={(v) => set('vol', v)} blank={blankJob} optional title="عمل تطوعي" addLabel="إضافة عمل تطوعي" render={jobFields('الدور', 'المنظمة')} />
           </Card>
@@ -376,8 +407,7 @@ export default function App() {
           <Export cv={cv} onValidate={validate} />
         </aside>
       </main>
-      {translating && <div className="busy-bg no-print" />}
-      {(translating || toast) && <div className="toast no-print" role="status">{translating ? 'جارٍ ترجمة المحتوى…' : toast}</div>}
+      {toast && <div className="toast no-print" role="status">{toast}</div>}
       </WarnCtx.Provider>
       </LangCtx.Provider>
       )}
