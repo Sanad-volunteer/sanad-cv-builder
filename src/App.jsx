@@ -30,11 +30,12 @@ const TODAY = new Date().toISOString().slice(0, 10)
 const SKILLS = [['read', 'القراءة'], ['write', 'الكتابة'], ['listen', 'الاستماع'], ['speak', 'المحادثة']] // each language is rated on all four
 const blankLang = () => ({ id: uid(), name: '', read: '', write: '', listen: '', speak: '' })
 const blankCourse = () => ({ id: uid(), title: '', org: '', date: nd() })
+const blankConf = () => ({ id: uid(), title: '', org: '', date: nd() })
 const blankJob = () => ({ id: uid(), title: '', company: '', start: nd(), end: nd(), bullets: '' })
 const initial = () => ({
   lang: 'ar',
   p: { name: '', title: '', email: '', phone: '', city: '', residence: '', link: '', photo: '', summary: '', dob: '', gender: '', marital: '' },
-  tech: [], soft: [], courses: [], langs: [blankLang()], edu: [blankEdu()], exp: [], vol: [],
+  tech: [], soft: [], courses: [], confs: [], langs: [blankLang()], edu: [blankEdu()], exp: [], vol: [],
 })
 const load = () => {
   try { const s = localStorage.getItem(KEY); if (!s) return initial()
@@ -92,7 +93,8 @@ function DateSel({ label, value, onChange, now, err }) {
     return () => { document.removeEventListener('mousedown', away); document.removeEventListener('keydown', esc) }
   }, [open])
 
-  const toggle = () => { if (!open && numeric(value.y)) setVy(+value.y); setOpen(!open) }
+  const off = !!now && value.y === 'now' // "until now" ticked: the end date is not chosen
+  const toggle = () => { if (off) return; if (!open && numeric(value.y)) setVy(+value.y); setOpen(!open) }
   const text = value.y === 'now' ? 'حتى الآن' : value.y ? `${value.m ? months[value.m - 1] + ' ' : ''}${value.y}` : ''
   const pick = (i) => { onChange({ m: String(i + 1), y: String(vy) }); setOpen(false) }
   const clear = () => { onChange({ m: '', y: '' }); setOpen(false) }
@@ -101,7 +103,7 @@ function DateSel({ label, value, onChange, now, err }) {
   return (
     <Field label={label} err={err}>
       <div className="dp" ref={box}>
-        <button type="button" className="dp-btn" aria-haspopup="dialog" aria-expanded={open} onClick={toggle}>
+        <button type="button" className="dp-btn" aria-haspopup="dialog" aria-expanded={open} disabled={off} style={off ? { opacity: 0.55, cursor: 'not-allowed' } : undefined} onClick={toggle}>
           <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3" {...stroke} /><path d="M3 10h18M8 3v4M16 3v4" {...stroke} /></svg>
           <span className={text ? '' : 'ph'}>{text || 'اختر التاريخ'}</span>
           <svg viewBox="0 0 12 8" width="12" height="8" aria-hidden="true"><path d="M1 1.5l5 5 5-5" {...stroke} /></svg>
@@ -113,15 +115,11 @@ function DateSel({ label, value, onChange, now, err }) {
               <b>{vy}</b>
               <button type="button" aria-label="السنة السابقة" disabled={vy <= MIN_Y} onClick={() => setVy(vy - 1)}><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M15 5l-7 7 7 7" {...stroke} strokeWidth={2.6} /></svg></button>
             </div>
-            <div className={`dp-grid${value.y === 'now' ? ' off' : ''}`} dir={lang === 'en' ? 'ltr' : 'rtl'}>
+            <div className="dp-grid" dir={lang === 'en' ? 'ltr' : 'rtl'}>
               {months.map((m, i) => (
                 <button type="button" key={i} className={value.y === String(vy) && value.m === String(i + 1) ? 'on' : ''} onClick={() => pick(i)}>{m}</button>
               ))}
             </div>
-            {now && (
-              <button type="button" className={`dp-now${value.y === 'now' ? ' on' : ''}`}
-                onClick={() => { onChange(value.y === 'now' ? { m: '', y: '' } : { m: '', y: 'now' }); setOpen(false) }}>حتى الآن</button>
-            )}
             <div className="dp-foot">
               <button type="button" className="dp-done" onClick={() => setOpen(false)}>تم</button>
               <button type="button" className="dp-clear" onClick={clear}>مسح</button>
@@ -129,6 +127,13 @@ function DateSel({ label, value, onChange, now, err }) {
           </div>
         )}
       </div>
+      {now && (
+        <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6, fontWeight: 'normal', cursor: 'pointer' }}>
+          <input type="checkbox" style={{ width: 'auto', margin: 0, flex: 'none' }} checked={value.y === 'now'}
+            onChange={(e) => { setOpen(false); onChange(e.target.checked ? { m: '', y: 'now' } : { m: '', y: '' }) }} />
+          حتى الآن
+        </label>
+      )}
     </Field>
   )
 }
@@ -146,6 +151,50 @@ const SKILL_OPTS = {
   },
 }
 
+// Skills drop-down. A native <select> opens upwards whenever the browser decides there is more room above,
+// so this is a small custom menu that always opens downwards (and scrolls itself into view).
+function MenuItem({ children, onClick, last }) {
+  const [hot, setHot] = useState(false)
+  return (
+    <button type="button" role="option" onClick={onClick} onMouseEnter={() => setHot(true)} onMouseLeave={() => setHot(false)}
+      style={{ display: 'block', width: '100%', textAlign: 'start', background: hot ? 'rgba(0,0,0,.06)' : 'none', border: 0, borderTop: last ? '1px solid rgba(0,0,0,.12)' : 0, padding: '8px 10px', font: 'inherit', color: 'inherit', cursor: 'pointer' }}>
+      {children}
+    </button>
+  )
+}
+function SkillMenu({ options, onChoose }) {
+  const lang = useContext(LangCtx)
+  const [open, setOpen] = useState(false)
+  const box = useRef(null)
+  const pop = useRef(null)
+  useEffect(() => {
+    if (!open) return
+    pop.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+    const away = (e) => { if (!box.current?.contains(e.target)) setOpen(false) }
+    const esc = (e) => { if (e.key === 'Escape') setOpen(false) }
+    document.addEventListener('mousedown', away)
+    document.addEventListener('keydown', esc)
+    return () => { document.removeEventListener('mousedown', away); document.removeEventListener('keydown', esc) }
+  }, [open])
+  const choose = (s) => { setOpen(false); onChoose(s) }
+  const stroke = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round' }
+  return (
+    <div className="dp" ref={box}>
+      <button type="button" className="dp-btn" aria-haspopup="listbox" aria-expanded={open} onClick={() => setOpen(!open)}>
+        <span className="ph">اختر مهارة</span>
+        <svg viewBox="0 0 12 8" width="12" height="8" aria-hidden="true"><path d="M1 1.5l5 5 5-5" {...stroke} /></svg>
+      </button>
+      {open && (
+        <div className="dp-pop" ref={pop} role="listbox" dir={lang === 'en' ? 'ltr' : 'rtl'}
+          style={{ width: '100%', maxHeight: 260, overflowY: 'auto', boxSizing: 'border-box' }}>
+          {options.map((o) => <MenuItem key={o} onClick={() => choose(o)}>{o}</MenuItem>)}
+          <MenuItem last onClick={() => choose(OTHER)}>غير ذلك</MenuItem>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function Chips({ label, items, onChange, placeholder, err, options }) {
   const guard = useGuard()
   const [v, setV] = useState('')
@@ -155,20 +204,13 @@ function Chips({ label, items, onChange, placeholder, err, options }) {
     if (t && !items.includes(t)) onChange([...items, t])
     setV('')
   }
-  const pick = (e) => {
-    const s = e.target.value
+  const pick = (s) => {
     if (s === OTHER) setOther(true)
     else if (s && !items.includes(s)) onChange([...items, s])
   }
   return (
     <Field label={label} full err={err}>
-      {options && (
-        <select value="" onChange={pick}>
-          <option value="">اختر مهارة</option>
-          {options.filter((o) => !items.includes(o)).map((o) => <option key={o} value={o}>{o}</option>)}
-          <option value={OTHER}>غير ذلك</option>
-        </select>
-      )}
+      {options && <SkillMenu options={options.filter((o) => !items.includes(o))} onChoose={pick} />}
       {options && other && <div className="gap" />}
       {other && (
         <input dir={v ? 'auto' : 'rtl'} value={v} placeholder={placeholder} onChange={(e) => setV(guard(e.target.value, v))} onBlur={add}
@@ -230,6 +272,13 @@ const langFields = (tried) => (it, up) => (
         </select>
       </Field>
     ))}
+  </>
+)
+const confFields = (it, up) => (
+  <>
+    <Txt full label="اسم المؤتمر" value={it.title} onChange={(v) => up({ title: v })} />
+    <Txt label="الجهة المنظِّمة" value={it.org} onChange={(v) => up({ org: v })} />
+    <DateSel label="التاريخ" value={it.date} onChange={(v) => up({ date: v })} />
   </>
 )
 const courseFields = (it, up) => (
@@ -381,7 +430,7 @@ export default function App() {
           <Card n="2" title="التعليم">
             <List items={cv.edu} onChange={(v) => set('edu', v)} blank={blankEdu} title="التعليم" addLabel="إضافة تعليم" render={eduFields(tried)} />
           </Card>
-          <Card n="3" title="الخبرة العملية" opt>
+          <Card n="3" title="الخبرات" opt>
             <List items={cv.exp} onChange={(v) => set('exp', v)} blank={blankJob} optional title="خبرة" addLabel="إضافة خبرة" render={jobFields('المسمى الوظيفي', 'الشركة', 'المهام والمسؤوليات (كل سطر نقطة)')} />
           </Card>
           <Card n="4" title="المهارات">
@@ -398,6 +447,9 @@ export default function App() {
           </Card>
           <Card n="7" title="الدورات وورش العمل" opt>
             <List items={cv.courses} onChange={(v) => set('courses', v)} blank={blankCourse} optional title="دورة" addLabel="إضافة دورة أو ورشة" render={courseFields} />
+          </Card>
+          <Card n="8" title="المؤتمرات" opt>
+            <List items={cv.confs || []} onChange={(v) => set('confs', v)} blank={blankConf} optional title="مؤتمر" addLabel="إضافة مؤتمر" render={confFields} />
           </Card>
         </section>
 

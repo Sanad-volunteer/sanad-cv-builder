@@ -39,14 +39,19 @@ const DETAILS = {
   ar: { dob: 'تاريخ الميلاد', gender: 'الجنس', marital: 'الحالة الاجتماعية', male: 'ذكر', female: 'أنثى', single: 'أعزب', singleF: 'عزباء', married: 'متزوج', marriedF: 'متزوجة' },
   en: { dob: 'Date of birth', gender: 'Gender', marital: 'Marital status', male: 'Male', female: 'Female', single: 'Single', singleF: 'Single', married: 'Married', marriedF: 'Married' },
 }
+// Labels printed (in bold) before each contact line
+const CONTACT = {
+  ar: { residence: 'مكان السكن', city: 'المدينة والدولة', email: 'البريد الإلكتروني', phone: 'الهاتف', link: 'لينكدإن' },
+  en: { residence: 'Residence', city: 'City, Country', email: 'Email', phone: 'Phone', link: 'LinkedIn' },
+}
 const dobText = (iso, l) => {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || ''))
   const month = m && MONTH_NAMES[l][+m[2] - 1]
   return month ? `${+m[3]} ${month} ${m[1]}` : ''
 }
 const T = {
-  ar: { summary: 'نبذة', skills: 'المهارات', tech: 'المهارات التقنية', soft: 'المهارات الناعمة', langs: 'اللغات', courses: 'الدورات وورش العمل', edu: 'التعليم', exp: 'الخبرة العملية', vol: 'العمل التطوعي', now: 'حتى الآن' },
-  en: { summary: 'Summary', skills: 'Skills', tech: 'Technical', soft: 'Soft', langs: 'Languages', courses: 'Courses & Workshops', edu: 'Education', exp: 'Work Experience', vol: 'Volunteer Work', now: 'Present' },
+  ar: { summary: 'نبذة', skills: 'المهارات', tech: 'المهارات التقنية', soft: 'المهارات الناعمة', langs: 'اللغات', courses: 'الدورات وورش العمل', edu: 'التعليم', exp: 'الخبرات', vol: 'العمل التطوعي', confs: 'المؤتمرات', now: 'حتى الآن' },
+  en: { summary: 'Summary', skills: 'Skills', tech: 'Technical', soft: 'Soft', langs: 'Languages', courses: 'Courses & Workshops', edu: 'Education', exp: 'Work Experience', vol: 'Volunteer Work', confs: 'Conferences', now: 'Present' },
 }
 
 const fmt = (d, l) => (!d || !d.y ? '' : d.y === 'now' ? T[l].now : (d.m ? MONTHS[l][d.m - 1] + ' ' : '') + d.y)
@@ -78,29 +83,30 @@ const Jobs = ({ items, h, l }) => {
 export default function Preview({ cv }) {
   const { lang, p, tech, soft, edu, exp, vol } = cv
   const courseF = (cv.courses || []).filter((c) => c.title || c.org)
+  const confF = (cv.confs || []).filter((c) => c.title || c.org)
   const langF = (cv.langs || []).filter((x) => x.name && x.name.trim())
   const t = T[lang]
   const d = DETAILS[lang]
-  const genderLine = (p.gender === 'male' || p.gender === 'female') && `${d.gender}: ${d[p.gender]}`
+  const genderLine = (p.gender === 'male' || p.gender === 'female') && [d.gender, d[p.gender]] // [label, value]
   const details = [
-    dobText(p.dob, lang) && `${d.dob}: ${dobText(p.dob, lang)}`,
-    (p.marital === 'single' || p.marital === 'married') && `${d.marital}: ${d[p.marital + (p.gender === 'female' ? 'F' : '')]}`,
+    dobText(p.dob, lang) && [d.dob, dobText(p.dob, lang)],
+    (p.marital === 'single' || p.marital === 'married') && [d.marital, d[p.marital + (p.gender === 'female' ? 'F' : '')]],
   ].filter(Boolean)
   const sep = lang === 'ar' ? '، ' : ', '
-  const contact = [[p.residence], [p.city], [p.email], [p.phone], [p.link, true]].filter(([v]) => v) // [text, isLink]
+  const contact = [['residence', p.residence], ['city', p.city], ['email', p.email], ['phone', p.phone], ['link', p.link, true]].filter(([, v]) => v) // [key, text, isLink]
   const eduF = edu.filter((e) => e.school || e.major || e.level || e.field)
   const hasJobs = [...exp, ...vol].some((i) => i.title || i.company)
-  const empty = !p.name && !p.title && !contact.length && !p.summary && !p.photo && !genderLine && !details.length && !tech.length && !soft.length && !langF.length && !courseF.length && !eduF.length && !hasJobs
+  const empty = !p.name && !p.title && !contact.length && !p.summary && !p.photo && !genderLine && !details.length && !tech.length && !soft.length && !langF.length && !courseF.length && !confF.length && !eduF.length && !hasJobs
 
   const head = (
     <>
     {p.name && <h1>{p.name}</h1>}
-    {p.title && <p>{p.title}</p>}
-    {contact.map(([v, isLink], i) => (
-      <p key={i}><bdi>{isLink ? <a href={href(v)} target="_blank" rel="noreferrer">{v}</a> : v}</bdi></p>
+    {p.title && <p style={{ fontSize: '1.3em' }}>{p.title}</p>}
+    {contact.map(([k, v, isLink]) => (
+      <p key={k}><b>{CONTACT[lang][k]}:</b> <bdi>{isLink ? <a href={href(v)} target="_blank" rel="noreferrer">{v}</a> : v}</bdi></p>
     ))}
-    {genderLine && <p>{genderLine}</p>}
-    {details.length > 0 && <p>{details.join(' · ')}</p>}
+    {genderLine && <p><b>{genderLine[0]}:</b> {genderLine[1]}</p>}
+    {details.length > 0 && <p>{details.map(([k, v], i) => <span key={k}>{i > 0 && ' · '}<b>{k}:</b> {v}</span>)}</p>}
     </>
   )
 
@@ -123,9 +129,8 @@ export default function Preview({ cv }) {
                 const line = [EDU_LEVEL[lang][e.level], e.field].filter(Boolean).join(' – ') // "Bachelor's Degree – Economics"
                 return (
                   <div key={e.id}>
-                    <Row a={e.school} b={range(e.start, e.end, lang)} />
+                    <Row a={[e.school, e.major].filter(Boolean).join(' - ')} b={range(e.start, e.end, lang)} />
                     {line && <p>{line}</p>}
-                    {e.major && <p>{e.major}</p>}
                   </div>
                 )
               })}
@@ -149,6 +154,11 @@ export default function Preview({ cv }) {
             </Sec>
           )}
           <Jobs items={vol} h={t.vol} l={lang} />
+          {confF.length > 0 && (
+            <Sec h={t.confs}>
+              {confF.map((c) => <div key={c.id}><Row a={[c.title, c.org].filter(Boolean).join(' – ')} b={fmt(c.date, lang)} /></div>)}
+            </Sec>
+          )}
         </>
       )}
     </div>
