@@ -83,6 +83,7 @@ function DateSel({ label, value, onChange, now, err }) {
   const months = MONTH_NAMES[lang]
   const [open, setOpen] = useState(false)
   const [vy, setVy] = useState(() => (numeric(value.y) ? +value.y : new Date().getFullYear()))
+  const [kb, setKb] = useState(false) // true only while the checkbox is focused with the keyboard
   const box = useRef(null)
 
   useEffect(() => {
@@ -135,8 +136,9 @@ function DateSel({ label, value, onChange, now, err }) {
               appearance: 'none', WebkitAppearance: 'none', width: 24, height: 24, padding: 0, margin: 0, flex: 'none', cursor: 'pointer',
               borderRadius: 8, border: `2px solid ${value.y === 'now' ? '#1A1464' : '#cfd0e4'}`, background: value.y === 'now' ? '#1A1464' : '#fff',
               backgroundImage: value.y === 'now' ? CHECK : 'none', backgroundRepeat: 'no-repeat', backgroundPosition: 'center', backgroundSize: '16px',
-              transition: 'background-color .15s, border-color .15s',
+              transition: 'background-color .15s, border-color .15s', boxShadow: 'none', outline: kb ? '2px solid #1A1464' : 'none', outlineOffset: 2,
             }}
+            onFocus={(e) => setKb(e.target.matches(':focus-visible'))} onBlur={() => setKb(false)}
             onChange={(e) => { setOpen(false); onChange(e.target.checked ? { m: '', y: 'now' } : { m: '', y: '' }) }} />
           حتى الآن
         </label>
@@ -226,7 +228,9 @@ function Chips({ label, items, onChange, placeholder, err, options }) {
       <div className="chips">
         {items.map((s) => (
           <span className="chip" key={s}>{s}
-            <button type="button" aria-label="حذف" onClick={() => onChange(items.filter((x) => x !== s))}>×</button>
+            <button type="button" aria-label="حذف" onClick={() => onChange(items.filter((x) => x !== s))}>
+              <svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M2 2l8 8M10 2l-8 8" /></svg>
+            </button>
           </span>
         ))}
       </div>
@@ -335,7 +339,7 @@ function PhotoField({ value, onChange, flash }) {
         </div>
       ) : (
         <button type="button" className="drop" onClick={() => input.current.click()}
-          style={{ width: 160, height: 160, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, padding: 0, color: 'var(--navy)', font: 'inherit' }}>
+          style={{ width: '100%', height: 160, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, padding: 0, color: 'var(--navy)', font: 'inherit' }}>
           <svg viewBox="0 0 24 24" width="46" height="46" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
             <path d="M12 16V4M7 9l5-5 5 5M4 20h16" />
           </svg>
