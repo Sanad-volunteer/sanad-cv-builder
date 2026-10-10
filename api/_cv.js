@@ -34,8 +34,8 @@ const DETAILS = {
 }
 // Labels printed (in bold) before each contact line
 const CONTACT = {
-  ar: { residence: 'مكان السكن', city: 'المدينة والدولة', email: 'البريد الإلكتروني', phone: 'الهاتف', link: 'لينكدإن' },
-  en: { residence: 'Residence', city: 'City, Country', email: 'Email', phone: 'Phone', link: 'LinkedIn' },
+  ar: { residence: 'مكان السكن', city: 'المدينة', email: 'البريد الإلكتروني', phone: 'الهاتف', link: 'لينكدإن' },
+  en: { residence: 'Residence', city: 'City', email: 'Email', phone: 'Phone', link: 'LinkedIn' },
 }
 const dobText = (iso, l) => {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || ''))
@@ -81,7 +81,7 @@ export function cvHtml(cv, opts = {}) {
     .map(([k, v, isLink]) => `<p><b>${CONTACT[l][k]}:</b> <bdi>${isLink ? `<a href="${esc(href(v))}">${esc(v)}</a>` : esc(v)}</bdi></p>`)
     .join('')
   const courses = list(cv.courses).filter((c) => c && (c.title || c.org))
-  const confs = list(cv.confs).filter((c) => c && (c.title || c.org))
+  const confs = list(cv.confs).filter((c) => c && c.title)
   const d = DETAILS[l]
   const genderLine = (p.gender === 'male' || p.gender === 'female') ? [d.gender, d[p.gender]] : null // [label, value]
   const details = [
@@ -91,8 +91,8 @@ export function cvHtml(cv, opts = {}) {
   const langs = list(cv.langs).filter((x) => x && String(x.name || '').trim())
   const edu = list(cv.edu).filter((e) => e && (e.school || e.major || e.level || e.field))
   const head = [
-    p.name ? `<h1>${esc(p.name)}</h1>` : '',
-    p.title ? `<p style="font-size:1.3em">${esc(p.title)}</p>` : '',
+    p.name ? `<h1 style="line-height:1.25">${esc(p.name)}</h1>` : '',
+    p.title ? `<p style="font-size:1.3em;line-height:1.3">${esc(p.title)}</p>` : '',
     contact, // one line per item (residence, city, email, phone, link)
     genderLine ? `<p><b>${esc(genderLine[0])}:</b> ${esc(genderLine[1])}</p>` : '',
     details.length ? `<p>${details.map(([k, v]) => `<b>${esc(k)}:</b> ${esc(v)}`).join(' · ')}</p>` : '',
@@ -116,7 +116,7 @@ export function cvHtml(cv, opts = {}) {
     langs.length ? sec(t.langs, langs.map((x) => `<p><b>${esc(x.name)}</b>${esc(langLine(x, l))}</p>`).join('')) : '',
     courses.length ? sec(t.courses, courses.map((c) => `<div>${row([c.title, c.org].filter(Boolean).join(' – '), fmt(c.date, l))}</div>`).join('')) : '',
     jobs(cv.vol, t.vol, l),
-    confs.length ? sec(t.confs, confs.map((c) => `<div>${row([c.title, c.org].filter(Boolean).join(' – '), fmt(c.date, l))}</div>`).join('')) : '',
+    confs.length ? sec(t.confs, confs.map((c) => `<div>${row(c.title, fmt(c.date, l))}</div>`).join('')) : '',
   ].join('')
   return `<!doctype html><html lang="${l}" dir="${l === 'ar' ? 'rtl' : 'ltr'}"><head><meta charset="utf-8"><style>${opts.fontCss || ''}${CSS}</style></head><body>${opts.wrap ? opts.wrap(body) : body}</body></html>`
 }
