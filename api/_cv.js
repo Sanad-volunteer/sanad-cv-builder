@@ -4,8 +4,8 @@ const M = {
   en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
 }
 const T = {
-  ar: { summary: 'نبذة', skills: 'المهارات', tech: 'المهارات التقنية', soft: 'المهارات الناعمة', langs: 'اللغات', courses: 'الدورات وورش العمل', edu: 'التعليم', exp: 'الخبرة العملية', vol: 'العمل التطوعي', now: 'حتى الآن' },
-  en: { summary: 'Summary', skills: 'Skills', tech: 'Technical', soft: 'Soft', langs: 'Languages', courses: 'Courses & Workshops', edu: 'Education', exp: 'Work Experience', vol: 'Volunteer Work', now: 'Present' },
+  ar: { summary: 'نبذة', skills: 'المهارات', tech: 'المهارات التقنية', soft: 'المهارات الناعمة', langs: 'اللغات', courses: 'الدورات وورش العمل', edu: 'التعليم', exp: 'الخبرات', vol: 'العمل التطوعي', confs: 'المؤتمرات', now: 'حتى الآن' },
+  en: { summary: 'Summary', skills: 'Skills', tech: 'Technical', soft: 'Soft', langs: 'Languages', courses: 'Courses & Workshops', edu: 'Education', exp: 'Work Experience', vol: 'Volunteer Work', confs: 'Conferences', now: 'Present' },
 }
 const LV = {
   ar: { beginner: 'مبتدئ', intermediate: 'متوسط', upper: 'فوق المتوسط', fluent: 'متمرس', native: 'لغة أم' },
@@ -31,6 +31,11 @@ const langLine = (x, l) => {
 const DETAILS = {
   ar: { dob: 'تاريخ الميلاد', gender: 'الجنس', marital: 'الحالة الاجتماعية', male: 'ذكر', female: 'أنثى', single: 'أعزب', singleF: 'عزباء', married: 'متزوج', marriedF: 'متزوجة' },
   en: { dob: 'Date of birth', gender: 'Gender', marital: 'Marital status', male: 'Male', female: 'Female', single: 'Single', singleF: 'Single', married: 'Married', marriedF: 'Married' },
+}
+// Labels printed (in bold) before each contact line
+const CONTACT = {
+  ar: { residence: 'مكان السكن', city: 'المدينة والدولة', email: 'البريد الإلكتروني', phone: 'الهاتف', link: 'لينكدإن' },
+  en: { residence: 'Residence', city: 'City, Country', email: 'Email', phone: 'Phone', link: 'LinkedIn' },
 }
 const dobText = (iso, l) => {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || ''))
@@ -71,25 +76,26 @@ export function cvHtml(cv, opts = {}) {
   const p = cv.p || {}
   const sep = l === 'ar' ? '، ' : ', '
   const tech = list(cv.tech), soft = list(cv.soft)
-  const contact = [[p.residence], [p.city], [p.email], [p.phone], [p.link, true]]
-    .filter(([v]) => v)
-    .map(([v, isLink]) => `<p><bdi>${isLink ? `<a href="${esc(href(v))}">${esc(v)}</a>` : esc(v)}</bdi></p>`)
+  const contact = [['residence', p.residence], ['city', p.city], ['email', p.email], ['phone', p.phone], ['link', p.link, true]]
+    .filter(([, v]) => v)
+    .map(([k, v, isLink]) => `<p><b>${CONTACT[l][k]}:</b> <bdi>${isLink ? `<a href="${esc(href(v))}">${esc(v)}</a>` : esc(v)}</bdi></p>`)
     .join('')
   const courses = list(cv.courses).filter((c) => c && (c.title || c.org))
+  const confs = list(cv.confs).filter((c) => c && (c.title || c.org))
   const d = DETAILS[l]
-  const genderLine = (p.gender === 'male' || p.gender === 'female') ? `${d.gender}: ${d[p.gender]}` : ''
+  const genderLine = (p.gender === 'male' || p.gender === 'female') ? [d.gender, d[p.gender]] : null // [label, value]
   const details = [
-    dobText(p.dob, l) && `${d.dob}: ${dobText(p.dob, l)}`,
-    (p.marital === 'single' || p.marital === 'married') && `${d.marital}: ${d[p.marital + (p.gender === 'female' ? 'F' : '')]}`,
+    dobText(p.dob, l) && [d.dob, dobText(p.dob, l)],
+    (p.marital === 'single' || p.marital === 'married') && [d.marital, d[p.marital + (p.gender === 'female' ? 'F' : '')]],
   ].filter(Boolean)
   const langs = list(cv.langs).filter((x) => x && String(x.name || '').trim())
   const edu = list(cv.edu).filter((e) => e && (e.school || e.major || e.level || e.field))
   const head = [
     p.name ? `<h1>${esc(p.name)}</h1>` : '',
-    p.title ? `<p>${esc(p.title)}</p>` : '',
+    p.title ? `<p style="font-size:1.3em">${esc(p.title)}</p>` : '',
     contact, // one line per item (residence, city, email, phone, link)
-    genderLine ? `<p>${esc(genderLine)}</p>` : '',
-    details.length ? `<p>${details.map(esc).join(' · ')}</p>` : '',
+    genderLine ? `<p><b>${esc(genderLine[0])}:</b> ${esc(genderLine[1])}</p>` : '',
+    details.length ? `<p>${details.map(([k, v]) => `<b>${esc(k)}:</b> ${esc(v)}`).join(' · ')}</p>` : '',
   ].join('')
   const photo = typeof p.photo === 'string' && p.photo.length <= 400000 && PHOTO.test(p.photo) ? p.photo : ''
   const body = [
@@ -100,7 +106,7 @@ export function cvHtml(cv, opts = {}) {
     edu.length
       ? sec(t.edu, edu.map((e) => {
           const line = [EL[l][e.level], e.field].filter(Boolean).join(' – ') // "Bachelor's Degree – Economics"
-          return `<div>${row(e.school, range(e.start, e.end, l))}${line ? `<p>${esc(line)}</p>` : ''}${e.major ? `<p>${esc(e.major)}</p>` : ''}</div>`
+          return `<div>${row([e.school, e.major].filter(Boolean).join(' - '), range(e.start, e.end, l))}${line ? `<p>${esc(line)}</p>` : ''}</div>`
         }).join(''))
       : '',
     jobs(cv.exp, t.exp, l),
@@ -110,6 +116,7 @@ export function cvHtml(cv, opts = {}) {
     langs.length ? sec(t.langs, langs.map((x) => `<p><b>${esc(x.name)}</b>${esc(langLine(x, l))}</p>`).join('')) : '',
     courses.length ? sec(t.courses, courses.map((c) => `<div>${row([c.title, c.org].filter(Boolean).join(' – '), fmt(c.date, l))}</div>`).join('')) : '',
     jobs(cv.vol, t.vol, l),
+    confs.length ? sec(t.confs, confs.map((c) => `<div>${row([c.title, c.org].filter(Boolean).join(' – '), fmt(c.date, l))}</div>`).join('')) : '',
   ].join('')
   return `<!doctype html><html lang="${l}" dir="${l === 'ar' ? 'rtl' : 'ltr'}"><head><meta charset="utf-8"><style>${opts.fontCss || ''}${CSS}</style></head><body>${opts.wrap ? opts.wrap(body) : body}</body></html>`
 }
