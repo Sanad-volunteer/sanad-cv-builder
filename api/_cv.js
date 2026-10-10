@@ -37,6 +37,8 @@ const dobText = (iso, l) => {
   const month = m && FULL[l][+m[2] - 1]
   return month ? `${+m[3]} ${month} ${m[1]}` : ''
 }
+// Only a small inline JPEG/PNG/WebP data URL is accepted as the photo (no external URLs reach the PDF renderer).
+const PHOTO = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/
 const CSS = `body{margin:0;font-family:Cairo,Arial,sans-serif;font-size:12.5px;line-height:1.6;color:#000}
 a{color:inherit;text-decoration:underline}h1{font-size:21px;margin:0;color:#1A1464}p{margin:0}
 h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;border-bottom:1px solid #000;margin:14px 0 5px;padding-bottom:1px}
@@ -71,22 +73,29 @@ export function cvHtml(cv, opts = {}) {
   const tech = list(cv.tech), soft = list(cv.soft)
   const contact = [[p.residence], [p.city], [p.email], [p.phone], [p.link, true]]
     .filter(([v]) => v)
-    .map(([v, isLink]) => `<bdi>${isLink ? `<a href="${esc(href(v))}">${esc(v)}</a>` : esc(v)}</bdi>`)
-    .join(' · ')
+    .map(([v, isLink]) => `<p><bdi>${isLink ? `<a href="${esc(href(v))}">${esc(v)}</a>` : esc(v)}</bdi></p>`)
+    .join('')
   const courses = list(cv.courses).filter((c) => c && (c.title || c.org))
   const d = DETAILS[l]
+  const genderLine = (p.gender === 'male' || p.gender === 'female') ? `${d.gender}: ${d[p.gender]}` : ''
   const details = [
     dobText(p.dob, l) && `${d.dob}: ${dobText(p.dob, l)}`,
-    (p.gender === 'male' || p.gender === 'female') && `${d.gender}: ${d[p.gender]}`,
     (p.marital === 'single' || p.marital === 'married') && `${d.marital}: ${d[p.marital + (p.gender === 'female' ? 'F' : '')]}`,
   ].filter(Boolean)
   const langs = list(cv.langs).filter((x) => x && String(x.name || '').trim())
   const edu = list(cv.edu).filter((e) => e && (e.school || e.major || e.level || e.field))
-  const body = [
+  const head = [
     p.name ? `<h1>${esc(p.name)}</h1>` : '',
     p.title ? `<p>${esc(p.title)}</p>` : '',
-    contact ? `<p>${contact}</p>` : '',
+    contact, // one line per item (residence, city, email, phone, link)
+    genderLine ? `<p>${esc(genderLine)}</p>` : '',
     details.length ? `<p>${details.map(esc).join(' · ')}</p>` : '',
+  ].join('')
+  const photo = typeof p.photo === 'string' && p.photo.length <= 400000 && PHOTO.test(p.photo) ? p.photo : ''
+  const body = [
+    photo
+      ? `<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px"><div>${head}</div><img src="${photo}" alt="" style="width:96px;height:128px;object-fit:cover;flex:none"></div>`
+      : head,
     p.summary ? sec(t.summary, `<p>${esc(p.summary)}</p>`) : '',
     edu.length
       ? sec(t.edu, edu.map((e) => {
@@ -94,11 +103,11 @@ export function cvHtml(cv, opts = {}) {
           return `<div>${row(e.school, range(e.start, e.end, l))}${line ? `<p>${esc(line)}</p>` : ''}${e.major ? `<p>${esc(e.major)}</p>` : ''}</div>`
         }).join(''))
       : '',
+    jobs(cv.exp, t.exp, l),
     tech.length || soft.length
       ? sec(t.skills, (tech.length ? `<p><b>${t.tech}:</b> ${esc(tech.join(sep))}</p>` : '') + (soft.length ? `<p><b>${t.soft}:</b> ${esc(soft.join(sep))}</p>` : ''))
       : '',
     langs.length ? sec(t.langs, langs.map((x) => `<p><b>${esc(x.name)}</b>${esc(langLine(x, l))}</p>`).join('')) : '',
-    jobs(cv.exp, t.exp, l),
     courses.length ? sec(t.courses, courses.map((c) => `<div>${row([c.title, c.org].filter(Boolean).join(' – '), fmt(c.date, l))}</div>`).join('')) : '',
     jobs(cv.vol, t.vol, l),
   ].join('')
