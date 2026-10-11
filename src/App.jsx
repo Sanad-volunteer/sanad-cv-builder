@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import logo from './assets/sanad-logo.svg'
-import Preview, { MONTH_NAMES, LEVELS, EDU_LEVELS } from './Preview.jsx'
+import Preview, { MONTH_NAMES, LEVELS, EDU_LEVELS, MAJOR_GROUPS, isMajor, majorLabel } from './Preview.jsx'
 import Home from './Home.jsx'
 import Analyze from './Analyze.jsx'
 import Export from './Export.jsx'
@@ -25,7 +25,7 @@ const uid = () => Math.random().toString(36).slice(2, 9)
 const nd = () => ({ m: '', y: '' })
 const empty = (v) => !String(v ?? '').trim()
 const dEmpty = (d) => !d.y || (d.y !== 'now' && !d.m) // a date needs a year, and a month unless "until now"
-const blankEdu = () => ({ id: uid(), level: '', field: '', school: '', major: '', start: nd(), end: nd() })
+const blankEdu = () => ({ id: uid(), level: '', school: '', major: '', start: nd(), end: nd() })
 const TODAY = new Date().toISOString().slice(0, 10)
 const SKILLS = [['read', 'القراءة'], ['write', 'الكتابة'], ['listen', 'الاستماع'], ['speak', 'المحادثة']] // each language is rated on all four
 const blankLang = () => ({ id: uid(), name: '', read: '', write: '', listen: '', speak: '' })
@@ -42,7 +42,7 @@ const load = () => {
     const d = { ...initial(), ...JSON.parse(s) }
     d.p = { ...initial().p, ...d.p } // fields added in newer versions
     d.langs = (d.langs || []).map((x) => (x.read === undefined ? { ...x, read: x.level || '', write: x.level || '', listen: x.level || '', speak: x.level || '' } : x)) // old single level -> four skills
-    d.edu = (d.edu || []).map((e) => ({ level: '', field: '', ...e })) // education fields added in newer versions
+    d.edu = (d.edu || []).map((e) => ({ level: '', ...e })) // education fields added in newer versions
     if (!d.langs.length) d.langs = [blankLang()] // languages are required: always show one row
     return d } catch { return initial() }
 }
@@ -152,11 +152,11 @@ const OTHER = '__other__'
 const SKILL_OPTS = {
   ar: {
     tech: ['مايكروسوفت أوفيس', 'مايكروسوفت وورد', 'مايكروسوفت إكسل', 'مايكروسوفت باوربوينت', 'جوجل وورك سبيس', 'كانفا (Canva)', 'فوتوشوب', 'إليستريتور', 'تحرير الفيديو', 'التصميم الجرافيكي', 'إدارة وسائل التواصل الاجتماعي', 'التسويق الرقمي', 'تحسين محركات البحث (SEO)', 'كتابة المحتوى', 'تحليل البيانات', 'إدخال البيانات', 'الكتابة السريعة على الكمبيوتر', 'البرمجة', 'تطوير المواقع', 'قواعد البيانات (SQL)', 'إدارة المشاريع', 'المحاسبة', 'استخدام أدوات الذكاء الاصطناعي'],
-    soft: ['التواصل الفعّال', 'العمل ضمن فريق', 'القيادة', 'حل المشكلات', 'إدارة الوقت', 'التفكير النقدي', 'الإبداع', 'المرونة والتكيّف', 'الذكاء العاطفي', 'اتخاذ القرار', 'التفاوض', 'العمل تحت الضغط', 'الالتزام وتحمّل المسؤولية', 'التنظيم', 'سرعة التعلّم', 'الإقناع', 'خدمة العملاء', 'مهارات العرض والتقديم'],
+    soft: ['التواصل الفعّال', 'العمل ضمن فريق', 'القيادة', 'حل المشكلات', 'إدارة الوقت', 'التفكير النقدي', 'الإبداع', 'المرونة والتكيّف', 'الذكاء العاطفي', 'اتخاذ القرار', 'التفاوض', 'العمل تحت الضغط', 'الالتزام وتحمّل المسؤولية', 'التنظيم', 'سرعة التعلّم', 'خدمة العملاء', 'مهارات العرض والتقديم'],
   },
   en: {
     tech: ['Microsoft Office', 'Microsoft Word', 'Microsoft Excel', 'Microsoft PowerPoint', 'Google Workspace', 'Canva', 'Photoshop', 'Illustrator', 'Video Editing', 'Graphic Design', 'Social Media Management', 'Digital Marketing', 'SEO', 'Content Writing', 'Data Analysis', 'Data Entry', 'Fast Typing', 'Programming', 'Web Development', 'SQL Databases', 'Project Management', 'Accounting', 'Using AI Tools'],
-    soft: ['Effective Communication', 'Teamwork', 'Leadership', 'Problem Solving', 'Time Management', 'Critical Thinking', 'Creativity', 'Adaptability', 'Emotional Intelligence', 'Decision Making', 'Negotiation', 'Working Under Pressure', 'Responsibility & Commitment', 'Organization', 'Fast Learning', 'Persuasion', 'Customer Service', 'Presentation Skills'],
+    soft: ['Effective Communication', 'Teamwork', 'Leadership', 'Problem Solving', 'Time Management', 'Critical Thinking', 'Creativity', 'Adaptability', 'Emotional Intelligence', 'Decision Making', 'Negotiation', 'Working Under Pressure', 'Responsibility & Commitment', 'Organization', 'Fast Learning', 'Customer Service', 'Presentation Skills'],
   },
 }
 
@@ -171,7 +171,9 @@ function MenuItem({ children, onClick, last }) {
     </button>
   )
 }
-function SkillMenu({ options, onChoose }) {
+// Drop-down that always opens downwards (a native <select> opens upwards whenever the browser sees more room above).
+// groups: [{ label?, items: [{ value, label }] }]. text: what the button shows (empty = placeholder).
+function DropMenu({ placeholder, text, groups, onChoose, other, dir }) {
   const lang = useContext(LangCtx)
   const [open, setOpen] = useState(false)
   const box = useRef(null)
@@ -185,22 +187,53 @@ function SkillMenu({ options, onChoose }) {
     document.addEventListener('keydown', esc)
     return () => { document.removeEventListener('mousedown', away); document.removeEventListener('keydown', esc) }
   }, [open])
-  const choose = (s) => { setOpen(false); onChoose(s) }
+  const choose = (v) => { setOpen(false); onChoose(v) }
   const stroke = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round' }
   return (
     <div className="dp" ref={box}>
       <button type="button" className="dp-btn" aria-haspopup="listbox" aria-expanded={open} onClick={() => setOpen(!open)}>
-        <span className="ph">اختر مهارة</span>
+        <span className={text ? '' : 'ph'}>{text || placeholder}</span>
         <svg viewBox="0 0 12 8" width="12" height="8" aria-hidden="true"><path d="M1 1.5l5 5 5-5" {...stroke} /></svg>
       </button>
       {open && (
-        <div className="dp-pop" ref={pop} role="listbox" dir={lang === 'en' ? 'ltr' : 'rtl'}
-          style={{ width: '100%', maxHeight: 260, overflowY: 'auto', boxSizing: 'border-box' }}>
-          {options.map((o) => <MenuItem key={o} onClick={() => choose(o)}>{o}</MenuItem>)}
-          <MenuItem last onClick={() => choose(OTHER)}>غير ذلك</MenuItem>
+        <div className="dp-pop" ref={pop} role="listbox" dir={dir || (lang === 'en' ? 'ltr' : 'rtl')}
+          style={{ width: '100%', maxHeight: 280, overflowY: 'auto', boxSizing: 'border-box' }}>
+          {groups.map((g, i) => (
+            <div key={i}>
+              {g.label && <div style={{ padding: '10px 10px 4px', fontSize: 12, fontWeight: 700, color: 'var(--mut)' }}>{g.label}</div>}
+              {g.items.map((o) => <MenuItem key={o.value} onClick={() => choose(o.value)}>{o.label}</MenuItem>)}
+            </div>
+          ))}
+          {other && <MenuItem last onClick={() => choose(OTHER)}>{other}</MenuItem>}
         </div>
       )}
     </div>
+  )
+}
+function SkillMenu({ options, onChoose }) {
+  const lang = useContext(LangCtx)
+  return <DropMenu placeholder="اختر مهارة" dir={lang === 'en' ? 'ltr' : 'rtl'} groups={[{ items: options.map((o) => ({ value: o, label: o })) }]} other="غير ذلك" onChoose={onChoose} />
+}
+// Specialization: pick from the list (stored as a key, printed in the CV language) or choose "غير ذلك" and type it.
+const MAJOR_MENU = MAJOR_GROUPS.map((g) => ({ label: g.ar, items: g.items.map(([k, ar]) => ({ value: k, label: ar })) }))
+function MajorField({ value, onChange, err }) {
+  const guard = useGuard()
+  const known = isMajor(value)
+  const [other, setOther] = useState(!!value && !known)
+  const choose = (v) => {
+    if (v === OTHER) { setOther(true); if (known) onChange('') }
+    else { setOther(false); onChange(v) }
+  }
+  return (
+    <Field full label="اسم التخصص" err={err}>
+      <DropMenu placeholder="اختر التخصص" dir="rtl" text={known ? majorLabel(value, 'ar') : other ? 'غير ذلك' : ''} groups={MAJOR_MENU} other="غير ذلك" onChoose={choose} />
+      {other && (
+        <>
+          <div className="gap" />
+          <input value={known ? '' : value || ''} placeholder="اكتب اسم التخصص" onChange={(e) => onChange(guard(e.target.value, value || ''))} />
+        </>
+      )}
+    </Field>
   )
 }
 
@@ -259,15 +292,14 @@ function List({ items, onChange, blank, title, addLabel, render, optional }) {
 
 const eduFields = (tried) => (it, up) => (
   <>
-    <Field label="المرحلة الدراسية" err={tried && empty(it.level)}>
+    <Field full label="المرحلة الدراسية" err={tried && empty(it.level)}>
       <select value={it.level || ''} onChange={(e) => up({ level: e.target.value })}>
         <option value="">اختر المرحلة</option>
         {EDU_LEVELS.map(([k, label]) => <option key={k} value={k}>{label}</option>)}
       </select>
     </Field>
-    <Txt label="ماذا تدرس؟" placeholder="مثال: اقتصاد، آداب، فنون" value={it.field} err={tried && empty(it.field)} onChange={(v) => up({ field: v })} />
     <Txt full label="اسم الجامعة" value={it.school} err={tried && empty(it.school)} onChange={(v) => up({ school: v })} />
-    <Txt full label="اسم التخصص" value={it.major} err={tried && empty(it.major)} onChange={(v) => up({ major: v })} />
+    <MajorField value={it.major} err={tried && empty(it.major)} onChange={(v) => up({ major: v })} />
     <DateSel label="تاريخ البدء" value={it.start} err={tried && dEmpty(it.start)} onChange={(v) => up({ start: v })} />
     <DateSel label="تاريخ الانتهاء" value={it.end} now err={tried && dEmpty(it.end)} onChange={(v) => up({ end: v })} />
   </>
@@ -294,7 +326,7 @@ const confFields = (it, up) => (
 const courseFields = (it, up) => (
   <>
     <Txt full label="اسم الدورة أو الورشة" value={it.title} onChange={(v) => up({ title: v })} />
-    <Txt label="الجهة المنظِّمة" value={it.org} onChange={(v) => up({ org: v })} />
+    <Txt label="المعهد أو المؤسسة" value={it.org} onChange={(v) => up({ org: v })} />
     <DateSel label="تاريخ الإنجاز" value={it.date} onChange={(v) => up({ date: v })} />
   </>
 )
@@ -380,7 +412,7 @@ export default function App() {
     city: empty(p.city), residence: empty(p.residence), summary: empty(p.summary), // LinkedIn is optional
     tech: !cv.tech.length, soft: !cv.soft.length,
   }
-  const valid = !Object.values(bad).some(Boolean) && !cv.edu.some((e) => empty(e.level) || empty(e.field) || empty(e.school) || empty(e.major) || dEmpty(e.start) || dEmpty(e.end)) && !cv.langs.some((x) => empty(x.name) || SKILLS.some(([k]) => empty(x[k])))
+  const valid = !Object.values(bad).some(Boolean) && !cv.edu.some((e) => empty(e.level) || empty(e.school) || empty(e.major) || dEmpty(e.start) || dEmpty(e.end)) && !cv.langs.some((x) => empty(x.name) || SKILLS.some(([k]) => empty(x[k])))
   const ev = (b) => tried && b
   const validate = () => {
     setTried(true)
@@ -453,7 +485,7 @@ export default function App() {
             <List items={cv.edu} onChange={(v) => set('edu', v)} blank={blankEdu} title="التعليم" addLabel="إضافة تعليم" render={eduFields(tried)} />
           </Card>
           <Card n="3" title="الخبرات" opt>
-            <List items={cv.exp} onChange={(v) => set('exp', v)} blank={blankJob} optional title="خبرة" addLabel="إضافة خبرة" render={jobFields('المسمى الوظيفي', 'الشركة', 'المهام والمسؤوليات (كل سطر نقطة)')} />
+            <List items={cv.exp} onChange={(v) => set('exp', v)} blank={blankJob} optional title="خبرة" addLabel="إضافة خبرة" render={jobFields('المسمى الوظيفي', 'الشركة', 'المسؤوليات والإنجازات (كل سطر نقطة)')} />
           </Card>
           <Card n="4" title="المهارات">
             <Chips label="المهارات التقنية" items={cv.tech} options={SKILL_OPTS[cv.lang].tech} err={ev(bad.tech)} onChange={(v) => set('tech', v)} placeholder="اكتب مهارة واضغط Enter" />

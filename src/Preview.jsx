@@ -20,6 +20,70 @@ const EDU_LEVEL = {
   ar: Object.fromEntries(EDU_LEVELS),
   en: { basic: 'Basic Education', secondary: 'Secondary Education', diploma: 'Diploma', bachelor: "Bachelor's Degree", master: "Master's Degree", doctorate: 'Doctorate (PhD)' },
 }
+// Specializations offered in the education drop-down. The key is what is stored, so the CV prints the right language;
+// anything else (typed through "غير ذلك") is stored and printed as typed.
+export const MAJOR_GROUPS = [
+  {
+    ar: "الاختصاصات الطبية والصحية", en: "Medical & Health Sciences", items: [
+      ["major:medicine", "الطب البشري", "Medicine"],
+      ["major:dentistry", "طب الأسنان", "Dentistry"],
+      ["major:pharmacy", "الصيدلة", "Pharmacy"],
+      ["major:nursing", "التمريض", "Nursing"],
+      ["major:midwifery", "القبالة", "Midwifery"],
+      ["major:dental-prosthetics", "التعويضات السنية والمعهد التقاني للتعويضات السنية", "Dental Prosthetics & Technical Institute of Dental Prosthetics"],
+      ["major:laboratories", "المخابر", "Medical Laboratories"],
+      ["major:physiotherapy", "المعالجة الفيزيائية", "Physical Therapy"],
+      ["major:anesthesia", "التخدير", "Anesthesia"],
+      ["major:nutrition-skincare", "التغذية والعناية بالبشرة", "Nutrition & Skin Care"],
+      ["major:public-health", "الصحة العامة والعلوم الصحية", "Public Health & Health Sciences"],
+    ],
+  },
+  {
+    ar: "الاختصاصات الهندسية والتكنولوجية", en: "Engineering & Technology", items: [
+      ["major:architecture", "هندسة العمارة", "Architectural Engineering"],
+      ["major:civil-mech-elec", "الهندسة المدنية والميكانيكية والكهربائية", "Civil, Mechanical & Electrical Engineering"],
+      ["major:comms-computer", "هندسة الاتصالات والحاسوب", "Communications & Computer Engineering"],
+      ["major:software-it", "هندسة البرمجيات وتقنية المعلومات (وهندسة المعلوماتية)", "Software Engineering & Information Technology (Informatics Engineering)"],
+      ["major:ai-cyber", "الذكاء الاصطناعي والأمن السيبراني", "Artificial Intelligence & Cybersecurity"],
+      ["major:mechatronics-biomed", "الميكاترونكس والهندسة الطبية الذكية", "Mechatronics & Smart Biomedical Engineering"],
+      ["major:petroleum", "هندسة البترول", "Petroleum Engineering"],
+    ],
+  },
+  {
+    ar: "الاختصاصات الإدارية والاقتصادية والقانونية", en: "Management, Economics & Law", items: [
+      ["major:business-admin", "إدارة الأعمال", "Business Administration"],
+      ["major:economics", "الاقتصاد", "Economics"],
+      ["major:accounting-finance", "المحاسبة والتدقيق والتمويل", "Accounting, Auditing & Finance"],
+      ["major:law", "الحقوق", "Law"],
+      ["major:sharia", "الشريعة وأصول الدين", "Sharia & Fundamentals of Religion"],
+    ],
+  },
+  {
+    ar: "الآداب والعلوم الإنسانية والتربوية", en: "Arts, Humanities & Education", items: [
+      ["major:languages", "اللغة العربية واللغة الإنكليزية", "Arabic & English Language"],
+      ["major:translation", "الترجمة", "Translation"],
+      ["major:history-archaeology", "التاريخ والآثار", "History & Archaeology"],
+      ["major:psychology-sociology", "علم النفس وفلسفة الاجتماع", "Psychology & Philosophy of Sociology"],
+    ],
+  },
+  {
+    ar: "العلوم العامة", en: "General Sciences", items: [
+      ["major:math", "الرياضيات", "Mathematics"],
+      ["major:physics", "الفيزياء", "Physics"],
+      ["major:chemistry", "الكيمياء", "Chemistry"],
+    ],
+  },
+  {
+    ar: "الإعلام والفنون", en: "Media & Arts", items: [
+      ["major:media", "الإعلام", "Media"],
+      ["major:fine-arts-design", "الفنون الجميلة والتصميم الداخلي", "Fine Arts & Interior Design"],
+      ["major:drama-music-cinema", "المعهد العالي للفنون المسرحية والموسيقا والفنون السينمائية", "Higher Institute of Dramatic Arts, Music & Cinematic Arts"],
+    ],
+  },
+]
+const MAJOR = Object.fromEntries(MAJOR_GROUPS.flatMap((g) => g.items.map(([k, ar, en]) => [k, { ar, en }])))
+export const isMajor = (v) => !!MAJOR[v]
+export const majorLabel = (v, l) => (MAJOR[v] ? MAJOR[v][l] : v || '')
 // The four language skills, rated one by one.
 const SKILLS = ['read', 'write', 'listen', 'speak']
 const SK = {
@@ -94,14 +158,14 @@ export default function Preview({ cv }) {
   ].filter(Boolean)
   const sep = lang === 'ar' ? '، ' : ', '
   const contact = [['residence', p.residence], ['city', p.city], ['email', p.email], ['phone', p.phone], ['link', p.link, true]].filter(([, v]) => v) // [key, text, isLink]
-  const eduF = edu.filter((e) => e.school || e.major || e.level || e.field)
+  const eduF = edu.filter((e) => e.school || e.major || e.level)
   const hasJobs = [...exp, ...vol].some((i) => i.title || i.company)
   const empty = !p.name && !p.title && !contact.length && !p.summary && !p.photo && !genderLine && !details.length && !tech.length && !soft.length && !langF.length && !courseF.length && !confF.length && !eduF.length && !hasJobs
 
   const head = (
     <>
     {p.name && <h1 style={{ lineHeight: 1.25 }}>{p.name}</h1>}
-    {p.title && <p style={{ fontSize: '1.3em', lineHeight: 1.3 }}>{p.title}</p>}
+    {p.title && <p style={{ fontSize: '1.3em', lineHeight: 1.3, marginBottom: 6 }}>{p.title}</p>}
     {contact.map(([k, v, isLink]) => (
       <p key={k}><b>{CONTACT[lang][k]}:</b> <bdi>{isLink ? <a href={href(v)} target="_blank" rel="noreferrer">{v}</a> : v}</bdi></p>
     ))}
@@ -126,10 +190,10 @@ export default function Preview({ cv }) {
           {eduF.length > 0 && (
             <Sec h={t.edu}>
               {eduF.map((e) => {
-                const line = [EDU_LEVEL[lang][e.level], e.field].filter(Boolean).join(' – ') // "Bachelor's Degree – Economics"
+                const line = EDU_LEVEL[lang][e.level] || '' // "Bachelor's Degree"
                 return (
                   <div key={e.id}>
-                    <Row a={[e.school, e.major].filter(Boolean).join(' - ')} b={range(e.start, e.end, lang)} />
+                    <Row a={[e.school, majorLabel(e.major, lang)].filter(Boolean).join(' - ')} b={range(e.start, e.end, lang)} />
                     {line && <p>{line}</p>}
                   </div>
                 )
