@@ -16,6 +16,69 @@ const EL = {
   ar: { basic: 'تعليم أساسي', secondary: 'تعليم ثانوي', diploma: 'دبلوم', bachelor: 'بكالوريوس', master: 'ماجستير', doctorate: 'دكتوراه' },
   en: { basic: 'Basic Education', secondary: 'Secondary Education', diploma: 'Diploma', bachelor: "Bachelor's Degree", master: "Master's Degree", doctorate: 'Doctorate (PhD)' },
 }
+// Specializations offered in the education drop-down. The key is what is stored, so the CV prints the right language;
+// anything else (typed through "غير ذلك") is stored and printed as typed.
+const MAJOR_GROUPS = [
+  {
+    ar: "الاختصاصات الطبية والصحية", en: "Medical & Health Sciences", items: [
+      ["major:medicine", "الطب البشري", "Medicine"],
+      ["major:dentistry", "طب الأسنان", "Dentistry"],
+      ["major:pharmacy", "الصيدلة", "Pharmacy"],
+      ["major:nursing", "التمريض", "Nursing"],
+      ["major:midwifery", "القبالة", "Midwifery"],
+      ["major:dental-prosthetics", "التعويضات السنية والمعهد التقاني للتعويضات السنية", "Dental Prosthetics & Technical Institute of Dental Prosthetics"],
+      ["major:laboratories", "المخابر", "Medical Laboratories"],
+      ["major:physiotherapy", "المعالجة الفيزيائية", "Physical Therapy"],
+      ["major:anesthesia", "التخدير", "Anesthesia"],
+      ["major:nutrition-skincare", "التغذية والعناية بالبشرة", "Nutrition & Skin Care"],
+      ["major:public-health", "الصحة العامة والعلوم الصحية", "Public Health & Health Sciences"],
+    ],
+  },
+  {
+    ar: "الاختصاصات الهندسية والتكنولوجية", en: "Engineering & Technology", items: [
+      ["major:architecture", "هندسة العمارة", "Architectural Engineering"],
+      ["major:civil-mech-elec", "الهندسة المدنية والميكانيكية والكهربائية", "Civil, Mechanical & Electrical Engineering"],
+      ["major:comms-computer", "هندسة الاتصالات والحاسوب", "Communications & Computer Engineering"],
+      ["major:software-it", "هندسة البرمجيات وتقنية المعلومات (وهندسة المعلوماتية)", "Software Engineering & Information Technology (Informatics Engineering)"],
+      ["major:ai-cyber", "الذكاء الاصطناعي والأمن السيبراني", "Artificial Intelligence & Cybersecurity"],
+      ["major:mechatronics-biomed", "الميكاترونكس والهندسة الطبية الذكية", "Mechatronics & Smart Biomedical Engineering"],
+      ["major:petroleum", "هندسة البترول", "Petroleum Engineering"],
+    ],
+  },
+  {
+    ar: "الاختصاصات الإدارية والاقتصادية والقانونية", en: "Management, Economics & Law", items: [
+      ["major:business-admin", "إدارة الأعمال", "Business Administration"],
+      ["major:economics", "الاقتصاد", "Economics"],
+      ["major:accounting-finance", "المحاسبة والتدقيق والتمويل", "Accounting, Auditing & Finance"],
+      ["major:law", "الحقوق", "Law"],
+      ["major:sharia", "الشريعة وأصول الدين", "Sharia & Fundamentals of Religion"],
+    ],
+  },
+  {
+    ar: "الآداب والعلوم الإنسانية والتربوية", en: "Arts, Humanities & Education", items: [
+      ["major:languages", "اللغة العربية واللغة الإنكليزية", "Arabic & English Language"],
+      ["major:translation", "الترجمة", "Translation"],
+      ["major:history-archaeology", "التاريخ والآثار", "History & Archaeology"],
+      ["major:psychology-sociology", "علم النفس وفلسفة الاجتماع", "Psychology & Philosophy of Sociology"],
+    ],
+  },
+  {
+    ar: "العلوم العامة", en: "General Sciences", items: [
+      ["major:math", "الرياضيات", "Mathematics"],
+      ["major:physics", "الفيزياء", "Physics"],
+      ["major:chemistry", "الكيمياء", "Chemistry"],
+    ],
+  },
+  {
+    ar: "الإعلام والفنون", en: "Media & Arts", items: [
+      ["major:media", "الإعلام", "Media"],
+      ["major:fine-arts-design", "الفنون الجميلة والتصميم الداخلي", "Fine Arts & Interior Design"],
+      ["major:drama-music-cinema", "المعهد العالي للفنون المسرحية والموسيقا والفنون السينمائية", "Higher Institute of Dramatic Arts, Music & Cinematic Arts"],
+    ],
+  },
+]
+const MAJOR = Object.fromEntries(MAJOR_GROUPS.flatMap((g) => g.items.map(([k, ar, en]) => [k, { ar, en }])))
+const majorLabel = (v, l) => (MAJOR[v] ? MAJOR[v][l] : v || '')
 const FULL = { ar: M.ar, en: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'] }
 const SKILLS = ['read', 'write', 'listen', 'speak']
 const SK = {
@@ -89,10 +152,10 @@ export function cvHtml(cv, opts = {}) {
     (p.marital === 'single' || p.marital === 'married') && [d.marital, d[p.marital + (p.gender === 'female' ? 'F' : '')]],
   ].filter(Boolean)
   const langs = list(cv.langs).filter((x) => x && String(x.name || '').trim())
-  const edu = list(cv.edu).filter((e) => e && (e.school || e.major || e.level || e.field))
+  const edu = list(cv.edu).filter((e) => e && (e.school || e.major || e.level))
   const head = [
     p.name ? `<h1 style="line-height:1.25">${esc(p.name)}</h1>` : '',
-    p.title ? `<p style="font-size:1.3em;line-height:1.3">${esc(p.title)}</p>` : '',
+    p.title ? `<p style="font-size:1.3em;line-height:1.3;margin-bottom:6px">${esc(p.title)}</p>` : '',
     contact, // one line per item (residence, city, email, phone, link)
     genderLine ? `<p><b>${esc(genderLine[0])}:</b> ${esc(genderLine[1])}</p>` : '',
     details.length ? `<p>${details.map(([k, v]) => `<b>${esc(k)}:</b> ${esc(v)}`).join(' · ')}</p>` : '',
@@ -105,8 +168,8 @@ export function cvHtml(cv, opts = {}) {
     p.summary ? sec(t.summary, `<p>${esc(p.summary)}</p>`) : '',
     edu.length
       ? sec(t.edu, edu.map((e) => {
-          const line = [EL[l][e.level], e.field].filter(Boolean).join(' – ') // "Bachelor's Degree – Economics"
-          return `<div>${row([e.school, e.major].filter(Boolean).join(' - '), range(e.start, e.end, l))}${line ? `<p>${esc(line)}</p>` : ''}</div>`
+          const line = EL[l][e.level] || '' // "Bachelor's Degree"
+          return `<div>${row([e.school, majorLabel(e.major, l)].filter(Boolean).join(' - '), range(e.start, e.end, l))}${line ? `<p>${esc(line)}</p>` : ''}</div>`
         }).join(''))
       : '',
     jobs(cv.exp, t.exp, l),
@@ -120,3 +183,6 @@ export function cvHtml(cv, opts = {}) {
   ].join('')
   return `<!doctype html><html lang="${l}" dir="${l === 'ar' ? 'rtl' : 'ltr'}"><head><meta charset="utf-8"><style>${opts.fontCss || ''}${CSS}</style></head><body>${opts.wrap ? opts.wrap(body) : body}</body></html>`
 }
+
+// Shared with api/_docx.js so the Word file uses exactly the same wording as the PDF.
+export { T, EL, DETAILS, CONTACT, dobText, langLine, range, fmt, list, href, majorLabel }
