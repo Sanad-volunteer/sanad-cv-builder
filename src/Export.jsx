@@ -37,19 +37,24 @@ export default function Export({ cv, onValidate }) {
     window.print()
     document.title = old
   }
-  const download = async () => {
+  // kind: 'pdf' or 'docx' (the file extension is also the name of the /api endpoint)
+  const save = async (kind) => {
     if (!onValidate()) return setMsg({ ok: false, t: REQUIRED_MSG })
-    setBusy('pdf'); setMsg(null)
+    setBusy(kind); setMsg(null)
     try {
-      const r = await post('/api/pdf', { cv })
+      const r = await post(`/api/${kind}`, { cv })
       const url = URL.createObjectURL(await r.blob())
       const a = document.createElement('a')
-      a.href = url; a.download = `${fileName(cv.p.name)}.pdf`; a.click()
+      a.href = url; a.download = `${fileName(cv.p.name)}.${kind}`; a.click()
       URL.revokeObjectURL(url)
-    } catch {
-      print() // fallback: browser print dialog -> "Save as PDF"
+    } catch (e) {
+      console.error(e)
+      if (kind === 'pdf') print() // fallback: browser print dialog -> "Save as PDF"
+      else setMsg({ ok: false, t: 'تعذّر تجهيز ملف Word، حاول مرة أخرى' })
     } finally { setBusy('') }
   }
+  const download = () => save('pdf')
+  const downloadWord = () => save('docx')
   const send = async () => {
     if (!onValidate()) return setMsg({ ok: false, t: REQUIRED_MSG })
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return setMsg({ ok: false, t: 'أدخل بريدًا إلكترونيًا صحيحًا' })
@@ -72,7 +77,10 @@ export default function Export({ cv, onValidate }) {
 
   return (
     <div className="exp no-print">
-      <button type="button" className="btn p" onClick={download} disabled={!!busy}>{busy === 'pdf' ? 'جارٍ التجهيز…' : '⬇ تحميل PDF'}</button>
+      <div className="mail">
+        <button type="button" className="btn p" style={{ flex: 1 }} onClick={download} disabled={!!busy}>{busy === 'pdf' ? 'جارٍ التجهيز…' : '⬇ تحميل PDF'}</button>
+        <button type="button" className="btn p" style={{ flex: 1 }} onClick={downloadWord} disabled={!!busy}>{busy === 'docx' ? 'جارٍ التجهيز…' : '⬇ تحميل Word'}</button>
+      </div>
       <div className="mail">
         <input type="email" name="recipient" autoComplete="email" dir="ltr" placeholder="recipient@email.com" value={to} onChange={(e) => setTo(e.target.value)} />
         <button type="button" className="btn s" onClick={send} disabled={!!busy}>{busy === 'mail' ? 'جارٍ الإرسال…' : '✉ إرسال بالبريد'}</button>
