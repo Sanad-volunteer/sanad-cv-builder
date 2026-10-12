@@ -3,7 +3,7 @@ import {
   AlignmentType, BorderStyle, Document, ExternalHyperlink, HeadingLevel, ImageRun, LevelFormat, LineRuleType,
   Packer, Paragraph, Table, TableCell, TableRow, TextRun, WidthType,
 } from 'docx'
-import { T, EL, DETAILS, CONTACT, dobText, langLine, range, fmt, list, href, majorLabel } from './_cv.js'
+import { T, EL, DETAILS, CONTACT, dobText, langParts, range, fmt, list, href, majorLabel } from './_cv.js'
 
 const FONT = 'Arial' // Cairo is not installed on most computers; Arial exists everywhere and has Arabic glyphs
 const NAVY = '1A1464'
@@ -77,9 +77,7 @@ export async function makeDocx(cv) {
     dobText(p.dob, l) && [d.dob, dobText(p.dob, l)],
     (p.marital === 'single' || p.marital === 'married') && [d.marital, d[p.marital + (p.gender === 'female' ? 'F' : '')]],
   ].filter(Boolean)
-  if (details.length) {
-    head.push(para(details.flatMap(([k, v], i) => [...(i ? [run(' · ')] : []), run(`${k}: `, { bold: true }), run(v)])))
-  }
+  for (const [k, v] of details) head.push(labelled(k, v))
 
   const photo = photoOf(p.photo)
   const children = []
@@ -128,10 +126,10 @@ export async function makeDocx(cv) {
   }
 
   const langs = list(cv.langs).filter((x) => x && String(x.name || '').trim())
-  if (langs.length) children.push(h2(t.langs), ...langs.map((x) => para([run(x.name, { bold: true }), run(langLine(x, l))])))
+  if (langs.length) children.push(h2(t.langs), ...langs.map((x) => para([run(x.name, { bold: true }), ...langParts(x, l).map(([tx, b]) => run(tx, { bold: b }))])))
 
   const courses = list(cv.courses).filter((c) => c && (c.title || c.org))
-  if (courses.length) children.push(h2(t.courses), ...entries(courses.map((c) => [row([c.title, c.org].filter(Boolean).join(' – '), fmt(c.date, l))])))
+  if (courses.length) children.push(h2(t.courses), ...courses.map((c) => para([run([[c.title, c.org].filter(Boolean).join(' – '), fmt(c.date, l) && `(${fmt(c.date, l)})`].filter(Boolean).join(' '))], { numbering: { reference: 'bullets', level: 0 } })))
 
   jobs(cv.vol, t.vol)
 

@@ -7,90 +7,8 @@ const T = {
   ar: { summary: 'نبذة', skills: 'المهارات', tech: 'المهارات التقنية', soft: 'المهارات الناعمة', langs: 'اللغات', courses: 'الدورات وورش العمل', edu: 'التعليم', exp: 'الخبرات', vol: 'العمل التطوعي', confs: 'المؤتمرات', now: 'حتى الآن' },
   en: { summary: 'Summary', skills: 'Skills', tech: 'Technical', soft: 'Soft', langs: 'Languages', courses: 'Courses & Workshops', edu: 'Education', exp: 'Work Experience', vol: 'Volunteer Work', confs: 'Conferences', now: 'Present' },
 }
-const LV = {
-  ar: { beginner: 'مبتدئ', intermediate: 'متوسط', upper: 'فوق المتوسط', fluent: 'متمرس', native: 'لغة أم' },
-  en: { beginner: 'Beginner', intermediate: 'Intermediate', upper: 'Upper-intermediate', fluent: 'Proficient', native: 'Native' },
-}
-// Education levels (basic education -> doctorate)
-const EL = {
-  ar: { basic: 'تعليم أساسي', secondary: 'تعليم ثانوي', diploma: 'دبلوم', bachelor: 'بكالوريوس', master: 'ماجستير', doctorate: 'دكتوراه' },
-  en: { basic: 'Basic Education', secondary: 'Secondary Education', diploma: 'Diploma', bachelor: "Bachelor's Degree", master: "Master's Degree", doctorate: 'Doctorate (PhD)' },
-}
-// Specializations offered in the education drop-down. The key is what is stored, so the CV prints the right language;
-// anything else (typed through "غير ذلك") is stored and printed as typed.
-const MAJOR_GROUPS = [
-  {
-    ar: "الاختصاصات الطبية والصحية", en: "Medical & Health Sciences", items: [
-      ["major:medicine", "الطب البشري", "Medicine"],
-      ["major:dentistry", "طب الأسنان", "Dentistry"],
-      ["major:pharmacy", "الصيدلة", "Pharmacy"],
-      ["major:nursing", "التمريض", "Nursing"],
-      ["major:midwifery", "القبالة", "Midwifery"],
-      ["major:dental-prosthetics", "التعويضات السنية والمعهد التقاني للتعويضات السنية", "Dental Prosthetics & Technical Institute of Dental Prosthetics"],
-      ["major:laboratories", "المخابر", "Medical Laboratories"],
-      ["major:physiotherapy", "المعالجة الفيزيائية", "Physical Therapy"],
-      ["major:anesthesia", "التخدير", "Anesthesia"],
-      ["major:nutrition-skincare", "التغذية والعناية بالبشرة", "Nutrition & Skin Care"],
-      ["major:public-health", "الصحة العامة والعلوم الصحية", "Public Health & Health Sciences"],
-    ],
-  },
-  {
-    ar: "الاختصاصات الهندسية والتكنولوجية", en: "Engineering & Technology", items: [
-      ["major:architecture", "هندسة العمارة", "Architectural Engineering"],
-      ["major:civil-mech-elec", "الهندسة المدنية والميكانيكية والكهربائية", "Civil, Mechanical & Electrical Engineering"],
-      ["major:comms-computer", "هندسة الاتصالات والحاسوب", "Communications & Computer Engineering"],
-      ["major:software-it", "هندسة البرمجيات وتقنية المعلومات (وهندسة المعلوماتية)", "Software Engineering & Information Technology (Informatics Engineering)"],
-      ["major:ai-cyber", "الذكاء الاصطناعي والأمن السيبراني", "Artificial Intelligence & Cybersecurity"],
-      ["major:mechatronics-biomed", "الميكاترونكس والهندسة الطبية الذكية", "Mechatronics & Smart Biomedical Engineering"],
-      ["major:petroleum", "هندسة البترول", "Petroleum Engineering"],
-    ],
-  },
-  {
-    ar: "الاختصاصات الإدارية والاقتصادية والقانونية", en: "Management, Economics & Law", items: [
-      ["major:business-admin", "إدارة الأعمال", "Business Administration"],
-      ["major:economics", "الاقتصاد", "Economics"],
-      ["major:accounting-finance", "المحاسبة والتدقيق والتمويل", "Accounting, Auditing & Finance"],
-      ["major:law", "الحقوق", "Law"],
-      ["major:sharia", "الشريعة وأصول الدين", "Sharia & Fundamentals of Religion"],
-    ],
-  },
-  {
-    ar: "الآداب والعلوم الإنسانية والتربوية", en: "Arts, Humanities & Education", items: [
-      ["major:languages", "اللغة العربية واللغة الإنكليزية", "Arabic & English Language"],
-      ["major:translation", "الترجمة", "Translation"],
-      ["major:history-archaeology", "التاريخ والآثار", "History & Archaeology"],
-      ["major:psychology-sociology", "علم النفس وفلسفة الاجتماع", "Psychology & Philosophy of Sociology"],
-    ],
-  },
-  {
-    ar: "العلوم العامة", en: "General Sciences", items: [
-      ["major:math", "الرياضيات", "Mathematics"],
-      ["major:physics", "الفيزياء", "Physics"],
-      ["major:chemistry", "الكيمياء", "Chemistry"],
-    ],
-  },
-  {
-    ar: "الإعلام والفنون", en: "Media & Arts", items: [
-      ["major:media", "الإعلام", "Media"],
-      ["major:fine-arts-design", "الفنون الجميلة والتصميم الداخلي", "Fine Arts & Interior Design"],
-      ["major:drama-music-cinema", "المعهد العالي للفنون المسرحية والموسيقا والفنون السينمائية", "Higher Institute of Dramatic Arts, Music & Cinematic Arts"],
-    ],
-  },
-]
-const MAJOR = Object.fromEntries(MAJOR_GROUPS.flatMap((g) => g.items.map(([k, ar, en]) => [k, { ar, en }])))
-const majorLabel = (v, l) => (MAJOR[v] ? MAJOR[v][l] : v || '')
+import { EDU_LEVEL as EL, majorLabel, langParts } from './_lists.js'
 const FULL = { ar: M.ar, en: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'] }
-const SKILLS = ['read', 'write', 'listen', 'speak']
-const SK = {
-  ar: { read: 'القراءة', write: 'الكتابة', listen: 'الاستماع', speak: 'المحادثة' },
-  en: { read: 'Reading', write: 'Writing', listen: 'Listening', speak: 'Speaking' },
-}
-const langLine = (x, l) => {
-  const vals = SKILLS.map((k) => LV[l][x[k]] || '')
-  if (!vals.some(Boolean)) return ''
-  if (vals.every((v) => v && v === vals[0])) return ` – ${vals[0]}`
-  return ' – ' + SKILLS.filter((k, i) => vals[i]).map((k) => `${SK[l][k]}: ${LV[l][x[k]]}`).join(l === 'ar' ? '، ' : ', ')
-}
 const DETAILS = {
   ar: { dob: 'تاريخ الميلاد', gender: 'الجنس', marital: 'الحالة الاجتماعية', male: 'ذكر', female: 'أنثى', single: 'أعزب', singleF: 'عزباء', married: 'متزوج', marriedF: 'متزوجة' },
   en: { dob: 'Date of birth', gender: 'Gender', marital: 'Marital status', male: 'Male', female: 'Female', single: 'Single', singleF: 'Single', married: 'Married', marriedF: 'Married' },
@@ -158,7 +76,7 @@ export function cvHtml(cv, opts = {}) {
     p.title ? `<p style="font-size:1.3em;line-height:1.3;margin-bottom:6px">${esc(p.title)}</p>` : '',
     contact, // one line per item (residence, city, email, phone, link)
     genderLine ? `<p><b>${esc(genderLine[0])}:</b> ${esc(genderLine[1])}</p>` : '',
-    details.length ? `<p>${details.map(([k, v]) => `<b>${esc(k)}:</b> ${esc(v)}`).join(' · ')}</p>` : '',
+    ...details.map(([k, v]) => `<p><b>${esc(k)}:</b> ${esc(v)}</p>`),
   ].join('')
   const photo = typeof p.photo === 'string' && p.photo.length <= 400000 && PHOTO.test(p.photo) ? p.photo : ''
   const body = [
@@ -176,8 +94,8 @@ export function cvHtml(cv, opts = {}) {
     tech.length || soft.length
       ? sec(t.skills, (tech.length ? `<p><b>${t.tech}:</b> ${esc(tech.join(sep))}</p>` : '') + (soft.length ? `<p><b>${t.soft}:</b> ${esc(soft.join(sep))}</p>` : ''))
       : '',
-    langs.length ? sec(t.langs, langs.map((x) => `<p><b>${esc(x.name)}</b>${esc(langLine(x, l))}</p>`).join('')) : '',
-    courses.length ? sec(t.courses, courses.map((c) => `<div>${row([c.title, c.org].filter(Boolean).join(' – '), fmt(c.date, l))}</div>`).join('')) : '',
+    langs.length ? sec(t.langs, langs.map((x) => `<p><b>${esc(x.name)}</b>${langParts(x, l).map(([tx, b]) => (b ? `<b>${esc(tx)}</b>` : esc(tx))).join('')}</p>`).join('')) : '',
+    courses.length ? sec(t.courses, `<ul>${courses.map((c) => `<li>${esc([[c.title, c.org].filter(Boolean).join(' – '), fmt(c.date, l) && `(${fmt(c.date, l)})`].filter(Boolean).join(' '))}</li>`).join('')}</ul>`) : '',
     jobs(cv.vol, t.vol, l),
     confs.length ? sec(t.confs, confs.map((c) => `<div>${row(c.title, fmt(c.date, l))}</div>`).join('')) : '',
   ].join('')
@@ -185,4 +103,4 @@ export function cvHtml(cv, opts = {}) {
 }
 
 // Shared with api/_docx.js so the Word file uses exactly the same wording as the PDF.
-export { T, EL, DETAILS, CONTACT, dobText, langLine, range, fmt, list, href, majorLabel }
+export { T, EL, DETAILS, CONTACT, dobText, langParts, range, fmt, list, href, majorLabel }

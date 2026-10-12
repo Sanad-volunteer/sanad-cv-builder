@@ -35,13 +35,24 @@ export default async function handler(req, res) {
     : [{ text: `${jobText}\n<cv>${file.data.slice(0, 20000)}</cv>\nReview this CV for the job.` }]
 
   try {
-    const data = await callGemini({
+    // Newer Gemini models spend part of maxOutputTokens on hidden "thinking", which can cut the JSON answer short.
+    // So: a generous limit, thinking parts ignored, and one retry with an even bigger limit if the answer was cut.
+    const ask = (maxOutputTokens) => callGemini({
       systemInstruction: { parts: [{ text: SYSTEM }] },
       contents: [{ role: 'user', parts }],
-      generationConfig: { responseMimeType: 'application/json', temperature: 0.3, maxOutputTokens: 6000 },
+      generationConfig: { responseMimeType: 'application/json', temperature: 0.3, maxOutputTokens },
     })
-    const text = arr(data.candidates?.[0]?.content?.parts).map((p) => p.text || '').join('')
-    const j = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1))
+    const read = (d) => {
+      const c = d.candidates?.[0]
+      const text = arr(c?.content?.parts).filter((p) => !p.thought).map((p) => p.text || '').join('')
+      let j = null
+      try { j = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1)) } catch { /* cut off or not JSON */ }
+      return { j, why: d.promptFeedback?.blockReason ? `blocked:${d.promptFeedback.blockReason}` : c?.finishReason || 'no_candidates' }
+    }
+    let out = read(await ask(16000))
+    if (!out.j && out.why === 'MAX_TOKENS') out = read(await ask(48000))
+    if (!out.j) { const e = new Error(`bad_ai_answer (${out.why})`); e.status = 0; throw e }
+    const j = out.j
     res.status(200).json({
       score: Math.max(0, Math.min(100, Math.round(+j.score) || 0)),
       verdict: str(j.verdict, 200),
