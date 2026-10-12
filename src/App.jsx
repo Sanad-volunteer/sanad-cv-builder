@@ -28,7 +28,7 @@ const dEmpty = (d) => !d.y || (d.y !== 'now' && !d.m) // a date needs a year, an
 const blankEdu = () => ({ id: uid(), level: '', school: '', major: '', start: nd(), end: nd() })
 const TODAY = new Date().toISOString().slice(0, 10)
 const SKILLS = [['read', 'القراءة'], ['write', 'الكتابة'], ['listen', 'الاستماع'], ['speak', 'المحادثة']] // each language is rated on all four
-const blankLang = () => ({ id: uid(), name: '', read: '', write: '', listen: '', speak: '' })
+const blankLang = () => ({ id: uid(), name: '', native: false, read: '', write: '', listen: '', speak: '' })
 const blankCourse = () => ({ id: uid(), title: '', org: '', date: nd() })
 const blankConf = () => ({ id: uid(), title: '', date: nd() })
 const blankJob = () => ({ id: uid(), title: '', company: '', start: nd(), end: nd(), bullets: '' })
@@ -42,7 +42,12 @@ const load = () => {
     const d = { ...initial(), ...JSON.parse(s) }
     d.p = { ...initial().p, ...d.p } // fields added in newer versions
     d.langs = (d.langs || []).map((x) => (x.read === undefined ? { ...x, read: x.level || '', write: x.level || '', listen: x.level || '', speak: x.level || '' } : x)) // old single level -> four skills
-    d.edu = (d.edu || []).map((e) => ({ level: '', ...e })) // education fields added in newer versions
+    d.langs = d.langs.map((x) => { // "native" used to be a level: four natives -> the checkbox, a single native skill -> proficient
+      const all = SKILLS.every(([k]) => x[k] === 'native')
+      const fix = Object.fromEntries(SKILLS.map(([k]) => [k, x[k] === 'native' ? 'fluent' : x[k]]))
+      return all ? { ...x, native: true, read: '', write: '', listen: '', speak: '' } : { ...x, native: !!x.native, ...fix }
+    })
+    d.edu = (d.edu || []).map((e) => ({ level: '', ...e, ...(e.level === 'basic' ? { level: '' } : {}) })) // education fields added in newer versions
     if (!d.langs.length) d.langs = [blankLang()] // languages are required: always show one row
     return d } catch { return initial() }
 }
@@ -215,24 +220,70 @@ function SkillMenu({ options, onChoose }) {
   return <DropMenu placeholder="اختر مهارة" dir={lang === 'en' ? 'ltr' : 'rtl'} groups={[{ items: options.map((o) => ({ value: o, label: o })) }]} other="غير ذلك" onChoose={onChoose} />
 }
 // Specialization: pick from the list (stored as a key, printed in the CV language) or choose "غير ذلك" and type it.
-const MAJOR_MENU = MAJOR_GROUPS.map((g) => ({ label: g.ar, items: g.items.map(([k, ar]) => ({ value: k, label: ar })) }))
-function MajorField({ value, onChange, err }) {
+const PLAIN_MAJOR = ['secondary', 'diploma'] // levels where the specialization is typed, not chosen from the list
+// Arabic-insensitive search text: no diacritics, alef/ya/ta-marbuta variants folded, lower case.
+const normSearch = (t) => String(t || '').toLowerCase().replace(/[\u064B-\u0652\u0640]/g, '').replace(/[أإآٱ]/g, 'ا').replace(/ى/g, 'ي').replace(/ة/g, 'ه').trim()
+// Bachelor/master/doctorate pick the specialization from the list (typing in the box searches it);
+// secondary school and diploma/institute have no list: the specialization is typed freely.
+function MajorField({ value, onChange, err, plain }) {
   const guard = useGuard()
   const known = isMajor(value)
-  const [other, setOther] = useState(!!value && !known)
-  const choose = (v) => {
-    if (v === OTHER) { setOther(true); if (known) onChange('') }
-    else { setOther(false); onChange(v) }
+  const [q, setQ] = useState(null) // null = not typing, the box shows the saved value
+  const [open, setOpen] = useState(false)
+  const box = useRef(null)
+  const pop = useRef(null)
+  const finish = (text = q) => { // leave the box: keep what was typed (an exact list name becomes that item)
+    setOpen(false)
+    if (text === null) return
+    const t = text.trim()
+    setQ(null)
+    if (!t) { onChange(''); return }
+    const hit = MAJOR_GROUPS.flatMap((g) => g.items).find(([, ar, en]) => normSearch(ar) === normSearch(t) || normSearch(en) === normSearch(t))
+    onChange(hit ? hit[0] : guard(t, ''))
   }
+  const fin = useRef(finish)
+  fin.current = finish
+  useEffect(() => {
+    if (!open) return
+    pop.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+    const away = (e) => { if (!box.current?.contains(e.target)) fin.current() }
+    document.addEventListener('mousedown', away)
+    return () => document.removeEventListener('mousedown', away)
+  }, [open])
+  if (plain) return <Txt full label="اسم التخصص" placeholder="اكتب اسم التخصص" value={known ? '' : value || ''} err={err} onChange={onChange} />
+  const needle = normSearch(q)
+  const groups = MAJOR_GROUPS.map((g) => ({
+    label: g.ar,
+    items: g.items.filter(([, ar, en]) => !needle || normSearch(ar).includes(needle) || normSearch(en).includes(needle)).map(([k, ar]) => ({ value: k, label: ar })),
+  })).filter((g) => g.items.length)
+  const flat = groups.flatMap((g) => g.items)
+  const pick = (k) => { setOpen(false); setQ(null); onChange(k) }
+  const typed = (q || '').trim()
   return (
     <Field full label="اسم التخصص" err={err}>
-      <DropMenu placeholder="اختر التخصص" dir="rtl" text={known ? majorLabel(value, 'ar') : other ? 'غير ذلك' : ''} groups={MAJOR_MENU} other="غير ذلك" onChoose={choose} />
-      {other && (
-        <>
-          <div className="gap" />
-          <input value={known ? '' : value || ''} placeholder="اكتب اسم التخصص" onChange={(e) => onChange(guard(e.target.value, value || ''))} />
-        </>
-      )}
+      <div className="dp" ref={box}>
+        <input dir="rtl" autoComplete="off" role="combobox" aria-expanded={open} aria-autocomplete="list" placeholder="ابحث أو اختر التخصص"
+          value={q !== null ? q : known ? majorLabel(value, 'ar') : value || ''}
+          onFocus={(e) => { setOpen(true); e.target.select() }}
+          onChange={(e) => { setQ(e.target.value); setOpen(true) }}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') { setOpen(false); setQ(null) }
+            else if (e.key === 'Tab') finish()
+            else if (e.key === 'Enter') { e.preventDefault(); if (q !== null && flat.length === 1) pick(flat[0].value); else finish() }
+          }} />
+        {open && (
+          <div className="dp-pop" ref={pop} role="listbox" dir="rtl" style={{ width: '100%', maxHeight: 280, overflowY: 'auto', boxSizing: 'border-box' }}>
+            {groups.map((g, i) => (
+              <div key={i}>
+                <div style={{ padding: '10px 10px 4px', fontSize: 12, fontWeight: 700, color: 'var(--mut)' }}>{g.label}</div>
+                {g.items.map((o) => <MenuItem key={o.value} onClick={() => pick(o.value)}>{o.label}</MenuItem>)}
+              </div>
+            ))}
+            {typed && <MenuItem last={groups.length > 0} onClick={() => finish()}>غير ذلك: «{typed}»</MenuItem>}
+            {!typed && !groups.length && <div style={{ padding: 10, color: 'var(--mut)' }}>لا توجد نتائج</div>}
+          </div>
+        )}
+      </div>
     </Field>
   )
 }
@@ -293,13 +344,13 @@ function List({ items, onChange, blank, title, addLabel, render, optional }) {
 const eduFields = (tried) => (it, up) => (
   <>
     <Field full label="المرحلة الدراسية" err={tried && empty(it.level)}>
-      <select value={it.level || ''} onChange={(e) => up({ level: e.target.value })}>
+      <select value={it.level || ''} onChange={(e) => up(PLAIN_MAJOR.includes(e.target.value) && isMajor(it.major) ? { level: e.target.value, major: '' } : { level: e.target.value })}>
         <option value="">اختر المرحلة</option>
         {EDU_LEVELS.map(([k, label]) => <option key={k} value={k}>{label}</option>)}
       </select>
     </Field>
-    <Txt full label="اسم الجامعة" value={it.school} err={tried && empty(it.school)} onChange={(v) => up({ school: v })} />
-    <MajorField value={it.major} err={tried && empty(it.major)} onChange={(v) => up({ major: v })} />
+    <Txt full label={it.level === 'secondary' ? 'اسم المدرسة' : it.level === 'diploma' ? 'اسم المعهد' : 'اسم الجامعة'} value={it.school} err={tried && empty(it.school)} onChange={(v) => up({ school: v })} />
+    <MajorField key={PLAIN_MAJOR.includes(it.level) ? 'plain' : 'list'} plain={PLAIN_MAJOR.includes(it.level)} value={it.major} err={tried && empty(it.major)} onChange={(v) => up({ major: v })} />
     <DateSel label="تاريخ البدء" value={it.start} err={tried && dEmpty(it.start)} onChange={(v) => up({ start: v })} />
     <DateSel label="تاريخ الانتهاء" value={it.end} now err={tried && dEmpty(it.end)} onChange={(v) => up({ end: v })} />
   </>
@@ -307,9 +358,20 @@ const eduFields = (tried) => (it, up) => (
 const langFields = (tried) => (it, up) => (
   <>
     <Txt full label="اللغة" placeholder="مثال: الإنجليزية" value={it.name} err={tried && empty(it.name)} onChange={(v) => up({ name: v })} />
+    <label style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: 10, fontWeight: 'normal', cursor: 'pointer', userSelect: 'none' }}>
+      <input type="checkbox" checked={!!it.native}
+        style={{
+          appearance: 'none', WebkitAppearance: 'none', width: 24, height: 24, padding: 0, margin: 0, flex: 'none', cursor: 'pointer',
+          borderRadius: 8, border: `2px solid ${it.native ? '#1A1464' : '#cfd0e4'}`, background: it.native ? '#1A1464' : '#fff',
+          backgroundImage: it.native ? CHECK : 'none', backgroundRepeat: 'no-repeat', backgroundPosition: 'center', backgroundSize: '16px',
+          transition: 'background-color .15s, border-color .15s', boxShadow: 'none',
+        }}
+        onChange={(e) => up(e.target.checked ? { native: true, read: '', write: '', listen: '', speak: '' } : { native: false })} />
+      لغة أم
+    </label>
     {SKILLS.map(([k, label]) => (
-      <Field key={k} label={label} err={tried && empty(it[k])}>
-        <select value={it[k] || ''} onChange={(e) => up({ [k]: e.target.value })}>
+      <Field key={k} label={label} err={tried && !it.native && empty(it[k])}>
+        <select value={it[k] || ''} disabled={!!it.native} style={it.native ? { opacity: 0.5, cursor: 'not-allowed' } : undefined} onChange={(e) => up({ [k]: e.target.value })}>
           <option value="">اختر المستوى</option>
           {LEVELS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
         </select>
@@ -323,10 +385,10 @@ const confFields = (it, up) => (
     <DateSel label="التاريخ" value={it.date} onChange={(v) => up({ date: v })} />
   </>
 )
-const courseFields = (it, up) => (
+const courseFields = (tried) => (it, up) => (
   <>
     <Txt full label="اسم الدورة أو الورشة" value={it.title} onChange={(v) => up({ title: v })} />
-    <Txt label="المعهد أو المؤسسة" value={it.org} onChange={(v) => up({ org: v })} />
+    <Txt label="المعهد أو المؤسسة" value={it.org} err={tried && empty(it.org)} onChange={(v) => up({ org: v })} />
     <DateSel label="تاريخ الإنجاز" value={it.date} onChange={(v) => up({ date: v })} />
   </>
 )
@@ -412,7 +474,7 @@ export default function App() {
     city: empty(p.city), residence: empty(p.residence), summary: empty(p.summary), // LinkedIn is optional
     tech: !cv.tech.length, soft: !cv.soft.length,
   }
-  const valid = !Object.values(bad).some(Boolean) && !cv.edu.some((e) => empty(e.level) || empty(e.school) || empty(e.major) || dEmpty(e.start) || dEmpty(e.end)) && !cv.langs.some((x) => empty(x.name) || SKILLS.some(([k]) => empty(x[k])))
+  const valid = !Object.values(bad).some(Boolean) && !cv.edu.some((e) => empty(e.level) || empty(e.school) || empty(e.major) || dEmpty(e.start) || dEmpty(e.end)) && !(cv.courses || []).some((c) => empty(c.org)) && !cv.langs.some((x) => empty(x.name) || (!x.native && SKILLS.some(([k]) => empty(x[k]))))
   const ev = (b) => tried && b
   const validate = () => {
     setTried(true)
@@ -493,14 +555,14 @@ export default function App() {
             <Chips label="المهارات الناعمة" items={cv.soft} options={SKILL_OPTS[cv.lang].soft} err={ev(bad.soft)} onChange={(v) => set('soft', v)} placeholder="اكتب مهارة واضغط Enter" />
           </Card>
 
-          <Card n="5" title="العمل التطوعي" opt>
-            <List items={cv.vol} onChange={(v) => set('vol', v)} blank={blankJob} optional title="عمل تطوعي" addLabel="إضافة عمل تطوعي" render={jobFields('الدور', 'المنظمة')} />
-          </Card>
-          <Card n="6" title="اللغات">
+          <Card n="5" title="اللغات">
             <List items={cv.langs} onChange={(v) => set('langs', v)} blank={blankLang} title="لغة" addLabel="إضافة لغة" render={langFields(tried)} />
           </Card>
+          <Card n="6" title="العمل التطوعي" opt>
+            <List items={cv.vol} onChange={(v) => set('vol', v)} blank={blankJob} optional title="عمل تطوعي" addLabel="إضافة عمل تطوعي" render={jobFields('الدور', 'المنظمة')} />
+          </Card>
           <Card n="7" title="الدورات وورش العمل" opt>
-            <List items={cv.courses} onChange={(v) => set('courses', v)} blank={blankCourse} optional title="دورة" addLabel="إضافة دورة أو ورشة" render={courseFields} />
+            <List items={cv.courses} onChange={(v) => set('courses', v)} blank={blankCourse} optional title="دورة" addLabel="إضافة دورة أو ورشة" render={courseFields(tried)} />
           </Card>
           <Card n="8" title="المؤتمرات" opt>
             <List items={cv.confs || []} onChange={(v) => set('confs', v)} blank={blankConf} optional title="مؤتمر" addLabel="إضافة مؤتمر" render={confFields} />

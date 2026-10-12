@@ -9,99 +9,9 @@ export const MONTH_NAMES = {
 }
 
 // Language levels: the key is stored, the label depends on the CV language.
-export const LEVELS = [['beginner', 'مبتدئ'], ['intermediate', 'متوسط'], ['upper', 'فوق المتوسط'], ['fluent', 'متمرس'], ['native', 'لغة أم']]
-const LEVEL = {
-  ar: Object.fromEntries(LEVELS),
-  en: { beginner: 'Beginner', intermediate: 'Intermediate', upper: 'Upper-intermediate', fluent: 'Proficient', native: 'Native' },
-}
-// Education levels (basic education -> doctorate): the key is stored, the label depends on the CV language.
-export const EDU_LEVELS = [['basic', 'تعليم أساسي'], ['secondary', 'تعليم ثانوي'], ['diploma', 'دبلوم'], ['bachelor', 'بكالوريوس'], ['master', 'ماجستير'], ['doctorate', 'دكتوراه']]
-const EDU_LEVEL = {
-  ar: Object.fromEntries(EDU_LEVELS),
-  en: { basic: 'Basic Education', secondary: 'Secondary Education', diploma: 'Diploma', bachelor: "Bachelor's Degree", master: "Master's Degree", doctorate: 'Doctorate (PhD)' },
-}
-// Specializations offered in the education drop-down. The key is what is stored, so the CV prints the right language;
-// anything else (typed through "غير ذلك") is stored and printed as typed.
-export const MAJOR_GROUPS = [
-  {
-    ar: "الاختصاصات الطبية والصحية", en: "Medical & Health Sciences", items: [
-      ["major:medicine", "الطب البشري", "Medicine"],
-      ["major:dentistry", "طب الأسنان", "Dentistry"],
-      ["major:pharmacy", "الصيدلة", "Pharmacy"],
-      ["major:nursing", "التمريض", "Nursing"],
-      ["major:midwifery", "القبالة", "Midwifery"],
-      ["major:dental-prosthetics", "التعويضات السنية", "Dental Prosthetics"],
-      ["major:laboratories", "المخابر", "Medical Laboratories"],
-      ["major:physiotherapy", "المعالجة الفيزيائية", "Physical Therapy"],
-      ["major:anesthesia", "التخدير", "Anesthesia"],
-      ["major:nutrition-skincare", "التغذية", "Nutrition"],
-      ["major:public-health", "العلوم الصحية", "Health Sciences"],
-    ],
-  },
-  {
-    ar: "الاختصاصات الهندسية والتكنولوجية", en: "Engineering & Technology", items: [
-      ["major:architecture", "هندسة العمارة", "Architectural Engineering"],
-      ["major:civil", "الهندسة المدنية", "Civil Engineering"],
-      ["major:mech", "الهندسة الميكانيكية", "Mechanical"],
-      ["major:elec", "الهندسة والكهربائية", "Electrical Engineering"],
-      ["major:computer", "هندسة أتمتة وحواسيب", "Computer sucience & automation"],
-      ["major:comms", "هندسة الاتصالات", "Communications"],
-      ["major:software-it", "هندسة المعلوماتية", "Information Technology"],
-      ["major:ai", "الذكاء الاصطناعي", "Artificial Intelligence"],
-      ["major:cyber", "الأمن السيبراني", "Cybersecurity"],
-      ["major:mechatronics-biomed", "الميكاترونكس", "Mechatronics"],
-      ["major:petroleum", "هندسة البترول", "Petroleum Engineering"],
-    ],
-  },
-  {
-    ar: "الاختصاصات الإدارية والاقتصادية والقانونية", en: "Management, Economics & Law", items: [
-      ["major:business-admin", "إدارة الأعمال", "Business Administration"],
-      ["major:economics", "الاقتصاد", "Economics"],
-      ["major:accounting-finance", "المحاسبة والتدقيق والتمويل", "Accounting, Auditing & Finance"],
-      ["major:law", "الحقوق", "Law"],
-      ["major:sharia", "الشريعة وأصول الدين", "Sharia & Fundamentals of Religion"],
-    ],
-  },
-  {
-    ar: "الآداب والعلوم الإنسانية والتربوية", en: "Arts, Humanities & Education", items: [
-      ["major:languages", "اللغة العربية واللغة الإنكليزية", "Arabic & English Language"],
-      ["major:translation", "الترجمة", "Translation"],
-      ["major:history-archaeology", "التاريخ والآثار", "History & Archaeology"],
-      ["major:psychology-sociology", "علم النفس وفلسفة الاجتماع", "Psychology & Philosophy of Sociology"],
-    ],
-  },
-  {
-    ar: "العلوم العامة", en: "General Sciences", items: [
-      ["major:math", "الرياضيات", "Mathematics"],
-      ["major:physics", "الفيزياء", "Physics"],
-      ["major:chemistry", "الكيمياء", "Chemistry"],
-    ],
-  },
-  {
-    ar: "الإعلام والفنون", en: "Media & Arts", items: [
-      ["major:media", "الإعلام", "Media"],
-      ["major:fine-arts-design", "الفنون الجميلة والتصميم الداخلي", "Fine Arts & Interior Design"],
-      ["major:drama-music-cinema", "المعهد العالي للفنون المسرحية والموسيقا والفنون السينمائية", "Higher Institute of Dramatic Arts, Music & Cinematic Arts"],
-    ],
-  },
-]
-const MAJOR = Object.fromEntries(MAJOR_GROUPS.flatMap((g) => g.items.map(([k, ar, en]) => [k, { ar, en }])))
-export const isMajor = (v) => !!MAJOR[v]
-export const majorLabel = (v, l) => (MAJOR[v] ? MAJOR[v][l] : v || '')
-// The four language skills, rated one by one.
-const SKILLS = ['read', 'write', 'listen', 'speak']
-const SK = {
-  ar: { read: 'القراءة', write: 'الكتابة', listen: 'الاستماع', speak: 'المحادثة' },
-  en: { read: 'Reading', write: 'Writing', listen: 'Listening', speak: 'Speaking' },
-}
-// "English – Proficient" when all four skills are equal, otherwise "Reading: …, Writing: …"
-const langLine = (x, l) => {
-  const vals = SKILLS.map((k) => LEVEL[l][x[k]] || '')
-  if (!vals.some(Boolean)) return ''
-  if (vals.every((v) => v && v === vals[0])) return ` – ${vals[0]}`
-  return ' – ' + SKILLS.filter((k, i) => vals[i]).map((k) => `${SK[l][k]}: ${LEVEL[l][x[k]]}`).join(l === 'ar' ? '، ' : ', ')
-}
-
+export const LEVELS = [['beginner', 'مبتدئ'], ['intermediate', 'متوسط'], ['upper', 'فوق المتوسط'], ['fluent', 'متمرس']] // "native" is a separate checkbox (x.native), not a level
+import { EDU_LEVELS, EDU_LEVEL, MAJOR_GROUPS, isMajor, majorLabel, langParts } from '../api/_lists.js'
+export { EDU_LEVELS, MAJOR_GROUPS, isMajor, majorLabel }
 // Optional personal details line (date of birth, gender, marital status)
 const DETAILS = {
   ar: { dob: 'تاريخ الميلاد', gender: 'الجنس', marital: 'الحالة الاجتماعية', male: 'ذكر', female: 'أنثى', single: 'أعزب', singleF: 'عزباء', married: 'متزوج', marriedF: 'متزوجة' },
@@ -174,7 +84,7 @@ export default function Preview({ cv }) {
       <p key={k}><b>{CONTACT[lang][k]}:</b> <bdi>{isLink ? <a href={href(v)} target="_blank" rel="noreferrer">{v}</a> : v}</bdi></p>
     ))}
     {genderLine && <p><b>{genderLine[0]}:</b> {genderLine[1]}</p>}
-    {details.length > 0 && <p>{details.map(([k, v], i) => <span key={k}>{i > 0 && ' · '}<b>{k}:</b> {v}</span>)}</p>}
+    {details.map(([k, v]) => <p key={k}><b>{k}:</b> {v}</p>)}
     </>
   )
 
@@ -213,12 +123,12 @@ export default function Preview({ cv }) {
           )}
           {langF.length > 0 && (
             <Sec h={t.langs}>
-              {langF.map((x) => <p key={x.id}><b>{x.name}</b>{langLine(x, lang)}</p>)}
+              {langF.map((x) => <p key={x.id}><b>{x.name}</b>{langParts(x, lang).map(([tx, b], i) => (b ? <b key={i}>{tx}</b> : tx))}</p>)}
             </Sec>
           )}
           {courseF.length > 0 && (
             <Sec h={t.courses}>
-              {courseF.map((c) => <div key={c.id}><Row a={[c.title, c.org].filter(Boolean).join(' – ')} b={fmt(c.date, lang)} /></div>)}
+              <ul>{courseF.map((c) => <li key={c.id}>{[[c.title, c.org].filter(Boolean).join(' – '), fmt(c.date, lang) && `(${fmt(c.date, lang)})`].filter(Boolean).join(' ')}</li>)}</ul>
             </Sec>
           )}
           <Jobs items={vol} h={t.vol} l={lang} />
