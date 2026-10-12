@@ -47,7 +47,7 @@ const load = () => {
       const fix = Object.fromEntries(SKILLS.map(([k]) => [k, x[k] === 'native' ? 'fluent' : x[k]]))
       return all ? { ...x, native: true, read: '', write: '', listen: '', speak: '' } : { ...x, native: !!x.native, ...fix }
     })
-    d.edu = (d.edu || []).map((e) => ({ level: '', ...e, ...(e.level === 'basic' ? { level: '' } : {}) })) // education fields added in newer versions
+    d.edu = (d.edu || []).map((e) => ({ level: '', ...e, ...(e.level === 'basic' ? { level: '' } : {}), ...(e.level === 'secondary' ? { major: '' } : {}) })) // education fields added in newer versions
     if (!d.langs.length) d.langs = [blankLang()] // languages are required: always show one row
     return d } catch { return initial() }
 }
@@ -60,11 +60,11 @@ const Field = ({ label, full, err, htmlFor, children }) => (
     <label htmlFor={htmlFor}>{label}{err && <span className="star"> *</span>}</label>{children}
   </div>
 )
-const Txt = ({ label, full, err, name, value, onChange, ...rest }) => {
+const Txt = ({ label, full, err, name, value, onChange, free, ...rest }) => { // free: skip the English-only guard
   const guard = useGuard()
   return (
     <Field label={label} full={full} err={err} htmlFor={name}>
-      <input id={name} name={name} autoComplete="off" dir={value ? 'auto' : 'rtl'} value={value} onChange={(e) => onChange(guard(e.target.value, value))} {...rest} />
+      <input id={name} name={name} autoComplete="off" dir={value ? 'auto' : 'rtl'} value={value} onChange={(e) => onChange(free ? e.target.value : guard(e.target.value, value))} {...rest} />
     </Field>
   )
 }
@@ -221,6 +221,7 @@ function SkillMenu({ options, onChoose }) {
 }
 // Specialization: pick from the list (stored as a key, printed in the CV language) or choose "غير ذلك" and type it.
 const PLAIN_MAJOR = ['secondary', 'diploma'] // levels where the specialization is typed, not chosen from the list
+const NO_MAJOR = ['secondary'] // no specialization at all for secondary school
 // Arabic-insensitive search text: no diacritics, alef/ya/ta-marbuta variants folded, lower case.
 const normSearch = (t) => String(t || '').toLowerCase().replace(/[\u064B-\u0652\u0640]/g, '').replace(/[أإآٱ]/g, 'ا').replace(/ى/g, 'ي').replace(/ة/g, 'ه').trim()
 // Bachelor/master/doctorate pick the specialization from the list (typing in the box searches it);
@@ -344,13 +345,13 @@ function List({ items, onChange, blank, title, addLabel, render, optional }) {
 const eduFields = (tried) => (it, up) => (
   <>
     <Field full label="المرحلة الدراسية" err={tried && empty(it.level)}>
-      <select value={it.level || ''} onChange={(e) => up(PLAIN_MAJOR.includes(e.target.value) && isMajor(it.major) ? { level: e.target.value, major: '' } : { level: e.target.value })}>
+      <select value={it.level || ''} onChange={(e) => up(NO_MAJOR.includes(e.target.value) || (PLAIN_MAJOR.includes(e.target.value) && isMajor(it.major)) ? { level: e.target.value, major: '' } : { level: e.target.value })}>
         <option value="">اختر المرحلة</option>
         {EDU_LEVELS.map(([k, label]) => <option key={k} value={k}>{label}</option>)}
       </select>
     </Field>
-    <Txt full label={it.level === 'secondary' ? 'اسم المدرسة' : it.level === 'diploma' ? 'اسم المعهد' : 'اسم الجامعة'} value={it.school} err={tried && empty(it.school)} onChange={(v) => up({ school: v })} />
-    <MajorField key={PLAIN_MAJOR.includes(it.level) ? 'plain' : 'list'} plain={PLAIN_MAJOR.includes(it.level)} value={it.major} err={tried && empty(it.major)} onChange={(v) => up({ major: v })} />
+    <Txt full label={it.level === 'secondary' ? 'اسم المدرسة' : it.level === 'diploma' ? 'اسم المعهد' : 'اسم الجامعة'} placeholder={it.level === 'secondary' ? 'اكتب اسم المدرسة' : it.level === 'diploma' ? 'اكتب اسم المعهد' : 'اكتب اسم الجامعة'} value={it.school} err={tried && empty(it.school)} onChange={(v) => up({ school: v })} />
+    {!NO_MAJOR.includes(it.level) && <MajorField key={PLAIN_MAJOR.includes(it.level) ? 'plain' : 'list'} plain={PLAIN_MAJOR.includes(it.level)} value={it.major} err={tried && empty(it.major)} onChange={(v) => up({ major: v })} />}
     <DateSel label="تاريخ البدء" value={it.start} err={tried && dEmpty(it.start)} onChange={(v) => up({ start: v })} />
     <DateSel label="تاريخ الانتهاء" value={it.end} now err={tried && dEmpty(it.end)} onChange={(v) => up({ end: v })} />
   </>
@@ -387,8 +388,8 @@ const confFields = (it, up) => (
 )
 const courseFields = (tried) => (it, up) => (
   <>
-    <Txt full label="اسم الدورة أو الورشة" value={it.title} onChange={(v) => up({ title: v })} />
-    <Txt label="المعهد أو المؤسسة" value={it.org} err={tried && empty(it.org)} onChange={(v) => up({ org: v })} />
+    <Txt free full label="اسم الدورة أو الورشة" value={it.title} onChange={(v) => up({ title: v })} />
+    <Txt free label="المعهد أو المؤسسة" value={it.org} err={tried && empty(it.org)} onChange={(v) => up({ org: v })} />
     <DateSel label="تاريخ الإنجاز" value={it.date} onChange={(v) => up({ date: v })} />
   </>
 )
@@ -474,7 +475,7 @@ export default function App() {
     city: empty(p.city), residence: empty(p.residence), summary: empty(p.summary), // LinkedIn is optional
     tech: !cv.tech.length, soft: !cv.soft.length,
   }
-  const valid = !Object.values(bad).some(Boolean) && !cv.edu.some((e) => empty(e.level) || empty(e.school) || empty(e.major) || dEmpty(e.start) || dEmpty(e.end)) && !(cv.courses || []).some((c) => empty(c.org)) && !cv.langs.some((x) => empty(x.name) || (!x.native && SKILLS.some(([k]) => empty(x[k]))))
+  const valid = !Object.values(bad).some(Boolean) && !cv.edu.some((e) => empty(e.level) || empty(e.school) || (!NO_MAJOR.includes(e.level) && empty(e.major)) || dEmpty(e.start) || dEmpty(e.end)) && !(cv.courses || []).some((c) => empty(c.org)) && !cv.langs.some((x) => empty(x.name) || (!x.native && SKILLS.some(([k]) => empty(x[k]))))
   const ev = (b) => tried && b
   const validate = () => {
     setTried(true)
