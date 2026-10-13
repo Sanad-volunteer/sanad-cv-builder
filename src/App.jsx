@@ -390,6 +390,7 @@ const jobFields = (a, b, c = 'الإنجازات (كل سطر نقطة)') => (it
   </>
 )
 
+const ADMIN_TITLE = 'لوحة تحكم السير الذاتية'
 export default function App() {
   const [cv, setCv] = useState(load)
   const [view, setView] = useState(() => (location.hash === '#admin' ? 'admin' : 'home')) // #admin = back office
@@ -416,13 +417,14 @@ export default function App() {
     if (!valid) setTimeout(() => document.querySelector('.invalid')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60)
     return valid
   }
+  useEffect(() => { document.title = view === 'admin' ? `${ADMIN_TITLE} – سند الشباب` : 'منشئ السيرة الذاتية – سند الشباب' }, [view]) // browser tab title
   const reset = () => { if (window.confirm('سيتم حذف جميع البيانات. هل أنت متأكد؟')) { setCv(initial()); setTried(false) } }
 
   return (
     <>
       <header className="top no-print">
         <div className="logo" role="button" tabIndex={0} onClick={() => setView('home')}><img src={logo} alt="Sanad Youth for Development" /></div>
-        <h1>منشئ السيرة الذاتية</h1>
+        <h1>{view === 'admin' ? ADMIN_TITLE : 'منشئ السيرة الذاتية'}</h1>
         <span className="cp">© 2026 جميع الحقوق محفوظة</span>
       </header>
 
