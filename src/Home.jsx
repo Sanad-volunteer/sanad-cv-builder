@@ -19,7 +19,6 @@ export default function Home({ go }) {
           style={{ appearance: 'none', WebkitAppearance: 'none', width: 24, height: 24, padding: 0, margin: 0, flex: 'none', cursor: 'pointer', borderRadius: 8, border: `2px solid ${ok ? '#1A1464' : nudge ? '#b3261e' : '#cfd0e4'}`, background: ok ? '#1A1464' : '#fff', backgroundImage: ok ? CHECK : 'none', backgroundRepeat: 'no-repeat', backgroundPosition: 'center', backgroundSize: '16px', boxShadow: 'none' }} />
         <span>
           <b>أوافق على أن تحتفظ مؤسسة سند الشباب بنسخة من سيرتي الذاتية وبياناتي الواردة فيها عند تحميلها أو إرسالها بالبريد.</b>
-          <small>الموافقة إلزامية لاستخدام الأدوات. وعند استخدام أداة التحليل يُرسَل ملفّك إلى خدمة ذكاء اصطناعي من Google.</small>
           {nudge && <em>يرجى الموافقة أولاً للمتابعة.</em>}
         </span>
       </label>
