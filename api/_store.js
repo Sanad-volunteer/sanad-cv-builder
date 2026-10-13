@@ -6,13 +6,21 @@ const base = () => String(process.env.SUPABASE_URL || '').trim().replace(/\/$/, 
 const key = () => String(process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim()
 export const storeReady = () => !!(base() && key())
 
+// Errors thrown from here never contain the URL or the key (they can end up in a response or a log).
 export async function sb(path, { method = 'GET', body, headers = {} } = {}) {
-  const r = await fetch(`${base()}/rest/v1/${path}`, {
-    method,
-    headers: { apikey: key(), Authorization: `Bearer ${key()}`, 'Content-Type': 'application/json', ...headers },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  })
-  if (!r.ok) throw new Error(`supabase ${r.status} ${(await r.text().catch(() => '')).slice(0, 200)}`)
+  if (!/^https:\/\/[^\s/]+$/.test(base())) throw new Error('invalid_supabase_url') // must look like https://xxxx.supabase.co
+  const auth = key().startsWith('sb_') ? {} : { Authorization: `Bearer ${key()}` } // new "sb_secret_" keys go in apikey only; old JWT keys in both
+  let r
+  try {
+    r = await fetch(`${base()}/rest/v1/${path}`, {
+      method,
+      headers: { apikey: key(), ...auth, 'Content-Type': 'application/json', ...headers },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    })
+  } catch {
+    throw new Error('supabase_unreachable')
+  }
+  if (!r.ok) throw new Error(`supabase ${r.status} ${(await r.text().catch(() => '')).slice(0, 160).replace(key(), '***')}`)
   return r
 }
 

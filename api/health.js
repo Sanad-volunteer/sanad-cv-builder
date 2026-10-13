@@ -17,7 +17,7 @@ export default async function handler(req, res) {
   }
   if (req.query && req.query.db !== undefined) { // ?db=1 -> checks that the cvs table can be reached
     if (await limited(clientIp(req))) return res.status(429).json({ error: 'rate_limited' })
-    try { await sb('cvs?select=id&limit=1'); out.db = { ok: true } } catch (e) { out.db = { ok: false, reason: storeReady() ? String(e.message).slice(0, 160) : 'missing_settings' } }
+    try { await sb('cvs?select=id&limit=1'); out.db = { ok: true } } catch (e) { out.db = { ok: false, reason: storeReady() ? String(e.message).slice(0, 160).replace(process.env.SUPABASE_SERVICE_ROLE_KEY || '\u0000', '***') : 'missing_settings' } }
   }
   if (req.query && req.query.ai !== undefined) {
     if (await limited(clientIp(req))) return res.status(429).json({ error: 'rate_limited' })
