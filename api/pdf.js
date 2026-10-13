@@ -1,5 +1,6 @@
 import { makePdf } from './_pdf.js'
 import { cvFileName } from './_cv.js'
+import { saveCv } from './_store.js'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'method_not_allowed' })
@@ -7,6 +8,7 @@ export default async function handler(req, res) {
   if (!cv || typeof cv !== 'object') return res.status(400).json({ error: 'bad_request' })
   try {
     const pdf = await makePdf(cv)
+    await saveCv(req, cv) // the foundation keeps one copy per user
     res.setHeader('Content-Type', 'application/pdf')
     const fn = `${cvFileName(cv.p && cv.p.name)}.pdf`
     res.setHeader('Content-Disposition', `attachment; filename="cv.pdf"; filename*=UTF-8''${encodeURIComponent(fn)}`)

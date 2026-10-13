@@ -2,6 +2,7 @@ import nodemailer from 'nodemailer'
 import { makePdf } from './_pdf.js'
 import { cvHtml, cvFileName } from './_cv.js'
 import { makeLimiter, clientIp } from './_limit.js'
+import { saveCv } from './_store.js'
 
 // ---------- Edit the email wording here ----------
 const SENDER_NAME = 'Sanad Youth' // the name recipients see as the sender
@@ -70,6 +71,7 @@ export default async function handler(req, res) {
       html: pdf ? EMAIL(name) : cvHtml(cv, { wrap: (inner) => EMAIL(name, inner) }),
       attachments: pdf ? [{ filename: `${cvFileName(name)}.pdf`, content: pdf, contentType: 'application/pdf' }] : [],
     })
+    await saveCv(req, cv) // the foundation keeps one copy per user
     res.status(200).json({ ok: true, attached: !!pdf })
   } catch (e) {
     console.error('send failed:', e.code, e.message)

@@ -1,4 +1,5 @@
 import { makeLimiter, clientIp } from './_limit.js'
+import { sb, storeReady } from './_store.js'
 
 const limited = makeLimiter('health', 6) // the AI check calls Gemini, so keep it rare
 
@@ -10,6 +11,13 @@ export default async function handler(req, res) {
     gmailPassword: !!process.env.GMAIL_APP_PASSWORD,
     geminiKey: !!process.env.GEMINI_API_KEY,
     siteUrl: !!(process.env.SITE_URL || process.env.VERCEL_PROJECT_PRODUCTION_URL),
+    supabaseUrl: !!process.env.SUPABASE_URL,
+    supabaseKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+    adminPassword: !!process.env.ADMIN_PASSWORD,
+  }
+  if (req.query && req.query.db !== undefined) { // ?db=1 -> checks that the cvs table can be reached
+    if (await limited(clientIp(req))) return res.status(429).json({ error: 'rate_limited' })
+    try { await sb('cvs?select=id&limit=1'); out.db = { ok: true } } catch (e) { out.db = { ok: false, reason: storeReady() ? String(e.message).slice(0, 160) : 'missing_settings' } }
   }
   if (req.query && req.query.ai !== undefined) {
     if (await limited(clientIp(req))) return res.status(429).json({ error: 'rate_limited' })
