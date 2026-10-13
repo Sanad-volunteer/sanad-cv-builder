@@ -1,8 +1,9 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import logo from './assets/sanad-logo.svg'
-import Preview, { MONTH_NAMES, LEVELS, EDU_LEVELS, MAJOR_GROUPS, isMajor, majorLabel } from './Preview.jsx'
+import Preview, { MONTH_NAMES, LEVELS, EDU_LEVELS } from './Preview.jsx'
 import Home from './Home.jsx'
 import Analyze from './Analyze.jsx'
+import Admin from './Admin.jsx'
 import Export from './Export.jsx'
 
 const LangCtx = createContext('ar') // language of the CV being written; the date pickers follow it
@@ -47,7 +48,7 @@ const load = () => {
       const fix = Object.fromEntries(SKILLS.map(([k]) => [k, x[k] === 'native' ? 'fluent' : x[k]]))
       return all ? { ...x, native: true, read: '', write: '', listen: '', speak: '' } : { ...x, native: !!x.native, ...fix }
     })
-    d.edu = (d.edu || []).map((e) => ({ level: '', ...e, ...(e.level === 'basic' ? { level: '' } : {}), ...(e.level === 'secondary' ? { major: '' } : {}) })) // education fields added in newer versions
+    d.edu = (d.edu || []).map((e) => ({ level: '', ...e, ...(e.level === 'basic' ? { level: '' } : {}), ...(e.level === 'secondary' ? { major: '' } : {}), ...(String(e.major || '').startsWith('major:') ? { major: '' } : {}) })) // the old specialization list is gone: its saved keys are cleared // education fields added in newer versions
     if (!d.langs.length) d.langs = [blankLang()] // languages are required: always show one row
     return d } catch { return initial() }
 }
@@ -220,74 +221,7 @@ function SkillMenu({ options, onChoose }) {
   return <DropMenu placeholder="اختر مهارة" dir={lang === 'en' ? 'ltr' : 'rtl'} groups={[{ items: options.map((o) => ({ value: o, label: o })) }]} other="غير ذلك" onChoose={onChoose} />
 }
 // Specialization: pick from the list (stored as a key, printed in the CV language) or choose "غير ذلك" and type it.
-const PLAIN_MAJOR = ['secondary', 'diploma'] // levels where the specialization is typed, not chosen from the list
 const NO_MAJOR = ['secondary'] // no specialization at all for secondary school
-// Arabic-insensitive search text: no diacritics, alef/ya/ta-marbuta variants folded, lower case.
-const normSearch = (t) => String(t || '').toLowerCase().replace(/[\u064B-\u0652\u0640]/g, '').replace(/[أإآٱ]/g, 'ا').replace(/ى/g, 'ي').replace(/ة/g, 'ه').trim()
-// Bachelor/master/doctorate pick the specialization from the list (typing in the box searches it);
-// secondary school and diploma/institute have no list: the specialization is typed freely.
-function MajorField({ value, onChange, err, plain }) {
-  const guard = useGuard()
-  const known = isMajor(value)
-  const [q, setQ] = useState(null) // null = not typing, the box shows the saved value
-  const [open, setOpen] = useState(false)
-  const box = useRef(null)
-  const pop = useRef(null)
-  const finish = (text = q) => { // leave the box: keep what was typed (an exact list name becomes that item)
-    setOpen(false)
-    if (text === null) return
-    const t = text.trim()
-    setQ(null)
-    if (!t) { onChange(''); return }
-    const hit = MAJOR_GROUPS.flatMap((g) => g.items).find(([, ar, en]) => normSearch(ar) === normSearch(t) || normSearch(en) === normSearch(t))
-    onChange(hit ? hit[0] : guard(t, ''))
-  }
-  const fin = useRef(finish)
-  fin.current = finish
-  useEffect(() => {
-    if (!open) return
-    pop.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
-    const away = (e) => { if (!box.current?.contains(e.target)) fin.current() }
-    document.addEventListener('mousedown', away)
-    return () => document.removeEventListener('mousedown', away)
-  }, [open])
-  if (plain) return <Txt full label="اسم التخصص" placeholder="اكتب اسم التخصص" value={known ? '' : value || ''} err={err} onChange={onChange} />
-  const needle = normSearch(q)
-  const groups = MAJOR_GROUPS.map((g) => ({
-    label: g.ar,
-    items: g.items.filter(([, ar, en]) => !needle || normSearch(ar).includes(needle) || normSearch(en).includes(needle)).map(([k, ar]) => ({ value: k, label: ar })),
-  })).filter((g) => g.items.length)
-  const flat = groups.flatMap((g) => g.items)
-  const pick = (k) => { setOpen(false); setQ(null); onChange(k) }
-  const typed = (q || '').trim()
-  return (
-    <Field full label="اسم التخصص" err={err}>
-      <div className="dp" ref={box}>
-        <input dir="rtl" autoComplete="off" role="combobox" aria-expanded={open} aria-autocomplete="list" placeholder="ابحث أو اختر التخصص"
-          value={q !== null ? q : known ? majorLabel(value, 'ar') : value || ''}
-          onFocus={(e) => { setOpen(true); e.target.select() }}
-          onChange={(e) => { setQ(e.target.value); setOpen(true) }}
-          onKeyDown={(e) => {
-            if (e.key === 'Escape') { setOpen(false); setQ(null) }
-            else if (e.key === 'Tab') finish()
-            else if (e.key === 'Enter') { e.preventDefault(); if (q !== null && flat.length === 1) pick(flat[0].value); else finish() }
-          }} />
-        {open && (
-          <div className="dp-pop" ref={pop} role="listbox" dir="rtl" style={{ width: '100%', maxHeight: 280, overflowY: 'auto', boxSizing: 'border-box' }}>
-            {groups.map((g, i) => (
-              <div key={i}>
-                <div style={{ padding: '10px 10px 4px', fontSize: 12, fontWeight: 700, color: 'var(--mut)' }}>{g.label}</div>
-                {g.items.map((o) => <MenuItem key={o.value} onClick={() => pick(o.value)}>{o.label}</MenuItem>)}
-              </div>
-            ))}
-            {typed && <MenuItem last={groups.length > 0} onClick={() => finish()}>غير ذلك: «{typed}»</MenuItem>}
-            {!typed && !groups.length && <div style={{ padding: 10, color: 'var(--mut)' }}>لا توجد نتائج</div>}
-          </div>
-        )}
-      </div>
-    </Field>
-  )
-}
 
 function Chips({ label, items, onChange, placeholder, err, options }) {
   const guard = useGuard()
@@ -345,13 +279,13 @@ function List({ items, onChange, blank, title, addLabel, render, optional }) {
 const eduFields = (tried) => (it, up) => (
   <>
     <Field full label="المرحلة الدراسية" err={tried && empty(it.level)}>
-      <select value={it.level || ''} onChange={(e) => up(NO_MAJOR.includes(e.target.value) || (PLAIN_MAJOR.includes(e.target.value) && isMajor(it.major)) ? { level: e.target.value, major: '' } : { level: e.target.value })}>
+      <select value={it.level || ''} onChange={(e) => up(NO_MAJOR.includes(e.target.value) ? { level: e.target.value, major: '' } : { level: e.target.value })}>
         <option value="">اختر المرحلة</option>
         {EDU_LEVELS.map(([k, label]) => <option key={k} value={k}>{label}</option>)}
       </select>
     </Field>
     <Txt full label={it.level === 'secondary' ? 'اسم المدرسة' : it.level === 'diploma' ? 'اسم المعهد' : 'اسم الجامعة'} placeholder={it.level === 'secondary' ? 'اكتب اسم المدرسة' : it.level === 'diploma' ? 'اكتب اسم المعهد' : 'اكتب اسم الجامعة'} value={it.school} err={tried && empty(it.school)} onChange={(v) => up({ school: v })} />
-    {!NO_MAJOR.includes(it.level) && <MajorField key={PLAIN_MAJOR.includes(it.level) ? 'plain' : 'list'} plain={PLAIN_MAJOR.includes(it.level)} value={it.major} err={tried && empty(it.major)} onChange={(v) => up({ major: v })} />}
+    {!NO_MAJOR.includes(it.level) && <Txt full label="اسم التخصص" placeholder="اكتب اسم التخصص" value={it.major} err={tried && empty(it.major)} onChange={(v) => up({ major: v })} />}
     <DateSel label="تاريخ البدء" value={it.start} err={tried && dEmpty(it.start)} onChange={(v) => up({ start: v })} />
     <DateSel label="تاريخ الانتهاء" value={it.end} now err={tried && dEmpty(it.end)} onChange={(v) => up({ end: v })} />
   </>
@@ -458,7 +392,7 @@ const jobFields = (a, b, c = 'الإنجازات (كل سطر نقطة)') => (it
 
 export default function App() {
   const [cv, setCv] = useState(load)
-  const [view, setView] = useState('home')
+  const [view, setView] = useState(() => (location.hash === '#admin' ? 'admin' : 'home')) // #admin = back office
   const [toast, setToast] = useState('')
   const toastTimer = useRef(null)
   const flash = (msg) => { setToast(msg); clearTimeout(toastTimer.current); toastTimer.current = setTimeout(() => setToast(''), 3000) }
@@ -494,6 +428,7 @@ export default function App() {
 
       {view === 'home' && <Home go={setView} />}
       {view === 'analyze' && <Analyze go={setView} />}
+      {view === 'admin' && <Admin />}
       {view === 'create' && (
       <LangCtx.Provider value={cv.lang}>
       <WarnCtx.Provider value={warn}>
@@ -545,9 +480,11 @@ export default function App() {
           </Card>
 
           <Card n="2" title="التعليم">
+            <p className="note start">رتّب إدخالاتك من الأحدث إلى الأقدم.</p>
             <List items={cv.edu} onChange={(v) => set('edu', v)} blank={blankEdu} title="التعليم" addLabel="إضافة تعليم" render={eduFields(tried)} />
           </Card>
           <Card n="3" title="الخبرات" opt>
+            <p className="note start">رتّب إدخالاتك من الأحدث إلى الأقدم.</p>
             <List items={cv.exp} onChange={(v) => set('exp', v)} blank={blankJob} optional title="خبرة" addLabel="إضافة خبرة" render={jobFields('المسمى الوظيفي', 'الشركة', 'المسؤوليات والإنجازات (كل سطر نقطة)')} />
           </Card>
           <Card n="4" title="المهارات">
