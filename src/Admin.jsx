@@ -79,7 +79,7 @@ export default function Admin() {
     return (
       <main className="adm">
         <form className="card adm-login" onSubmit={(e) => { e.preventDefault(); input && load(input) }}>
-          <h2>لوحة السير الذاتية</h2>
+          <h2>لوحة التحكم</h2>
           <label htmlFor="admpw">كلمة المرور</label>
           <input id="admpw" type="password" autoComplete="current-password" value={input} onChange={(e) => setInput(e.target.value)} />
           {err && <p className="adm-err">{err}</p>}
