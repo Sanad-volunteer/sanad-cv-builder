@@ -1,12 +1,21 @@
 import { useEffect, useMemo, useState } from 'react'
 import { EDU_LEVELS } from './Preview.jsx'
+import { makeXlsx, makeZip } from './files.js'
 
 // Back office: #admin at the end of the site address. Not linked from anywhere; the password is checked by the server.
 const LEVEL = Object.fromEntries(EDU_LEVELS)
-const ACTION = { pdf: 'PDF', docx: 'Word', email: 'بريد' }
 const KEY = 'sanad-admin-pw'
 const fmtDate = (iso) => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleString('ar', { dateStyle: 'medium', timeStyle: 'short' }) }
-const csvCell = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`
+const safeName = (s) => String(s || 'cv').replace(/[\\/:*?"<>|]+/g, ' ').trim() || 'cv'
+const stamp = () => new Date().toISOString().slice(0, 10)
+const when = (iso) => { const d = new Date(iso); return isNaN(d) ? '' : `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}` }
+function saveBlob(blob, name) {
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(blob)
+  a.download = name
+  a.click()
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000)
+}
 
 async function call(pw, qs, opts = {}) {
   const r = await fetch(`/api/admin?${qs}`, { ...opts, headers: { Authorization: `Bearer ${pw}` } })
@@ -23,6 +32,8 @@ export default function Admin() {
   const [q, setQ] = useState('')
   const [city, setCity] = useState('')
   const [level, setLevel] = useState('')
+  const [sel, setSel] = useState(() => new Set()) // ids ticked in the table
+  const [prog, setProg] = useState('') // progress text while a bulk action runs
 
   const load = async (password) => {
     setErr('')
@@ -43,17 +54,13 @@ export default function Admin() {
     setBusy(row.id + fmt)
     try {
       const blob = await (await call(pw, `action=file&id=${row.id}&fmt=${fmt}`)).blob()
-      const a = document.createElement('a')
-      a.href = URL.createObjectURL(blob)
-      a.download = `${(row.name || 'cv').replace(/[\\/:*?"<>|]+/g, ' ').trim()}-cv.${fmt}`
-      a.click()
-      setTimeout(() => URL.revokeObjectURL(a.href), 4000)
+      saveBlob(blob, `${safeName(row.name)}-cv.${fmt}`)
     } catch { setErr('تعذّر تنزيل الملف') }
     setBusy('')
   }
   const remove = async (row) => {
     if (!window.confirm(`حذف سيرة ${row.name || row.email} نهائياً؟`)) return
-    try { await call(pw, `action=delete&id=${row.id}`, { method: 'POST' }); setRows((r) => r.filter((x) => x.id !== row.id)) } catch { setErr('تعذّر الحذف') }
+    try { await call(pw, `action=delete&id=${row.id}`, { method: 'POST' }); setRows((r) => r.filter((x) => x.id !== row.id)); setSel((s) => { const n = new Set(s); n.delete(row.id); return n }) } catch { setErr('تعذّر الحذف') }
   }
 
   const cities = useMemo(() => [...new Set((rows || []).map((r) => (r.city || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ar')), [rows])
@@ -61,18 +68,53 @@ export default function Admin() {
     const n = q.trim().toLowerCase()
     return (rows || []).filter((r) =>
       (!city || (r.city || '').trim() === city) && (!level || r.level === level) &&
-      (!n || [r.name, r.email, r.phone, r.city, r.school, r.major, r.title].some((v) => String(v || '').toLowerCase().includes(n))))
+      (!n || [r.name, r.email, r.phone, r.city, r.university, r.major, r.title].some((v) => String(v || '').toLowerCase().includes(n))))
   }, [rows, q, city, level])
 
-  const exportCsv = () => {
-    const head = ['الاسم', 'المسمى', 'البريد', 'الهاتف', 'المدينة', 'السكن', 'المرحلة', 'الجامعة/المؤسسة', 'التخصص', 'لغة السيرة', 'آخر إجراء', 'أول حفظ', 'آخر تحديث']
-    const lines = shown.map((r) => [r.name, r.title, r.email, r.phone, r.city, r.residence, LEVEL[r.level] || '', r.school, r.major, r.lang === 'en' ? 'EN' : 'AR', ACTION[r.last_action] || '', r.created_at, r.updated_at].map(csvCell).join(','))
-    const blob = new Blob(['﻿' + [head.map(csvCell).join(','), ...lines].join('\n')], { type: 'text/csv;charset=utf-8' })
-    const a = document.createElement('a')
-    a.href = URL.createObjectURL(blob)
-    a.download = 'sanad-cvs.csv'
-    a.click()
-    setTimeout(() => URL.revokeObjectURL(a.href), 4000)
+  const picked = useMemo(() => (rows || []).filter((r) => sel.has(r.id)), [rows, sel])
+  const allShown = shown.length > 0 && shown.every((r) => sel.has(r.id))
+  const someShown = shown.some((r) => sel.has(r.id))
+  const toggle = (id) => setSel((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n })
+  const toggleAll = () => setSel((s) => { const n = new Set(s); allShown ? shown.forEach((r) => n.delete(r.id)) : shown.forEach((r) => n.add(r.id)); return n })
+
+  // Excel: the ticked rows when there are any, otherwise everything the filters show.
+  const exportXlsx = () => {
+    const list = picked.length ? picked : shown
+    const head = ['الاسم', 'المسمى', 'البريد', 'الهاتف', 'المدينة', 'السكن', 'المرحلة', 'الجامعة/المؤسسة', 'التخصص', 'لغة السيرة', 'أول حفظ', 'آخر تحديث']
+    const body = list.map((r) => [r.name, r.title, r.email, r.phone, r.city, r.residence, LEVEL[r.level] || '', r.university, r.major, r.lang === 'en' ? 'EN' : 'AR', when(r.created_at), when(r.updated_at)])
+    saveBlob(makeXlsx(head, body, 'السير الذاتية'), `sanad-cvs-${stamp()}.xlsx`)
+  }
+  // Files are fetched one by one (each is its own server call), then packed into one ZIP.
+  const bulkDownload = async (fmt) => {
+    const files = [], used = new Set()
+    let failed = 0
+    for (let i = 0; i < picked.length; i++) {
+      setProg(`جارٍ التجهيز ${i + 1} / ${picked.length}`)
+      try {
+        const data = new Uint8Array(await (await call(pw, `action=file&id=${picked[i].id}&fmt=${fmt}`)).arrayBuffer())
+        let name = `${safeName(picked[i].name)}-cv`
+        for (let n = 2; used.has(name); n++) name = `${safeName(picked[i].name)}-cv (${n})`
+        used.add(name)
+        files.push({ name: `${name}.${fmt}`, data })
+      } catch { failed++ }
+    }
+    setProg('')
+    if (files.length) saveBlob(makeZip(files), `sanad-cvs-${fmt}-${stamp()}.zip`)
+    setErr(failed ? `تعذّر تجهيز ${failed} من ${picked.length} ملفاً` : '')
+  }
+  const bulkRemove = async () => {
+    if (!window.confirm(`حذف ${picked.length} سيرة ذاتية نهائياً؟ لا يمكن التراجع.`)) return
+    const ids = picked.map((r) => r.id)
+    try {
+      for (let i = 0; i < ids.length; i += 50) {
+        setProg(`جارٍ الحذف ${Math.min(i + 50, ids.length)} / ${ids.length}`)
+        await call(pw, `action=delete&ids=${ids.slice(i, i + 50).join(',')}`, { method: 'POST' })
+      }
+      setRows((r) => r.filter((x) => !ids.includes(x.id)))
+      setSel(new Set())
+      setErr('')
+    } catch { setErr('تعذّر حذف بعض السجلات، حدّث الصفحة وتحقق') }
+    setProg('')
   }
 
   if (!rows) {
@@ -96,24 +138,34 @@ export default function Admin() {
           <input type="search" placeholder="بحث بالاسم أو البريد أو الهاتف…" value={q} onChange={(e) => setQ(e.target.value)} />
           <select value={city} onChange={(e) => setCity(e.target.value)}><option value="">كل المدن</option>{cities.map((c) => <option key={c}>{c}</option>)}</select>
           <select value={level} onChange={(e) => setLevel(e.target.value)}><option value="">كل المراحل</option>{EDU_LEVELS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
-          <button type="button" className="btn" onClick={exportCsv} disabled={!shown.length}>تصدير CSV</button>
+          <button type="button" className="btn" onClick={exportXlsx} disabled={!shown.length}>{picked.length ? `تصدير Excel (${picked.length})` : 'تصدير Excel'}</button>
           <button type="button" className="btn" onClick={() => load(pw)}>تحديث</button>
           <button type="button" className="btn" onClick={() => { try { sessionStorage.removeItem(KEY) } catch { /* ignore */ } setRows(null); setPw(''); setInput('') }}>خروج</button>
         </div>
       </div>
       {err && <p className="adm-err">{err}</p>}
+      {picked.length > 0 && (
+        <div className="adm-sel">
+          <b>{prog || `تم تحديد ${picked.length}`}</b>
+          <button type="button" onClick={() => bulkDownload('pdf')} disabled={!!prog}>تنزيل PDF (ZIP)</button>
+          <button type="button" onClick={() => bulkDownload('docx')} disabled={!!prog}>تنزيل Word (ZIP)</button>
+          <button type="button" onClick={exportXlsx} disabled={!!prog}>تصدير Excel</button>
+          <button type="button" className="del" onClick={bulkRemove} disabled={!!prog}>حذف المحدد</button>
+          <button type="button" className="adm-x" onClick={() => setSel(new Set())} disabled={!!prog}>إلغاء التحديد</button>
+        </div>
+      )}
       <div className="adm-wrap">
         <table className="adm-t">
-          <thead><tr><th>الاسم</th><th>البريد</th><th>الهاتف</th><th>المدينة</th><th>التعليم</th><th>آخر إجراء</th><th>آخر تحديث</th><th></th></tr></thead>
+          <thead><tr><th className="adm-ck"><input type="checkbox" aria-label="تحديد الكل" checked={allShown} ref={(el) => { if (el) el.indeterminate = someShown && !allShown }} onChange={toggleAll} disabled={!shown.length} /></th><th>الاسم</th><th>البريد</th><th>الهاتف</th><th>المدينة</th><th>التعليم</th><th>آخر تحديث</th><th></th></tr></thead>
           <tbody>
             {shown.map((r) => (
-              <tr key={r.id}>
+              <tr key={r.id} className={sel.has(r.id) ? 'on' : ''}>
+                <td className="adm-ck"><input type="checkbox" aria-label="تحديد" checked={sel.has(r.id)} onChange={() => toggle(r.id)} /></td>
                 <td><b>{r.name}</b><small>{r.title}</small></td>
                 <td dir="ltr">{r.email}</td>
                 <td dir="ltr">{r.phone}</td>
                 <td>{r.city}</td>
-                <td>{[LEVEL[r.level], r.school, r.major].filter(Boolean).join(' · ')}</td>
-                <td>{ACTION[r.last_action] || ''}</td>
+                <td>{[LEVEL[r.level], r.university, r.major].filter(Boolean).join(' · ')}</td>
                 <td>{fmtDate(r.updated_at)}</td>
                 <td className="adm-act">
                   <button type="button" onClick={() => download(r, 'pdf')} disabled={busy === r.id + 'pdf'}>{busy === r.id + 'pdf' ? '…' : 'PDF'}</button>

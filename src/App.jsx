@@ -4,6 +4,7 @@ import Preview, { MONTH_NAMES, LEVELS, EDU_LEVELS } from './Preview.jsx'
 import Home from './Home.jsx'
 import Analyze from './Analyze.jsx'
 import Admin from './Admin.jsx'
+import { LANG_OPTIONS, isLangKey, langKeyFromText } from '../api/_lists.js'
 import Export from './Export.jsx'
 
 const LangCtx = createContext('ar') // language of the CV being written; the date pickers follow it
@@ -48,6 +49,7 @@ const load = () => {
       const fix = Object.fromEntries(SKILLS.map(([k]) => [k, x[k] === 'native' ? 'fluent' : x[k]]))
       return all ? { ...x, native: true, read: '', write: '', listen: '', speak: '' } : { ...x, native: !!x.native, ...fix }
     })
+    d.langs = d.langs.map((x) => ({ ...x, name: langKeyFromText(x.name) })) // plain "English" etc. -> the drop-down keys
     d.edu = (d.edu || []).map((e) => ({ level: '', ...e, ...(e.level === 'basic' ? { level: '' } : {}), ...(e.level === 'secondary' ? { major: '' } : {}), ...(String(e.major || '').startsWith('major:') ? { major: '' } : {}) })) // the old specialization list is gone: its saved keys are cleared // education fields added in newer versions
     if (!d.langs.length) d.langs = [blankLang()] // languages are required: always show one row
     return d } catch { return initial() }
@@ -290,9 +292,34 @@ const eduFields = (tried) => (it, up) => (
     <DateSel label="تاريخ الانتهاء" value={it.end} now err={tried && dEmpty(it.end)} onChange={(v) => up({ end: v })} />
   </>
 )
+// Language name: pick Arabic / English / French (stored as a key, printed in the CV language) or "غير ذلك" and type it.
+const LANG_MENU = [{ items: LANG_OPTIONS.map(([k, label]) => ({ value: k, label })) }]
+function LangNameField({ value, onChange, err }) {
+  const known = isLangKey(value)
+  const [other, setOther] = useState(!!value && !known)
+  const choose = (v) => {
+    if (v === OTHER) { setOther(true); if (known) onChange('') }
+    else { setOther(false); onChange(v) }
+  }
+  return (
+    <Field full label="اللغة" err={err}>
+      <DropMenu placeholder="اختر اللغة" dir="ltr" text={known ? LANG_OPTIONS.find(([k]) => k === value)[1] : other ? 'غير ذلك' : ''} groups={LANG_MENU} other="غير ذلك" onChoose={choose} />
+      {other && (
+        <>
+          <div className="gap" />
+          <LangOther value={known ? '' : value || ''} onChange={onChange} />
+        </>
+      )}
+    </Field>
+  )
+}
+function LangOther({ value, onChange }) {
+  const guard = useGuard()
+  return <input dir={value ? 'auto' : 'rtl'} autoComplete="off" placeholder="اكتب اسم اللغة" value={value} onChange={(e) => onChange(guard(e.target.value, value))} />
+}
 const langFields = (tried) => (it, up) => (
   <>
-    <Txt full label="اللغة" placeholder="مثال: الإنجليزية" value={it.name} err={tried && empty(it.name)} onChange={(v) => up({ name: v })} />
+    <LangNameField value={it.name} err={tried && empty(it.name)} onChange={(v) => up({ name: v })} />
     <label style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: 10, fontWeight: 'normal', cursor: 'pointer', userSelect: 'none' }}>
       <input type="checkbox" checked={!!it.native}
         style={{

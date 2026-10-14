@@ -10,8 +10,8 @@ export const MONTH_NAMES = {
 
 // Language levels: the key is stored, the label depends on the CV language.
 export const LEVELS = [['beginner', 'مبتدئ'], ['intermediate', 'متوسط'], ['upper', 'فوق المتوسط'], ['fluent', 'متمرس']] // "native" is a separate checkbox (x.native), not a level
-import { EDU_LEVELS, EDU_LEVEL, MAJOR_GROUPS, isMajor, majorLabel, langParts } from '../api/_lists.js'
-export { EDU_LEVELS, MAJOR_GROUPS, isMajor, majorLabel }
+import { EDU_LEVELS, EDU_LEVEL, langParts, langName } from '../api/_lists.js'
+export { EDU_LEVELS }
 // Optional personal details line (date of birth, gender, marital status)
 const DETAILS = {
   ar: { dob: 'تاريخ الميلاد', gender: 'الجنس', marital: 'الحالة الاجتماعية', male: 'ذكر', female: 'أنثى', single: 'أعزب', singleF: 'عزباء', married: 'متزوج', marriedF: 'متزوجة' },
@@ -107,7 +107,7 @@ export default function Preview({ cv }) {
                 const line = EDU_LEVEL[lang][e.level] || '' // "Bachelor's Degree"
                 return (
                   <div key={e.id}>
-                    <Row a={[e.school, majorLabel(e.major, lang)].filter(Boolean).join(' - ')} b={range(e.start, e.end, lang)} />
+                    <Row a={[e.school, e.major].filter(Boolean).join(' - ')} b={range(e.start, e.end, lang)} />
                     {line && <p>{line}</p>}
                   </div>
                 )
@@ -123,7 +123,7 @@ export default function Preview({ cv }) {
           )}
           {langF.length > 0 && (
             <Sec h={t.langs}>
-              {langF.map((x) => <p key={x.id}><b>{x.name}</b>{langParts(x, lang).map(([tx, b], i) => (b ? <b key={i}>{tx}</b> : tx))}</p>)}
+              {langF.map((x) => <p key={x.id}><b>{langName(x.name, lang)}</b>{langParts(x, lang).map(([tx, b], i) => (b ? <b key={i}>{tx}</b> : tx))}</p>)}
             </Sec>
           )}
           {courseF.length > 0 && (
