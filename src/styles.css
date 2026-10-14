@@ -168,7 +168,7 @@ select:disabled{opacity:.6;cursor:not-allowed}
 .adm-t td small{display:block;color:var(--mut);margin-top:2px}
 .adm-t tbody tr:hover{background:rgba(58,219,192,.08)}
 .adm-act{white-space:nowrap}.adm-act button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:5px 10px;margin-inline-end:4px;font:inherit;font-size:12px;cursor:pointer}
-.adm-act button:hover{border-color:var(--teal)}.adm-act .del{color:#b3261e}
+.adm-act button:hover{border-color:var(--teal)}.adm-act .del{color:#b3261e;border-color:#e6b8b4}.adm-act .del:hover{background:#b3261e;border-color:#b3261e;color:#fff}
 .adm-empty{text-align:center;color:var(--mut);padding:28px!important}
 
 /* mandatory consent on the home page */
