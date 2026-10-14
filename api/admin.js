@@ -2,6 +2,7 @@
 //   GET  /api/admin?action=list                       -> all saved CVs (summary columns only)
 //   GET  /api/admin?action=file&id=<uuid>&fmt=pdf|docx|json
 //   POST /api/admin?action=delete&id=<uuid>           -> removes one user's CV (e.g. a deletion request)
+//   POST /api/admin?action=delete&ids=<uuid>,<uuid>   -> removes several at once (max 100)
 import crypto from 'node:crypto'
 import { sb, storeReady } from './_store.js'
 import { makePdf } from './_pdf.js'
@@ -9,7 +10,7 @@ import { makeDocx } from './_docx.js'
 import { cvFileName } from './_cv.js'
 import { makeLimiter, clientIp } from './_limit.js'
 
-const limited = makeLimiter('admin', 120) // also slows down anyone guessing the password (use a long one)
+const limited = makeLimiter('admin', 600) // also slows down anyone guessing the password (use a long one)
 const hash = (v) => crypto.createHash('sha256').update(String(v)).digest()
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const COLS = 'id,email,name,title,phone,city,residence,university,major,level,lang,created_at,updated_at'
@@ -43,9 +44,10 @@ export default async function handler(req, res) {
       return send('application/pdf', 'pdf', await makePdf(cv))
     }
     if (action === 'delete' && req.method === 'POST') {
-      if (!UUID.test(String(id))) return res.status(400).json({ error: 'bad_request' })
-      await sb(`cvs?id=eq.${id}`, { method: 'DELETE' })
-      return res.status(200).json({ ok: true })
+      const ids = String((req.query || {}).ids || id || '').split(',')
+      if (!ids.length || ids.length > 100 || !ids.every((x) => UUID.test(x))) return res.status(400).json({ error: 'bad_request' })
+      await sb(`cvs?id=in.(${ids.join(',')})`, { method: 'DELETE' })
+      return res.status(200).json({ ok: true, deleted: ids.length })
     }
     return res.status(400).json({ error: 'bad_request' })
   } catch (e) {

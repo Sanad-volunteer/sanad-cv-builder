@@ -1,4 +1,4 @@
-// Single source of truth for the education level and specialization lists.
+// Single source of truth for the education levels and language proficiency wording.
 // Imported by the React app (src/Preview.jsx) AND by the server (api/_cv.js -> PDF, Word, email), so they can never drift apart.
 // The leading underscore keeps Vercel from exposing this file as an API route.
 // Education levels (secondary -> doctorate): the key is stored, the label depends on the CV language.
@@ -7,75 +7,6 @@ export const EDU_LEVEL = {
   ar: Object.fromEntries(EDU_LEVELS),
   en: { secondary: 'Secondary Education', diploma: 'Diploma', bachelor: "Bachelor's Degree", master: "Master's Degree", doctorate: 'Doctorate (PhD)' },
 }
-// Specializations offered in the education drop-down. The key is what is stored, so the CV prints the right language;
-// anything else (typed through "غير ذلك") is stored and printed as typed.
-export const MAJOR_GROUPS = [
-  {
-    ar: "الاختصاصات الطبية والصحية", en: "Medical & Health Sciences", items: [
-      ["major:medicine", "الطب البشري", "Medicine"],
-      ["major:dentistry", "طب الأسنان", "Dentistry"],
-      ["major:pharmacy", "الصيدلة", "Pharmacy"],
-      ["major:nursing", "التمريض", "Nursing"],
-      ["major:midwifery", "القبالة", "Midwifery"],
-      ["major:dental-prosthetics", "التعويضات السنية", "Dental Prosthetics"],
-      ["major:laboratories", "المخابر", "Medical Laboratories"],
-      ["major:physiotherapy", "المعالجة الفيزيائية", "Physical Therapy"],
-      ["major:anesthesia", "التخدير", "Anesthesia"],
-      ["major:nutrition-skincare", "التغذية", "Nutrition"],
-      ["major:public-health", "العلوم الصحية", "Health Sciences"],
-    ],
-  },
-  {
-    ar: "الاختصاصات الهندسية والتكنولوجية", en: "Engineering & Technology", items: [
-      ["major:architecture", "هندسة العمارة", "Architectural Engineering"],
-      ["major:civil", "الهندسة المدنية", "Civil Engineering"],
-      ["major:mech", "الهندسة الميكانيكية", "Mechanical"],
-      ["major:elec", "الهندسة الكهربائية", "Electrical Engineering"],
-      ["major:computer", "هندسة أتمتة وحواسيب", "Computer & Automation Engineering"],
-      ["major:comms", "هندسة الاتصالات", "Communications"],
-      ["major:software-it", "هندسة المعلوماتية", "Information Technology"],
-      ["major:ai", "الذكاء الاصطناعي", "Artificial Intelligence"],
-      ["major:cyber", "الأمن السيبراني", "Cybersecurity"],
-      ["major:mechatronics-biomed", "الميكاترونكس", "Mechatronics"],
-      ["major:petroleum", "هندسة البترول", "Petroleum Engineering"],
-    ],
-  },
-  {
-    ar: "الاختصاصات الإدارية والاقتصادية والقانونية", en: "Management, Economics & Law", items: [
-      ["major:business-admin", "إدارة الأعمال", "Business Administration"],
-      ["major:economics", "الاقتصاد", "Economics"],
-      ["major:accounting-finance", "المحاسبة والتدقيق والتمويل", "Accounting, Auditing & Finance"],
-      ["major:law", "الحقوق", "Law"],
-      ["major:sharia", "الشريعة وأصول الدين", "Sharia & Fundamentals of Religion"],
-    ],
-  },
-  {
-    ar: "الآداب والعلوم الإنسانية والتربوية", en: "Arts, Humanities & Education", items: [
-      ["major:languages", "اللغة العربية واللغة الإنكليزية", "Arabic & English Language"],
-      ["major:translation", "الترجمة", "Translation"],
-      ["major:history-archaeology", "التاريخ والآثار", "History & Archaeology"],
-      ["major:psychology-sociology", "علم النفس وفلسفة الاجتماع", "Psychology & Philosophy of Sociology"],
-    ],
-  },
-  {
-    ar: "العلوم العامة", en: "General Sciences", items: [
-      ["major:math", "الرياضيات", "Mathematics"],
-      ["major:physics", "الفيزياء", "Physics"],
-      ["major:chemistry", "الكيمياء", "Chemistry"],
-    ],
-  },
-  {
-    ar: "الإعلام والفنون", en: "Media & Arts", items: [
-      ["major:media", "الإعلام", "Media"],
-      ["major:fine-arts-design", "الفنون الجميلة والتصميم الداخلي", "Fine Arts & Interior Design"],
-      ["major:drama-music-cinema", "المعهد العالي للفنون المسرحية والموسيقا والفنون السينمائية", "Higher Institute of Dramatic Arts, Music & Cinematic Arts"],
-    ],
-  },
-]
-const MAJOR = Object.fromEntries(MAJOR_GROUPS.flatMap((g) => g.items.map(([k, ar, en]) => [k, { ar, en }])))
-export const isMajor = (v) => !!MAJOR[v]
-export const majorLabel = (v, l) => (MAJOR[v] ? MAJOR[v][l] : v || '')
-
 // Language proficiency, rated per skill. langParts() returns [text, bold] pieces printed after the language name:
 // all four equal -> "English - Native"; otherwise "English - **Reading**: Native, **Writing**: Fluent, ..."
 const LV = {
@@ -100,3 +31,16 @@ export const langParts = (x, l) => {
   })
   return out
 }
+
+// Languages offered in the drop-down: the key is stored and printed in the CV language ("العربية" / "Arabic").
+// Any other language is typed by the user ("غير ذلك") and printed exactly as typed.
+export const LANG_OPTIONS = [['lang:ar', 'Arabic'], ['lang:en', 'English'], ['lang:fr', 'French']]
+const LNAME = {
+  ar: { 'lang:ar': 'العربية', 'lang:en': 'الإنجليزية', 'lang:fr': 'الفرنسية' },
+  en: { 'lang:ar': 'Arabic', 'lang:en': 'English', 'lang:fr': 'French' },
+}
+export const isLangKey = (v) => !!LNAME.ar[v]
+export const langName = (v, l) => LNAME[l][v] || v || ''
+// Old drafts stored the name as plain text: map the common spellings to the keys.
+const OLD = { arabic: 'lang:ar', 'العربية': 'lang:ar', english: 'lang:en', 'الإنجليزية': 'lang:en', 'الانجليزية': 'lang:en', 'الإنكليزية': 'lang:en', french: 'lang:fr', 'الفرنسية': 'lang:fr' }
+export const langKeyFromText = (t) => OLD[String(t || '').trim().toLowerCase()] || t

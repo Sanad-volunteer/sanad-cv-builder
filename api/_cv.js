@@ -7,7 +7,7 @@ const T = {
   ar: { summary: 'نبذة', skills: 'المهارات', tech: 'المهارات التقنية', soft: 'المهارات الناعمة', langs: 'اللغات', courses: 'الدورات وورش العمل', edu: 'التعليم', exp: 'الخبرات', vol: 'العمل التطوعي', confs: 'المؤتمرات', now: 'حتى الآن' },
   en: { summary: 'Summary', skills: 'Skills', tech: 'Technical', soft: 'Soft', langs: 'Languages', courses: 'Courses & Workshops', edu: 'Education', exp: 'Work Experience', vol: 'Volunteer Work', confs: 'Conferences', now: 'Present' },
 }
-import { EDU_LEVEL as EL, majorLabel, langParts } from './_lists.js'
+import { EDU_LEVEL as EL, langParts, langName } from './_lists.js'
 const FULL = { ar: M.ar, en: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'] }
 const DETAILS = {
   ar: { dob: 'تاريخ الميلاد', gender: 'الجنس', marital: 'الحالة الاجتماعية', male: 'ذكر', female: 'أنثى', single: 'أعزب', singleF: 'عزباء', married: 'متزوج', marriedF: 'متزوجة' },
@@ -87,14 +87,14 @@ export function cvHtml(cv, opts = {}) {
     edu.length
       ? sec(t.edu, edu.map((e) => {
           const line = EL[l][e.level] || '' // "Bachelor's Degree"
-          return `<div>${row([e.school, majorLabel(e.major, l)].filter(Boolean).join(' - '), range(e.start, e.end, l))}${line ? `<p>${esc(line)}</p>` : ''}</div>`
+          return `<div>${row([e.school, e.major].filter(Boolean).join(' - '), range(e.start, e.end, l))}${line ? `<p>${esc(line)}</p>` : ''}</div>`
         }).join(''))
       : '',
     jobs(cv.exp, t.exp, l),
     tech.length || soft.length
       ? sec(t.skills, (tech.length ? `<p><b>${t.tech}:</b> ${esc(tech.join(sep))}</p>` : '') + (soft.length ? `<p><b>${t.soft}:</b> ${esc(soft.join(sep))}</p>` : ''))
       : '',
-    langs.length ? sec(t.langs, langs.map((x) => `<p><b>${esc(x.name)}</b>${langParts(x, l).map(([tx, b]) => (b ? `<b>${esc(tx)}</b>` : esc(tx))).join('')}</p>`).join('')) : '',
+    langs.length ? sec(t.langs, langs.map((x) => `<p><b>${esc(langName(x.name, l))}</b>${langParts(x, l).map(([tx, b]) => (b ? `<b>${esc(tx)}</b>` : esc(tx))).join('')}</p>`).join('')) : '',
     courses.length ? sec(t.courses, `<ul>${courses.map((c) => `<li>${esc([[c.title, c.org].filter(Boolean).join(' – '), fmt(c.date, l) && `(${fmt(c.date, l)})`].filter(Boolean).join(' '))}</li>`).join('')}</ul>`) : '',
     jobs(cv.vol, t.vol, l),
     confs.length ? sec(t.confs, confs.map((c) => `<div>${row(c.title, fmt(c.date, l))}</div>`).join('')) : '',
@@ -103,4 +103,4 @@ export function cvHtml(cv, opts = {}) {
 }
 
 // Shared with api/_docx.js so the Word file uses exactly the same wording as the PDF.
-export { T, EL, DETAILS, CONTACT, dobText, langParts, range, fmt, list, href, majorLabel }
+export { T, EL, DETAILS, CONTACT, dobText, langParts, langName, range, fmt, list, href }
