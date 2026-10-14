@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import mammoth from 'mammoth/mammoth.browser'
 import { post } from './api.js'
+import Notice, { AI_TEXT } from './Notice.jsx'
 
 const MAX = 3 * 1024 * 1024 // keeps the request under Vercel's 4.5 MB body limit
 const toB64 = (f) => new Promise((ok, no) => {
@@ -44,6 +45,7 @@ export default function Analyze({ go }) {
   const [file, setFile] = useState(null)
   const [job, setJob] = useState({ title: '', company: '', desc: '' })
   const [st, setSt] = useState({ busy: false, err: '', res: null })
+  const [notice, setNotice] = useState(false) // information pop-up shown after an analysis
   const setJ = (k) => (e) => setJob((j) => ({ ...j, [k]: e.target.value }))
   const fail = (err) => setSt((s) => ({ ...s, err }))
 
@@ -65,6 +67,7 @@ export default function Analyze({ go }) {
     try {
       const r = await post('/api/analyze', { file: { type: file.type, data: file.data }, job })
       setSt({ busy: false, err: '', res: await r.json() })
+      setNotice(true)
     } catch (e) { setSt({ busy: false, err: e.status === 429 ? 'تجاوزت عدد المحاولات المسموح، حاول بعد قليل' : e.body && e.body.status === 503 ? 'الذكاء الاصطناعي مزدحم حالياً، حاول بعد دقيقة' : `تعذّر تحليل السيرة، حاول مرة أخرى${e.body && e.body.reason ? ` (${e.body.status || ''} ${e.body.reason})` : ''}`, res: null }) }
   }
   const ready = file && job.title.trim() && !st.busy // job title is required, description is optional
@@ -101,6 +104,7 @@ export default function Analyze({ go }) {
           <div className="card empty"><div className="big">✦</div><p>ارفع سيرتك وأضف الوظيفة المستهدفة ثم اضغط «حلّل» لترى نسبة المطابقة والاقتراحات.</p></div>
         )}
       </aside>
+      {notice && <Notice text={AI_TEXT} onClose={() => setNotice(false)} />}
     </main>
   )
 }

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { post } from './api.js'
+import Notice, { InfoIcon, SHARE_TEXT } from './Notice.jsx'
 
 const fileName = (n) => (String(n || '').replace(/[\\/:*?"<>|\u0000-\u001f]+/g, '').replace(/\s+/g, ' ').trim().slice(0, 60) || 'CV') + '-cv'
 const REQUIRED_MSG = 'أكمل الحقول المطلوبة المعلّمة بنجمة حمراء *'
@@ -18,7 +19,8 @@ function Success({ email, onClose }) {
       <div className="modal" role="dialog" aria-modal="true" aria-labelledby="ok-title" onClick={(e) => e.stopPropagation()}>
         <svg className="tick" viewBox="0 0 52 52" aria-hidden="true"><circle cx="26" cy="26" r="24" /><path d="M14 27l8 8 16-17" /></svg>
         <h3 id="ok-title">تم الإرسال بنجاح</h3>
-        <p>أُرسلت سيرتك الذاتية إلى <bdi dir="ltr">{email}</bdi></p>
+        <p style={{ marginBottom: 12 }}>أُرسلت سيرتك الذاتية إلى <bdi dir="ltr">{email}</bdi></p>
+        <p className="share-note"><InfoIcon />{SHARE_TEXT}</p>
         <button ref={btn} type="button" className="btn p" onClick={onClose}>حسناً</button>
       </div>
     </div>
@@ -30,6 +32,7 @@ export default function Export({ cv, onValidate }) {
   const [busy, setBusy] = useState('')
   const [msg, setMsg] = useState(null)
   const [sentTo, setSentTo] = useState('')
+  const [notice, setNotice] = useState(false) // information pop-up shown after a successful download
 
   const print = () => {
     const old = document.title
@@ -47,6 +50,7 @@ export default function Export({ cv, onValidate }) {
       const a = document.createElement('a')
       a.href = url; a.download = `${fileName(cv.p.name)}.${kind}`; a.click()
       URL.revokeObjectURL(url)
+      setNotice(true)
     } catch (e) {
       console.error(e)
       if (kind === 'pdf') print() // fallback: browser print dialog -> "Save as PDF"
@@ -86,6 +90,7 @@ export default function Export({ cv, onValidate }) {
         <button type="button" className="btn s" onClick={send} disabled={!!busy}>{busy === 'mail' ? 'جارٍ الإرسال…' : '✉ إرسال بالبريد'}</button>
       </div>
       {msg && <p className={msg.ok ? 'ok' : 'err'}>{msg.t}</p>}
+      {notice && <Notice text={SHARE_TEXT} onClose={() => setNotice(false)} />}
       {sentTo && createPortal(<Success email={sentTo} onClose={() => setSentTo('')} />, document.body)}
     </div>
   )
