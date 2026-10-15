@@ -139,7 +139,7 @@ export default function Admin() {
             <div className="adm-count" aria-live="polite">
               <b>{shown.length}</b>
               {shown.length !== rows.length && <span>/ {rows.length}</span>}
-              <small>سيرة</small>
+              <small>ملف</small>
             </div>
           </div>
           <div className="adm-actions">
