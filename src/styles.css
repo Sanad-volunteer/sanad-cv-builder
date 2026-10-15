@@ -213,3 +213,30 @@ select:disabled{opacity:.6;cursor:not-allowed}
 .adm-sel .del{color:#fff;font-weight:700;border-color:#8f1d17;border-bottom-width:3px;background:linear-gradient(#d8453c,#b3261e)}
 .adm-sel .del:hover:not(:disabled){border-color:#8f1d17}.adm-sel .del:focus,.adm-sel .del:focus-visible{outline:0;box-shadow:none}
 .adm-ck{width:36px;text-align:center!important}.adm-t td.adm-ck{vertical-align:middle}
+
+/* back office: top bar + bigger checkboxes */
+.adm-top{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 16px;margin-bottom:14px;display:flex;flex-direction:column;gap:12px}
+.adm-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.adm-id,.adm-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.adm-exit{border:1px solid var(--line);background:#fff;color:var(--navy);font:inherit;font-size:13.5px;font-weight:700;border-radius:10px;padding:10px 18px;cursor:pointer;transition:border-color .15s,background .15s}
+.adm-exit:hover{border-color:var(--teal);background:rgba(58,219,192,.08)}
+.adm-count{display:flex;align-items:baseline;gap:6px;background:rgba(58,219,192,.18);border:1px solid var(--teal);border-radius:12px;padding:4px 16px}
+.adm-count b{font-size:26px;line-height:1.3;color:var(--navy)}.adm-count span{font-size:16px;font-weight:600;color:var(--mut)}.adm-count small{font-size:13px;font-weight:600;color:var(--mut)}
+.adm-top .btn{width:auto;padding:10px 18px;font-size:13.5px;background:#fff;color:var(--navy);border:1px solid var(--line);border-radius:10px}
+.adm-top .btn.p{background:var(--navy);color:#fff;border-color:var(--navy)}
+.adm-filters{display:grid;grid-template-columns:minmax(200px,1fr) 190px 190px;gap:10px}
+.adm-filters input,.adm-filters select{height:44px}
+.adm-filters input[type=search]{padding-inline-start:40px;background:#fff url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%235d6079' stroke-width='2' stroke-linecap='round'><circle cx='11' cy='11' r='7'/><path d='M20 20l-3.5-3.5'/></svg>") no-repeat right 14px center}
+@media(max-width:700px){.adm-filters{grid-template-columns:1fr}.adm-actions{width:100%}.adm-actions .btn{flex:1}}
+.adm-box{display:grid;place-items:center;margin:0;padding:14px;cursor:pointer}
+.adm-ck{width:56px;padding:0!important}
+.adm-ck input[type=checkbox]{appearance:none;-webkit-appearance:none;width:24px;height:24px;margin:0;padding:0;flex:none;border:2px solid #c9cbe0;border-radius:8px;background:#fff center/16px no-repeat;cursor:pointer;transition:background-color .15s,border-color .15s,transform .1s}
+.adm-ck input[type=checkbox]:hover:not(:disabled){border-color:var(--navy)}
+.adm-ck input[type=checkbox]:active:not(:disabled){transform:scale(.9)}
+.adm-ck input[type=checkbox]:checked,.adm-ck input[type=checkbox]:indeterminate{background-color:var(--navy);border-color:var(--navy)}
+.adm-ck input[type=checkbox]:checked{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'><path d='M5 12.5l4.5 4.5L19 7'/></svg>")}
+.adm-ck input[type=checkbox]:indeterminate{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.5' stroke-linecap='round'><path d='M6 12h12'/></svg>")}
+.adm-ck input[type=checkbox]:disabled{opacity:.45;cursor:not-allowed}
+.adm-ck input[type=checkbox]:focus{outline:0;box-shadow:none}
+.adm-ck input[type=checkbox]:focus-visible{outline:2px solid var(--navy);outline-offset:2px}
+.adm-t tbody tr.on{background:rgba(58,219,192,.14)}

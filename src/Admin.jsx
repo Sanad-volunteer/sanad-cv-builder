@@ -132,17 +132,25 @@ export default function Admin() {
   }
   return (
     <main className="adm">
-      <div className="adm-bar">
-        <div className="adm-tools">
-          <button type="button" className="btn" onClick={() => { try { sessionStorage.removeItem(KEY) } catch { /* ignore */ } setRows(null); setPw(''); setInput('') }}>خروج</button>
-          <span className="adm-n">{shown.length}{shown.length !== rows.length ? ` / ${rows.length}` : ''}</span>
+      <div className="adm-top">
+        <div className="adm-row">
+          <div className="adm-id">
+            <button type="button" className="adm-exit" onClick={() => { try { sessionStorage.removeItem(KEY) } catch { /* ignore */ } setRows(null); setPw(''); setInput('') }}>خروج</button>
+            <div className="adm-count" aria-live="polite">
+              <b>{shown.length}</b>
+              {shown.length !== rows.length && <span>/ {rows.length}</span>}
+              <small>سيرة</small>
+            </div>
+          </div>
+          <div className="adm-actions">
+            <button type="button" className="btn" onClick={() => load(pw)}>تحديث</button>
+            <button type="button" className="btn p" onClick={exportXlsx} disabled={!shown.length}>{picked.length ? `تصدير Excel (${picked.length})` : 'تصدير Excel'}</button>
+          </div>
         </div>
-        <div className="adm-tools">
+        <div className="adm-filters">
           <input type="search" placeholder="بحث بالاسم أو البريد أو الهاتف…" value={q} onChange={(e) => setQ(e.target.value)} />
           <select value={city} onChange={(e) => setCity(e.target.value)}><option value="">كل المدن</option>{cities.map((c) => <option key={c}>{c}</option>)}</select>
           <select value={level} onChange={(e) => setLevel(e.target.value)}><option value="">كل المراحل</option>{EDU_LEVELS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
-          <button type="button" className="btn" onClick={exportXlsx} disabled={!shown.length}>{picked.length ? `تصدير Excel (${picked.length})` : 'تصدير Excel'}</button>
-          <button type="button" className="btn" onClick={() => load(pw)}>تحديث</button>
         </div>
       </div>
       {err && <p className="adm-err">{err}</p>}
@@ -157,11 +165,11 @@ export default function Admin() {
       )}
       <div className="adm-wrap">
         <table className="adm-t">
-          <thead><tr><th className="adm-ck"><input type="checkbox" aria-label="تحديد الكل" checked={allShown} ref={(el) => { if (el) el.indeterminate = someShown && !allShown }} onChange={toggleAll} disabled={!shown.length} /></th><th>الاسم</th><th>البريد</th><th>الهاتف</th><th>المدينة</th><th>التعليم</th><th>آخر تحديث</th><th></th></tr></thead>
+          <thead><tr><th className="adm-ck"><label className="adm-box"><input type="checkbox" aria-label="تحديد الكل" checked={allShown} ref={(el) => { if (el) el.indeterminate = someShown && !allShown }} onChange={toggleAll} disabled={!shown.length} /></label></th><th>الاسم</th><th>البريد</th><th>الهاتف</th><th>المدينة</th><th>التعليم</th><th>آخر تحديث</th><th></th></tr></thead>
           <tbody>
             {shown.map((r) => (
               <tr key={r.id} className={sel.has(r.id) ? 'on' : ''}>
-                <td className="adm-ck"><input type="checkbox" aria-label="تحديد" checked={sel.has(r.id)} onChange={() => toggle(r.id)} /></td>
+                <td className="adm-ck"><label className="adm-box"><input type="checkbox" aria-label="تحديد" checked={sel.has(r.id)} onChange={() => toggle(r.id)} /></label></td>
                 <td><b>{r.name}</b><small>{r.title}</small></td>
                 <td dir="ltr">{r.email}</td>
                 <td dir="ltr">{r.phone}</td>
