@@ -178,3 +178,9 @@ select:disabled{opacity:.6;cursor:not-allowed}
 .modal:has(.info-ic) p{color:var(--ink);font-size:15px;line-height:1.8}
 .share-note{display:flex;align-items:center;gap:10px;text-align:start;background:var(--bg);border-radius:12px;padding:10px 12px;color:var(--ink)!important;font-size:13px!important;line-height:1.7!important}
 .share-note .info-ic{width:34px;height:34px;margin:0;flex:none}.share-note .info-ic svg{width:18px;height:18px}
+
+/* big green tick in the information pop-up */
+.ok-ic{width:88px;height:88px;margin:6px auto 26px;background:rgba(58,219,192,.2);color:#0a7a52;box-shadow:0 0 0 9px rgba(58,219,192,.1)}
+.ok-ic path{stroke-dasharray:1;stroke-dashoffset:1;animation:okDraw .45s .2s ease-out forwards}
+@keyframes okDraw{to{stroke-dashoffset:0}}
+@media(prefers-reduced-motion:reduce){.ok-ic path{animation:none;stroke-dashoffset:0}}
