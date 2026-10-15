@@ -55,8 +55,20 @@ const load = () => {
     return d } catch { return initial() }
 }
 
+const STEPS = ['المعلومات الشخصية', 'التعليم', 'الخبرات', 'المهارات', 'اللغات', 'إضافات', 'التصدير']
+const Stepper = ({ step, max, bad, go }) => (
+  <ol className="steps no-print">
+    {STEPS.map((t, i) => (
+      <li key={t} className={[i === step && 'cur', i < step && !bad[i] && 'done'].filter(Boolean).join(' ')}>
+        <button type="button" disabled={i > max} onClick={() => go(i)} aria-current={i === step ? 'step' : undefined}>
+          <span className="dot">{i < step && !bad[i] ? '✓' : i + 1}</span><span className="lbl">{t}</span>
+        </button>
+      </li>
+    ))}
+  </ol>
+)
 const Card = ({ n, title, opt, children }) => (
-  <div className="card"><h2><span className="n">{n}</span>{title}{opt && <span className="opt-tag">اختياري</span>}</h2>{children}</div>
+  <div className="card"><h2>{n && <span className="n">{n}</span>}{title}{opt && <span className="opt-tag">اختياري</span>}</h2>{children}</div>
 )
 const Field = ({ label, full, err, htmlFor, children }) => (
   <div className={[full && 'full', err && 'invalid'].filter(Boolean).join(' ')}>
@@ -83,14 +95,17 @@ const Area = ({ label, full, err, value, onChange, placeholder }) => {
 const MIN_Y = 1980
 const MAX_Y = new Date().getFullYear() + 6
 const numeric = (y) => /^\d+$/.test(y)
+// The date of birth is stored as "YYYY-MM-DD" (what the CV files expect); the picker works with {y, m, d}.
+const dobParts = (iso) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || ''); return m ? { y: m[1], m: String(+m[2]), d: String(+m[3]) } : { y: '', m: '', d: '' } }
 
 const CHECK = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7'/%3E%3C/svg%3E\")" // white tick drawn inside the checked "until now" box
 // Month + year picker (pop-up). Month names follow the CV language.
-function DateSel({ label, value, onChange, now, err }) {
+function DateSel({ label, value, onChange, now, err, day, minY = MIN_Y, maxY = MAX_Y }) { // day: also pick the day (date of birth)
   const lang = useContext(LangCtx)
   const months = MONTH_NAMES[lang]
   const [open, setOpen] = useState(false)
-  const [vy, setVy] = useState(() => (numeric(value.y) ? +value.y : new Date().getFullYear()))
+  const [vy, setVy] = useState(() => (numeric(value.y) ? +value.y : day ? Math.min(2000, maxY) : new Date().getFullYear()))
+  const [vm, setVm] = useState(value.m || '') // month chosen so far while the day is still to be picked
   const [kb, setKb] = useState(false) // true only while the checkbox is focused with the keyboard
   const box = useRef(null)
 
@@ -104,10 +119,11 @@ function DateSel({ label, value, onChange, now, err }) {
   }, [open])
 
   const off = !!now && value.y === 'now' // "until now" ticked: the end date is not chosen
-  const toggle = () => { if (off) return; if (!open && numeric(value.y)) setVy(+value.y); setOpen(!open) }
-  const text = value.y === 'now' ? 'حتى الآن' : value.y ? `${value.m ? months[value.m - 1] + ' ' : ''}${value.y}` : ''
-  const pick = (i) => { onChange({ m: String(i + 1), y: String(vy) }); setOpen(false) }
-  const clear = () => { onChange({ m: '', y: '' }); setOpen(false) }
+  const toggle = () => { if (off) return; if (!open && numeric(value.y)) { setVy(+value.y); setVm(value.m || '') } setOpen(!open) }
+  const text = value.y === 'now' ? 'حتى الآن' : value.y ? `${day && value.d ? value.d + ' ' : ''}${value.m ? months[value.m - 1] + ' ' : ''}${value.y}` : ''
+  const pick = (i) => { if (day) { setVm(String(i + 1)); return } onChange({ m: String(i + 1), y: String(vy) }); setOpen(false) }
+  const pickDay = (d) => { onChange({ y: String(vy), m: vm, d: String(d) }); setOpen(false) }
+  const clear = () => { onChange({ m: '', y: '', d: '' }); setVm(''); setOpen(false) }
   const stroke = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round' }
 
   return (
@@ -121,15 +137,25 @@ function DateSel({ label, value, onChange, now, err }) {
         {open && (
           <div className="dp-pop" role="dialog" aria-label={label}>
             <div className="dp-head">
-              <button type="button" aria-label="السنة التالية" disabled={vy >= MAX_Y} onClick={() => setVy(vy + 1)}><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M9 5l7 7-7 7" {...stroke} strokeWidth={2.6} /></svg></button>
+              <button type="button" aria-label="السنة التالية" disabled={vy >= maxY} onClick={() => setVy(vy + 1)}><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M9 5l7 7-7 7" {...stroke} strokeWidth={2.6} /></svg></button>
               <b>{vy}</b>
-              <button type="button" aria-label="السنة السابقة" disabled={vy <= MIN_Y} onClick={() => setVy(vy - 1)}><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M15 5l-7 7 7 7" {...stroke} strokeWidth={2.6} /></svg></button>
+              <button type="button" aria-label="السنة السابقة" disabled={vy <= minY} onClick={() => setVy(vy - 1)}><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M15 5l-7 7 7 7" {...stroke} strokeWidth={2.6} /></svg></button>
             </div>
             <div className="dp-grid" dir={lang === 'en' ? 'ltr' : 'rtl'}>
               {months.map((m, i) => (
-                <button type="button" key={i} className={value.y === String(vy) && value.m === String(i + 1) ? 'on' : ''} onClick={() => pick(i)}>{m}</button>
+                <button type="button" key={i} className={(day ? vm === String(i + 1) : value.y === String(vy) && value.m === String(i + 1)) ? 'on' : ''} onClick={() => pick(i)}>{m}</button>
               ))}
             </div>
+            {day && vm && (
+              <>
+                <div className="dp-sub">اختر اليوم</div>
+                <div className="dp-grid days" dir="ltr">
+                  {Array.from({ length: new Date(vy, +vm, 0).getDate() }, (_, k) => k + 1).map((d) => (
+                    <button type="button" key={d} disabled={new Date(vy, +vm - 1, d) > new Date()} className={value.y === String(vy) && value.m === vm && value.d === String(d) ? 'on' : ''} onClick={() => pickDay(d)}>{d}</button>
+                  ))}
+                </div>
+              </>
+            )}
             <div className="dp-foot">
               <button type="button" className="dp-done" onClick={() => setOpen(false)}>تم</button>
               <button type="button" className="dp-clear" onClick={clear}>مسح</button>
@@ -425,7 +451,9 @@ export default function App() {
   const toastTimer = useRef(null)
   const flash = (msg) => { setToast(msg); clearTimeout(toastTimer.current); toastTimer.current = setTimeout(() => setToast(''), 3000) }
   const warn = () => flash('لغة السيرة الحالية هي الإنجليزية، اكتب بالأحرف الإنجليزية فقط')
-  const [tried, setTried] = useState(false) // red asterisks appear only after the first export attempt
+  const [step, setStep] = useState(0) // wizard position
+  const [maxStep, setMaxStep] = useState(0) // furthest step reached so far
+  const [shown, setShown] = useState([]) // steps where the user tried to continue: only those show red asterisks
   useEffect(() => { try { localStorage.setItem(KEY, JSON.stringify(cv)) } catch { /* storage unavailable */ } }, [cv])
 
   const set = (k, v) => setCv((c) => ({ ...c, [k]: v }))
@@ -437,15 +465,29 @@ export default function App() {
     city: empty(p.city), residence: empty(p.residence), summary: empty(p.summary), // LinkedIn is optional
     tech: !cv.tech.length, soft: !cv.soft.length,
   }
-  const valid = !Object.values(bad).some(Boolean) && !cv.edu.some((e) => empty(e.level) || empty(e.school) || (!NO_MAJOR.includes(e.level) && empty(e.major)) || dEmpty(e.start) || dEmpty(e.end)) && !(cv.courses || []).some((c) => empty(c.org)) && !cv.langs.some((x) => empty(x.name) || (!x.native && SKILLS.some(([k]) => empty(x[k]))))
-  const ev = (b) => tried && b
-  const validate = () => {
-    setTried(true)
-    if (!valid) setTimeout(() => document.querySelector('.invalid')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60)
-    return valid
+  const eduBad = cv.edu.some((e) => empty(e.level) || empty(e.school) || (!NO_MAJOR.includes(e.level) && empty(e.major)) || dEmpty(e.start) || dEmpty(e.end))
+  const langBad = cv.langs.some((x) => empty(x.name) || (!x.native && SKILLS.some(([k]) => empty(x[k]))))
+  const courseBad = (cv.courses || []).some((c) => empty(c.org))
+  // Which wizard steps still have missing required data (optional steps always pass)
+  const stepBad = [
+    ['name', 'title', 'email', 'phone', 'city', 'residence', 'summary'].some((k) => bad[k]),
+    eduBad, false, bad.tech || bad.soft, langBad, courseBad, false,
+  ]
+  const ev = (b, i) => shown.includes(i) && b
+  const scrollInvalid = () => setTimeout(() => document.querySelector('.invalid')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 80)
+  const goTo = (i) => { setStep(i); setMaxStep((m) => Math.max(m, i)); window.scrollTo({ top: 0, behavior: 'smooth' }) }
+  const next = () => {
+    if (stepBad[step]) { setShown((a) => (a.includes(step) ? a : [...a, step])); scrollInvalid(); return }
+    goTo(step + 1)
+  }
+  const validate = () => { // used by the export buttons
+    const i = stepBad.findIndex(Boolean)
+    if (i < 0) return true
+    setShown((a) => [...new Set([...a, i])]); setStep(i); scrollInvalid()
+    return false
   }
   useEffect(() => { document.title = view === 'admin' ? `${ADMIN_TITLE} – سند الشباب` : 'منشئ السيرة الذاتية – سند الشباب' }, [view]) // browser tab title
-  const reset = () => { if (window.confirm('سيتم حذف جميع البيانات. هل أنت متأكد؟')) { setCv(initial()); setTried(false) } }
+  const reset = () => { if (window.confirm('سيتم حذف جميع البيانات. هل أنت متأكد؟')) { setCv(initial()); setShown([]); setStep(0); setMaxStep(0) } }
 
   return (
     <>
@@ -467,6 +509,8 @@ export default function App() {
         </div>
         <section className="no-print">
           <div className="clear-row"><button type="button" className="link" onClick={reset}>مسح جميع البيانات</button></div>
+          <Stepper step={step} max={maxStep} bad={stepBad} go={goTo} />
+          {step === 0 && (<>
           <div className="card">
             <h2><span className="n">🌐</span>لغة السيرة الذاتية</h2>
             <div className="tabs">
@@ -479,16 +523,15 @@ export default function App() {
 
           <Card n="1" title="المعلومات الشخصية">
             <div className="g">
-              <Txt name="name" autoComplete="name" label="الاسم الكامل" value={cv.p.name} err={ev(bad.name)} onChange={setP('name')} />
-              <Txt name="job-title" autoComplete="organization-title" label="المسمى الوظيفي" value={cv.p.title} err={ev(bad.title)} onChange={setP('title')} />
-              <Txt name="email" autoComplete="email" label="البريد الإلكتروني" type="email" dir="ltr" value={cv.p.email} err={ev(bad.email)} onChange={setP('email')} />
-              <Txt name="phone" autoComplete="tel" label="رقم الهاتف" type="tel" dir="ltr" value={cv.p.phone} err={ev(bad.phone)} onChange={setP('phone')} />
-              <Txt name="city" autoComplete="address-level2" label="المدينة، الدولة" value={cv.p.city} err={ev(bad.city)} onChange={setP('city')} />
-              <Txt name="residence" autoComplete="off" label="مكان السكن الحالي" value={cv.p.residence} err={ev(bad.residence)} onChange={setP('residence')} />
+              <Txt name="name" autoComplete="name" label="الاسم الكامل" value={cv.p.name} err={ev(bad.name, 0)} onChange={setP('name')} />
+              <Txt name="job-title" autoComplete="organization-title" label="المسمى الوظيفي" value={cv.p.title} err={ev(bad.title, 0)} onChange={setP('title')} />
+              <Txt name="email" autoComplete="email" label="البريد الإلكتروني" type="email" dir="ltr" value={cv.p.email} err={ev(bad.email, 0)} onChange={setP('email')} />
+              <Txt name="phone" autoComplete="tel" label="رقم الهاتف" type="tel" dir="ltr" value={cv.p.phone} err={ev(bad.phone, 0)} onChange={setP('phone')} />
+              <Txt name="city" autoComplete="address-level2" label="المدينة، الدولة" value={cv.p.city} err={ev(bad.city, 0)} onChange={setP('city')} />
+              <Txt name="residence" autoComplete="off" label="مكان السكن الحالي" value={cv.p.residence} err={ev(bad.residence, 0)} onChange={setP('residence')} />
               <Txt name="linkedin" autoComplete="url" label="رابط لينكدإن (اختياري)" dir="ltr" placeholder="linkedin.com/in/username" value={cv.p.link} onChange={setP('link')} />
-              <Field label="تاريخ الميلاد (اختياري)">
-                <input type="date" name="bday" autoComplete="bday" dir="ltr" min="1940-01-01" max={TODAY} value={cv.p.dob} onChange={(e) => setP('dob')(e.target.value)} />
-              </Field>
+              <DateSel day minY={1940} maxY={new Date().getFullYear()} label="تاريخ الميلاد (اختياري)" value={dobParts(cv.p.dob)}
+                onChange={(v) => setP('dob')(v.y && v.m && v.d ? `${v.y}-${String(v.m).padStart(2, '0')}-${String(v.d).padStart(2, '0')}` : '')} />
               <Field label="الجنس (اختياري)">
                 <select value={cv.p.gender} onChange={(e) => setP('gender')(e.target.value)}>
                   <option value="">اختر</option>
@@ -503,43 +546,62 @@ export default function App() {
                   <option value="married">{cv.p.gender === 'female' ? 'متزوجة' : 'متزوج'}</option>
                 </select>
               </Field>
-              <Area full label="نبذة مختصرة (تعريف قصير بك وبهدفك المهني في جملتين أو ثلاث)" placeholder="مثال: طالب هندسة برمجيات مهتم بتطوير تطبيقات الجوال، أبحث عن فرصة تدريب أنمّي فيها مهاراتي." err={ev(bad.summary)} value={cv.p.summary} onChange={setP('summary')} />
+              <Area full label="نبذة مختصرة (تعريف قصير بك وبهدفك المهني في جملتين أو ثلاث)" placeholder="مثال: طالب هندسة برمجيات مهتم بتطوير تطبيقات الجوال، أبحث عن فرصة تدريب أنمّي فيها مهاراتي." err={ev(bad.summary, 0)} value={cv.p.summary} onChange={setP('summary')} />
               <PhotoField value={cv.p.photo} onChange={setP('photo')} flash={flash} />
             </div>
           </Card>
 
+          </>)}
+          {step === 1 && (
           <Card n="2" title="التعليم">
             <p className="note start">رتّب إدخالاتك من الأحدث إلى الأقدم.</p>
-            <List items={cv.edu} onChange={(v) => set('edu', v)} blank={blankEdu} title="التعليم" addLabel="إضافة تعليم" render={eduFields(tried)} />
+            <List items={cv.edu} onChange={(v) => set('edu', v)} blank={blankEdu} title="التعليم" addLabel="إضافة تعليم" render={eduFields(shown.includes(1))} />
           </Card>
+          )}
+          {step === 2 && (
           <Card n="3" title="الخبرات" opt>
             <p className="note start">رتّب إدخالاتك من الأحدث إلى الأقدم.</p>
             <List items={cv.exp} onChange={(v) => set('exp', v)} blank={blankJob} optional title="خبرة" addLabel="إضافة خبرة" render={jobFields('المسمى الوظيفي', 'الشركة', 'المسؤوليات والإنجازات (كل سطر نقطة)')} />
           </Card>
+          )}
+          {step === 3 && (
           <Card n="4" title="المهارات">
-            <Chips label="المهارات التقنية" items={cv.tech} options={SKILL_OPTS[cv.lang].tech} err={ev(bad.tech)} onChange={(v) => set('tech', v)} placeholder="اكتب مهارة واضغط Enter" />
+            <Chips label="المهارات التقنية" items={cv.tech} options={SKILL_OPTS[cv.lang].tech} err={ev(bad.tech, 3)} onChange={(v) => set('tech', v)} placeholder="اكتب مهارة واضغط Enter" />
             <div className="gap" />
-            <Chips label="المهارات الناعمة" items={cv.soft} options={SKILL_OPTS[cv.lang].soft} err={ev(bad.soft)} onChange={(v) => set('soft', v)} placeholder="اكتب مهارة واضغط Enter" />
+            <Chips label="المهارات الناعمة" items={cv.soft} options={SKILL_OPTS[cv.lang].soft} err={ev(bad.soft, 3)} onChange={(v) => set('soft', v)} placeholder="اكتب مهارة واضغط Enter" />
           </Card>
-
+          )}
+          {step === 4 && (
           <Card n="5" title="اللغات">
-            <List items={cv.langs} onChange={(v) => set('langs', v)} blank={blankLang} title="لغة" addLabel="إضافة لغة" render={langFields(tried)} />
+            <List items={cv.langs} onChange={(v) => set('langs', v)} blank={blankLang} title="لغة" addLabel="إضافة لغة" render={langFields(shown.includes(4))} />
           </Card>
-          <Card n="6" title="العمل التطوعي" opt>
+          )}
+          {step === 5 && (<>
+          <Card title="العمل التطوعي" opt>
             <List items={cv.vol} onChange={(v) => set('vol', v)} blank={blankJob} optional title="عمل تطوعي" addLabel="إضافة عمل تطوعي" render={jobFields('الدور', 'المنظمة')} />
           </Card>
-          <Card n="7" title="الدورات وورش العمل" opt>
-            <List items={cv.courses} onChange={(v) => set('courses', v)} blank={blankCourse} optional title="دورة" addLabel="إضافة دورة أو ورشة" render={courseFields(tried)} />
+          <Card title="الدورات وورش العمل" opt>
+            <List items={cv.courses} onChange={(v) => set('courses', v)} blank={blankCourse} optional title="دورة" addLabel="إضافة دورة أو ورشة" render={courseFields(shown.includes(5))} />
           </Card>
-          <Card n="8" title="المؤتمرات" opt>
+          <Card title="المؤتمرات" opt>
             <List items={cv.confs || []} onChange={(v) => set('confs', v)} blank={blankConf} optional title="مؤتمر" addLabel="إضافة مؤتمر" render={confFields} />
           </Card>
+          </>)}
+          {step === 6 && (
+          <Card n="✓" title="المراجعة والتصدير">
+            <p className="note start">راجع المعاينة ثم حمّل سيرتك أو أرسلها إلى بريدك.</p>
+            <Export cv={cv} onValidate={validate} />
+          </Card>
+          )}
+          <div className="wiz-nav">
+            {step > 0 && <button type="button" className="btn ghost" onClick={() => goTo(step - 1)}>السابق</button>}
+            {step < STEPS.length - 1 && <button type="button" className="btn" onClick={next}>التالي</button>}
+          </div>
         </section>
 
         <aside className="side">
           <div className="ph no-print"><h2>معاينة مباشرة</h2></div>
           <Preview cv={cv} />
-          <Export cv={cv} onValidate={validate} />
         </aside>
       </main>
       {toast && <div className="toast no-print" role="status">{toast}</div>}
