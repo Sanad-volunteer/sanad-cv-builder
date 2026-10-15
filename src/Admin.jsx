@@ -133,14 +133,16 @@ export default function Admin() {
   return (
     <main className="adm">
       <div className="adm-bar">
-        <h2>السير الذاتية المحفوظة <span className="adm-n">{shown.length}{shown.length !== rows.length ? ` / ${rows.length}` : ''}</span></h2>
+        <div className="adm-tools">
+          <button type="button" className="btn" onClick={() => { try { sessionStorage.removeItem(KEY) } catch { /* ignore */ } setRows(null); setPw(''); setInput('') }}>خروج</button>
+          <span className="adm-n">{shown.length}{shown.length !== rows.length ? ` / ${rows.length}` : ''}</span>
+        </div>
         <div className="adm-tools">
           <input type="search" placeholder="بحث بالاسم أو البريد أو الهاتف…" value={q} onChange={(e) => setQ(e.target.value)} />
           <select value={city} onChange={(e) => setCity(e.target.value)}><option value="">كل المدن</option>{cities.map((c) => <option key={c}>{c}</option>)}</select>
           <select value={level} onChange={(e) => setLevel(e.target.value)}><option value="">كل المراحل</option>{EDU_LEVELS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
           <button type="button" className="btn" onClick={exportXlsx} disabled={!shown.length}>{picked.length ? `تصدير Excel (${picked.length})` : 'تصدير Excel'}</button>
           <button type="button" className="btn" onClick={() => load(pw)}>تحديث</button>
-          <button type="button" className="btn" onClick={() => { try { sessionStorage.removeItem(KEY) } catch { /* ignore */ } setRows(null); setPw(''); setInput('') }}>خروج</button>
         </div>
       </div>
       {err && <p className="adm-err">{err}</p>}
@@ -151,7 +153,6 @@ export default function Admin() {
           <button type="button" onClick={() => bulkDownload('docx')} disabled={!!prog}>تنزيل Word (ZIP)</button>
           <button type="button" onClick={exportXlsx} disabled={!!prog}>تصدير Excel</button>
           <button type="button" className="del" onClick={bulkRemove} disabled={!!prog}>حذف المحدد</button>
-          <button type="button" className="adm-x" onClick={() => setSel(new Set())} disabled={!!prog}>إلغاء التحديد</button>
         </div>
       )}
       <div className="adm-wrap">

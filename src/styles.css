@@ -211,4 +211,5 @@ select:disabled{opacity:.6;cursor:not-allowed}
 .adm-sel button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:7px 12px;font:inherit;font-size:12.5px;cursor:pointer}
 .adm-sel button:hover:not(:disabled){border-color:var(--teal)}.adm-sel button:disabled{opacity:.55;cursor:not-allowed}
 .adm-sel .del{color:#fff;font-weight:700;border-color:#8f1d17;border-bottom-width:3px;background:linear-gradient(#d8453c,#b3261e)}
+.adm-sel .del:hover:not(:disabled){border-color:#8f1d17}.adm-sel .del:focus,.adm-sel .del:focus-visible{outline:0;box-shadow:none}
 .adm-ck{width:36px;text-align:center!important}.adm-t td.adm-ck{vertical-align:middle}
