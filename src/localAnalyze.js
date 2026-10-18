@@ -1,6 +1,7 @@
 // Browser-side CV review (no AI). Used quietly when the AI service is busy or unavailable.
 // It returns the same shape as /api/analyze:
-//   { score, verdict, summary, missingKeywords: [], suggestions: [{ section, text }], ats: [{ ok, text }] }
+//   { score, verdict, summary, missingKeywords: [], checks: [{ id, ok: true | false | null, text }] }
+// `checks` has one item per CV part (contact, summary, sections, title_match, dates, metrics, skills, font, file); ok === null means "cannot be checked here".
 // It compares the CV with the job words, checks the structure of the CV and gives rule-based advice.
 // It never invents anything: advice about missing keywords always says "if it is true".
 
@@ -56,20 +57,27 @@ const SECTIONS = {
 }
 const DEGREE = /bachelor|master|ph\.?d|diploma|university|college|بكالوريوس|ماجستير|دكتوراه|دبلوم|جامعه|الجامعه|معهد/
 
-function findSections(lines) {
-  const found = new Set()
-  for (const raw of lines) {
+function findSections(lines) { // Map: section key -> index of its heading line
+  const found = new Map()
+  lines.forEach((raw, idx) => {
     // each line is checked as written and flipped (visual-order PDFs)
     for (const cand of [raw, ARABIC.test(raw) ? flip(raw) : '']) {
       const l = norm(cand).replace(/[:\-–|•·●▪]/g, ' ').replace(/\s+/g, ' ').trim()
       if (!l || l.length > 40) continue
       const key = letters(l.replace(/\s/g, ''))
       for (const [k, names] of Object.entries(SECTIONS)) {
-        if (names.some((n) => l === n || l.startsWith(`${n} `) || (ARABIC.test(l) && key.length >= 4 && key === letters(n.replace(/\s/g, ''))))) found.add(k)
+        if (!found.has(k) && names.some((n) => l === n || l.startsWith(`${n} `) || (ARABIC.test(l) && key.length >= 4 && key === letters(n.replace(/\s/g, ''))))) found.set(k, idx)
       }
     }
-  }
+  })
   return found
+}
+// Lines under a section heading, up to the next heading
+function sectionLines(lines, sections, key) {
+  if (!sections.has(key)) return []
+  const start = sections.get(key)
+  const next = [...sections.values()].filter((i) => i > start).sort((a, b) => a - b)[0]
+  return lines.slice(start + 1, next === undefined ? lines.length : next)
 }
 
 const countMetrics = (text) => {
@@ -77,10 +85,20 @@ const countMetrics = (text) => {
   return (t.match(/\d+(?:[.,]\d+)?\s?%|\b\d{2,}\+?(?![\d.])/g) || []).length
 }
 
-const SECTION_TXT = { summary: 'نبذة', skills: 'مهارات', education: 'تعليم', experience: 'خبرات' }
+const SECTION_AR = { summary: 'النبذة', skills: 'المهارات', education: 'التعليم', experience: 'الخبرات', volunteer: 'العمل التطوعي', languages: 'اللغات', courses: 'الدورات' }
+
+// ---- the rules (the same rules are given to the AI in api/analyze.js) ----
+const MONTH = '(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?|كانون الثاني|كانون الاول|شباط|اذار|نيسان|ايار|حزيران|تموز|اب|ايلول|تشرين الاول|تشرين الثاني|يناير|فبراير|مارس|ابريل|مايو|يونيو|يوليو|اغسطس|سبتمبر|اكتوبر|نوفمبر|ديسمبر)'
+const GOOD_DATE = new RegExp(`(?<![\\d/])(?:0?[1-9]|1[0-2])\\s?[/.-]\\s?(?:\\d{4}|\\d{2})(?![\\d/])|(?<![\\p{L}])${MONTH}\\.?\\s*,?\\s*(?:19|20)\\d{2}`, 'gu')
+const BAD_DATE = /(?<![\d/])\d{1,2}\s?[/.-]\s?\d{1,2}\s?[/.-]\s?\d{2,4}(?![\d/])/g // 25/03/2021: day-first dates confuse ATS parsers
+const SEEKING = /looking for|seeking|i want|أبحث|ابحث|أسعى|اسعى|أطمح|اطمح|أتطلع|اتطلع|أريد|اريد|أتمنى|اتمنى|أرغب|ارغب/i
+const SILLY_EMAIL = /cool|sexy|baby|boss|king|queen|love|lover|angel|crazy|princess|hot|ninja|killer|gamer|xxx|\d{5,}/i
+const DECORATIVE_FONT = /script|brush|comic|papyrus|curlz|chancery|handwrit|blackadder|bradley|jokerman|kristen|segoe print|lucida hand/i
+const wordCount = (t) => (t.match(TOKEN) || []).length
+const list = (a) => a.join('، ')
 
 // ---------- main ----------
-export function analyzeText(rawText, job = {}) {
+export function analyzeText(rawText, job = {}, meta = {}) { // meta: { source: 'pdf' | 'docx' | 'builder', name, fonts }
   const text = clean(rawText).slice(0, 60000)
   const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean)
   const title = String(job.title || '').trim()
@@ -144,52 +162,96 @@ export function analyzeText(rawText, job = {}) {
     ? `تطابقت ${matched.length} من ${ranked.length} كلمة مفتاحية من الوظيفة مع سيرتك، وتظهر فيها ${mainSections} من 5 أقسام رئيسية بشكل واضح.`
     : 'قورنت سيرتك بالمسمى الوظيفي المستهدف وببنية السيرة العامة؛ أضف وصف الوظيفة كاملاً للحصول على مقارنة أدق للكلمات المفتاحية.'
 
-  // advice (most useful first, 3 to 6 items)
-  const tips = []
-  const miss = missing.slice(0, 6).map(([, e]) => label(e))
-  if (miss.length) tips.push({ section: 'skills', text: `فكّر في إضافة هذه الكلمات المفتاحية إن كانت تنطبق عليك فعلاً: ${miss.join('، ')}.` })
-  if (!sections.has('summary')) tips.push({ section: 'summary', text: `أضف نبذة مختصرة (جملتان أو ثلاث) تربط خلفيتك بالوظيفة${title ? ` «${title}»` : ''}.` })
-  if (title && titleStems.size && titleHit === 0) tips.push({ section: 'general', text: `اجعل المسمى الوظيفي أو النبذة أقرب إلى عنوان الوظيفة المستهدفة «${title}» إن كان ذلك صحيحاً.` })
-  if (hasExp && metrics < 2) tips.push({ section: 'experience', text: 'أضف أرقاماً ونتائج قابلة للقياس لإنجازاتك (عدد المشاريع، النسب، حجم العمل) إن كانت متوفرة لديك.' })
-  if (!sections.has('skills')) tips.push({ section: 'skills', text: 'أضف قسماً واضحاً للمهارات يجمع المهارات التقنية والناعمة المرتبطة بالوظيفة.' })
-  if (!hasExp) tips.push({ section: 'experience', text: 'أضف قسماً للخبرات أو التدريب أو العمل التطوعي أو المشاريع ليظهر تطبيقك العملي لمهاراتك.' })
-  if (!hasEdu) tips.push({ section: 'education', text: 'أضف قسم التعليم مع اسم الجامعة أو المعهد والتخصص وسنوات الدراسة.' })
-  if (!email || !phone) tips.push({ section: 'general', text: 'أضف وسائل تواصل واضحة في أعلى السيرة: بريد إلكتروني ورقم هاتف.' })
-  if (words > 900) tips.push({ section: 'general', text: 'السيرة طويلة نسبياً؛ اختصرها لتكون صفحة إلى صفحتين وأبقِ الأهم لهذه الوظيفة.' })
-  if (words < 120) tips.push({ section: 'general', text: 'السيرة مختصرة جداً؛ وسّع وصف خبراتك ومشاريعك بنقاط واضحة عن مهامك ومسؤولياتك.' })
-  const filler = [
-    { section: 'experience', text: 'رتّب الخبرات من الأحدث إلى الأقدم، وابدأ كل نقطة بفعل قوي يصف ما قمت به فعلاً.' },
-    { section: 'general', text: 'اجعل الصياغة موجزة وواضحة، وراجع السيرة لغوياً وإملائياً قبل التقديم.' },
-    { section: 'skills', text: 'رتّب المهارات بحيث تأتي الأقرب لهذه الوظيفة أولاً.' },
-  ]
-  for (const f of filler) if (tips.length < 3) tips.push(f)
+  // ---------- the checks: one verdict per CV part (ok true = green tick, false = red cross, null = cannot be checked) ----------
+  const checks = []
+  const chk = (id, ok, text) => checks.push({ id, ok, text })
+  const flat = text.replace(/\S+@\S+/g, ' ')
 
-  const checks = [
-    mainSections >= 3
-      ? { ok: true, text: 'عناوين الأقسام واضحة وقياسية' }
-      : { ok: false, text: 'استخدم عناوين قياسية واضحة مثل: التعليم، الخبرات، المهارات' },
-    email && phone
-      ? { ok: true, text: 'بيانات التواصل (البريد والهاتف) موجودة' }
-      : { ok: false, text: `بيانات التواصل ناقصة: ${[!email && 'البريد الإلكتروني', !phone && 'رقم الهاتف'].filter(Boolean).join('، ')}` },
-    years >= 2
-      ? { ok: true, text: 'التواريخ مذكورة بوضوح' }
-      : { ok: false, text: 'أضف سنوات التعليم والخبرات بوضوح' },
-    words >= 150 && words <= 900
-      ? { ok: true, text: 'طول السيرة مناسب' }
-      : { ok: false, text: words < 150 ? 'السيرة قصيرة؛ المطلوب غالباً صفحة واحدة مليئة بالمعلومات المهمة' : 'السيرة طويلة؛ يفضّل ألا تتجاوز صفحتين' },
-    text.length >= 200
-      ? { ok: true, text: 'المحتوى قابل للقراءة كنص عادي' }
-      : { ok: false, text: 'يصعب قراءة نص الملف؛ تجنّب الصور والجداول المعقدة وتأكد أن النص قابل للتحديد' },
-  ]
+  // 1. contact information
+  const head = lines.slice(0, 15).join(' ')
+  const hasName = !!lines[0] && lines[0].length <= 60 && !/[@\d]/.test(lines[0])
+  const emailAddr = (text.match(/[\w.+-]+@[\w-]+\.[\w.-]+/) || [''])[0]
+  const place = /(مكان السكن|المدينة|المدينه|العنوان|الموقع|location|address|city|residence)\s*[:：]/i.test(head) || /[A-Za-z؀-ۿ][\w؀-ۿ ]{1,30},\s*[A-Za-z؀-ۿ][\w؀-ۿ ]{1,30}/.test(head)
+  const sillyEmail = !!emailAddr && SILLY_EMAIL.test(emailAddr.split('@')[0])
+  const cMiss = [!hasName && 'الاسم', !phone && 'رقم الهاتف', !email && 'البريد الإلكتروني', !place && 'الموقع (المدينة والدولة)'].filter(Boolean)
+  chk('contact', !cMiss.length && !sillyEmail,
+    cMiss.length ? `ينقص في أعلى السيرة: ${list(cMiss)}. أضف الاسم والهاتف والبريد والموقع.`
+      : sillyEmail ? 'البريد الإلكتروني لا يبدو مهنياً؛ استخدم بريداً بسيطاً مبنياً على اسمك مثل name.lastname@gmail.com.'
+        : 'الاسم والهاتف والبريد والموقع موجودة والبريد مهني.')
 
-  return {
-    score,
-    verdict,
-    summary,
-    missingKeywords: missing.slice(0, 12).map(([, e]) => label(e)),
-    suggestions: tips.slice(0, 6),
-    ats: checks,
+  // 2. summary (50 to 150 words, what you offer - not what you want)
+  const sumBody = sectionLines(lines, sections, 'summary').join(' ')
+  const sumWords = wordCount(sumBody)
+  const FORMULA = 'الصيغة المقترحة: [المسمى المهني] بخبرة [عدد] سنوات، أنجزت [إنجاز 1] و[إنجاز 2]، ماهر في [مهارة 1] و[مهارة 2] و[مهارة 3]، ويتميز بـ [نقطة قوة].'
+  chk('summary', sections.has('summary') && sumWords >= 50 && sumWords <= 150 && !SEEKING.test(sumBody),
+    !sections.has('summary') ? `لم نجد نبذة مهنية. أضف نبذة من 50 إلى 150 كلمة تبرز قيمتك ومهاراتك وما تقدمه لصاحب العمل وليس ما تريده منه. ${FORMULA}`
+      : sumWords < 50 ? `النبذة قصيرة (${sumWords} كلمة)؛ اجعلها بين 50 و150 كلمة. ${FORMULA}`
+        : sumWords > 150 ? `النبذة طويلة (${sumWords} كلمة)؛ اختصرها إلى 150 كلمة كحد أقصى مع إبقاء أهم إنجازاتك.`
+          : SEEKING.test(sumBody) ? `النبذة تركّز على ما تريده؛ أعد صياغتها لتبرز ما تقدمه لصاحب العمل. ${FORMULA}`
+            : `النبذة بطول مناسب (${sumWords} كلمة) وتركّز على قيمتك.`)
+
+  // 3. sections
+  const has = (k) => sections.has(k) || (k === 'education' && hasEdu)
+  const present = ['summary', 'skills', 'education', 'experience', 'volunteer', 'languages', 'courses'].filter(has)
+  const absent = ['summary', 'skills', 'education', 'experience'].filter((k) => !has(k))
+  chk('sections', has('education') && has('skills') && (has('experience') || has('volunteer')),
+    `${present.length ? `الأقسام الموجودة: ${list(present.map((k) => SECTION_AR[k]))}.` : 'لم نتعرف على أي عنوان قسم.'} ${absent.length ? `غير موجودة: ${list(absent.map((k) => SECTION_AR[k]))}؛ أضفها بعناوين قياسية.` : 'كل الأقسام الأساسية موجودة.'}${!has('experience') && has('volunteer') ? ' (العمل التطوعي يعوّض غياب الخبرات).' : ''}`)
+
+  // 4. job title match
+  if (!title) chk('title_match', null, 'لم يُكتب مسمى وظيفي مستهدف للمقارنة.')
+  else {
+    const ratio = titleStems.size ? titleHit / titleStems.size : 0
+    const top = tokens(lines.slice(0, 8).join(' ')).some((w) => titleStems.has(stem(norm(w))))
+    chk('title_match', ratio >= 0.5,
+      ratio >= 0.5 ? `المسمى المستهدف «${title}» موجود في السيرة${top ? ' وفي أعلاها' : '؛ ويفضّل ذكره في أعلى السيرة أو النبذة'}.`
+        : `المسمى المستهدف «${title}» غير موجود في سيرتك. اذكره في أعلى السيرة أو النبذة إن كان يصف ما أنت عليه فعلاً.`)
   }
+
+  // 5. date formatting (MM/YY, MM/YYYY or Month YYYY)
+  const nt = norm(flat)
+  const good = (nt.match(GOOD_DATE) || []).length, bad = (nt.match(BAD_DATE) || []).length
+  chk('dates', good >= 2 && bad === 0,
+    bad ? 'بعض التواريخ مكتوبة بصيغة يوم/شهر/سنة؛ استخدم MM/YY أو MM/YYYY أو Month YYYY مثل 03/2022 أو March 2022.'
+      : good >= 2 ? `التواريخ بصيغة مناسبة (وجدنا ${good}).`
+        : 'لم نجد تواريخ بصيغة واضحة. اكتب التواريخ بإحدى الصيغ: MM/YY أو MM/YYYY أو Month YYYY (مثل 03/2022 أو March 2022) وليس السنة وحدها.')
+
+  // 6. measurable results
+  chk('metrics', metrics >= 2,
+    metrics >= 2 ? `وجدنا ${metrics} أرقام ونتائج قابلة للقياس في إنجازاتك.`
+      : 'أضف نتائج قابلة للقياس إن توفرت: أرقام ونسب وأحجام، مثل «زيادة التفاعل بنسبة 30%» أو «تدريب 40 متدرباً» أو «إدارة فريق من 6 أشخاص».')
+
+  // 7. skills (10 to 20 hard and soft skills)
+  const skillItems = new Set(sectionLines(lines, sections, 'skills').flatMap((l) => l.replace(/^[^:：]{1,30}[:：]/, '').split(/[,،;•·●▪|]+/)).map((x) => x.replace(/^[-–\s]+/, '').trim()).filter((x) => x.length >= 2 && x.length <= 40))
+  const nSkills = skillItems.size
+  const kwNote = missing.length && ranked.length >= 3 ? ` لم نجد في سيرتك بعض مهارات الوظيفة مثل: ${list(missing.slice(0, 4).map(([, e]) => label(e)))}؛ أضفها إن كانت صحيحة.` : ''
+  chk('skills', nSkills >= 10 && nSkills <= 20 && !(ranked.length >= 3 && missing.length > ranked.length / 2),
+    !sections.has('skills') ? `لم نجد قسم مهارات. أضف قسماً يضم من 10 إلى 20 مهارة تقنية وناعمة مرتبطة بالوظيفة.${kwNote}`
+      : nSkills < 10 ? `عدد المهارات ${nSkills}؛ اجعلها من 10 إلى 20 مهارة تقنية وناعمة مرتبطة بالوظيفة.${kwNote}`
+        : nSkills > 20 ? `عدد المهارات ${nSkills} كبير؛ اختصرها إلى 20 كحد أقصى وأبقِ الأقرب للوظيفة.${kwNote}`
+          : `عدد المهارات مناسب (${nSkills}).${kwNote}`)
+
+  // 8. font
+  const fonts = meta.fonts || []
+  if (meta.source === 'builder') chk('font', true, 'ملفات منشئ السيرة تستخدم خطاً واضحاً قابلاً للقراءة من أنظمة ATS.')
+  else if (fonts.length) {
+    const deco = fonts.filter((f) => DECORATIVE_FONT.test(f))
+    chk('font', !deco.length, deco.length ? `الخط (${list(deco)}) زخرفي؛ استخدم خطاً قياسياً مثل Arial أو Calibri أو Times New Roman بحجم 10 إلى 12.` : `الخط المستخدم (${list(fonts.slice(0, 3))}) قياسي وواضح. حافظ على حجم 10 إلى 12.`)
+  } else chk('font', null, 'تعذّر تحديد نوع الخط من الملف. استخدم خطاً قياسياً مثل Arial أو Calibri أو Times New Roman بحجم 10 إلى 12.')
+
+  // 9. file type and name
+  const fname = String(meta.name || '').replace(/\.[^.]+$/, '')
+  if (meta.source === 'builder') chk('file', true, 'سيرتك ستُصدَّر بصيغة PDF أو Word وهما مناسبتان لـ ATS. سمِّ الملف باسمك مثل Ali_Ahmad_CV.pdf.')
+  else {
+    const ext = meta.source === 'pdf' ? 'pdf' : meta.source === 'docx' ? 'docx' : String(meta.name || '').split('.').pop().toLowerCase()
+    const okType = ext === 'pdf' || ext === 'docx'
+    const okName = /cv|resume|سيره|السيره/i.test(norm(fname)) && !/(^|[\s_-])(new|final|copy|untitled|document|doc)(?=$|[\s_-])|\(\d+\)/i.test(fname) && fname.length <= 50
+    chk('file', okType && okName,
+      !okType ? 'استخدم صيغة PDF أو DOCX فقط.'
+        : !okName ? `اسم الملف «${meta.name}» غير مناسب؛ سمِّه باسمك مع كلمة CV مثل Ali_Ahmad_CV.pdf وتجنّب كلمات مثل final أو new أو copy.`
+          : `نوع الملف (${ext.toUpperCase()}) واسمه مناسبان.`)
+  }
+
+  return { score, verdict, summary, missingKeywords: missing.slice(0, 12).map(([, e]) => label(e)), checks }
 }
 
 // ---------- reading the CV file in the browser ----------
@@ -205,17 +267,26 @@ async function pdfText(b64) {
   pdfjs.GlobalWorkerOptions.workerSrc = worker.default
   const doc = await pdfjs.getDocument({ data, isEvalSupported: false }).promise
   let out = ''
+  const fonts = new Set()
   for (let i = 1; i <= Math.min(doc.numPages, 8); i++) {
-    const content = await (await doc.getPage(i)).getTextContent()
+    const page = await doc.getPage(i)
+    const content = await page.getTextContent()
     for (const it of content.items) { out += it.str; if (it.hasEOL) out += '\n' }
     out += '\n'
+    try { // real font names (best effort)
+      await page.getOperatorList()
+      for (const id of new Set(content.items.map((it) => it.fontName))) {
+        if (page.commonObjs.has(id)) { const f = page.commonObjs.get(id); if (f && f.name) fonts.add(String(f.name).replace(/^[A-Z]{6}\+/, '')) }
+      }
+    } catch { /* font names stay unknown */ }
   }
-  return out
+  return { text: out, fonts: [...fonts] }
 }
 
-// file: { type: 'pdf' | 'text', data } exactly as Analyze.jsx keeps it. job: { title, company, desc }
+// file: { name, type: 'pdf' | 'text', data, builder? } exactly as Analyze.jsx keeps it. job: { title, company, desc }
 export async function localAnalyze(file, job) {
-  const text = file.type === 'pdf' ? await pdfText(file.data) : String(file.data || '')
-  if (clean(text).trim().length < 40) throw new Error('no_text') // scanned or empty file: nothing to review
-  return analyzeText(text, job)
+  const pdf = file.type === 'pdf' ? await pdfText(file.data) : { text: String(file.data || ''), fonts: [] }
+  if (clean(pdf.text).trim().length < 40) throw new Error('no_text') // scanned or empty file: nothing to review
+  const source = file.builder ? 'builder' : file.type === 'pdf' ? 'pdf' : String(file.name || '').toLowerCase().endsWith('.docx') ? 'docx' : 'text'
+  return analyzeText(pdf.text, job, { source, name: file.name, fonts: pdf.fonts })
 }

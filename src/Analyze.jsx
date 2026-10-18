@@ -11,6 +11,10 @@ const toB64 = (f) => new Promise((ok, no) => {
   r.readAsDataURL(f)
 })
 
+const CHECK_TITLE = {
+  contact: 'معلومات التواصل (Contact Information)', summary: 'النبذة المهنية (Summary)', sections: 'الأقسام (Sections)', title_match: 'مطابقة المسمى الوظيفي (Job Title Match)',
+  dates: 'تنسيق التواريخ (Date Formatting)', metrics: 'النتائج القابلة للقياس (Measurable Results)', skills: 'المهارات (Skills)', font: 'نوع الخط (Font)', file: 'نوع الملف واسمه (File)',
+}
 function Result({ r, go }) {
   return (
     <div className="card res">
@@ -24,16 +28,15 @@ function Result({ r, go }) {
           <div className="chips">{r.missingKeywords.map((k) => <span className="chip miss" key={k}>{k}</span>)}</div>
         </>
       )}
-      {r.suggestions.length > 0 && (
+      {r.checks.length > 0 && (
         <>
-          <h5>اقتراحات</h5>
-          {r.suggestions.map((s, i) => <div className="sg" key={i}><p>{s.text}</p></div>)}
-        </>
-      )}
-      {r.ats.length > 0 && (
-        <>
-          <h5>فحص ATS</h5>
-          {r.ats.map((a, i) => <p className="ck" key={i}>{a.ok ? '✓' : '⚠'} {a.text}</p>)}
+          <h5>فحص السيرة بحسب معايير ATS</h5>
+          {r.checks.map((c) => (
+            <div className={`chk ${c.ok === true ? 'ok' : c.ok === false ? 'no' : 'na'}`} key={c.id}>
+              <span className="ic" aria-label={c.ok === true ? 'مناسب' : c.ok === false ? 'يحتاج تعديل' : 'غير محدد'}>{c.ok === true ? '✓' : c.ok === false ? '✗' : '–'}</span>
+              <div><b>{CHECK_TITLE[c.id] || c.id}</b><p>{c.text}</p></div>
+            </div>
+          ))}
         </>
       )}
       <button type="button" className="btn p" onClick={() => go('create')}>✎ حسّنها في منشئ السيرة الذاتية</button>
@@ -58,14 +61,14 @@ export default function Analyze({ go, seed }) { // seed: the CV just built in th
     try {
       const data = ext === 'pdf' ? await toB64(f) : (await mammoth.extractRawText({ arrayBuffer: await f.arrayBuffer() })).value
       if (!data.trim()) throw new Error('empty')
-      setFile({ name: f.name, type: ext === 'pdf' ? 'pdf' : 'text', data })
+      setFile({ name: f.name, type: ext === 'pdf' ? 'pdf' : 'text', data, ext })
       fail('')
     } catch { setFile(null); fail('تعذّرت قراءة الملف') }
   }
   const run = async () => {
     setSt({ busy: true, err: '', res: null })
     try {
-      const r = await post('/api/analyze', { file: { type: file.type, data: file.data }, job })
+      const r = await post('/api/analyze', { file: { type: file.type, data: file.data, name: file.name }, source: file.builder ? 'builder' : file.ext, job })
       setSt({ busy: false, err: '', res: { ...(await r.json()), source: 'ai' } })
       setNotice(true)
     } catch (e) {
