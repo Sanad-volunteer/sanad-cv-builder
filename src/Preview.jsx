@@ -10,7 +10,7 @@ export const MONTH_NAMES = {
 
 // Language levels: the key is stored, the label depends on the CV language.
 export const LEVELS = [['beginner', 'مبتدئ'], ['intermediate', 'متوسط'], ['upper', 'فوق المتوسط'], ['fluent', 'متمرس']] // "native" is a separate checkbox (x.native), not a level
-import { EDU_LEVELS, EDU_LEVEL, langParts, langName } from '../api/_lists.js'
+import { EDU_LEVELS, EDU_LEVEL, langParts, langName, skillText } from '../api/_lists.js'
 export { EDU_LEVELS }
 // Optional personal details line (date of birth, gender, marital status)
 const DETAILS = {
@@ -117,8 +117,8 @@ export default function Preview({ cv }) {
           <Jobs items={exp} h={t.exp} l={lang} />
           {(tech.length > 0 || soft.length > 0) && (
             <Sec h={t.skills}>
-              {tech.length > 0 && <p><b>{t.tech}:</b> {tech.join(sep)}</p>}
-              {soft.length > 0 && <p><b>{t.soft}:</b> {soft.join(sep)}</p>}
+              {tech.length > 0 && <p><b>{t.tech}:</b> {tech.map((s) => skillText(s, (cv.lvl || {})[s], lang)).join(sep)}</p>}
+              {soft.length > 0 && <p><b>{t.soft}:</b> {soft.map((s) => skillText(s, (cv.lvl || {})[s], lang)).join(sep)}</p>}
             </Sec>
           )}
           {langF.length > 0 && (

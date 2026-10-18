@@ -41,9 +41,9 @@ function Result({ r, go }) {
   )
 }
 
-export default function Analyze({ go }) {
-  const [file, setFile] = useState(null)
-  const [job, setJob] = useState({ title: '', company: '', desc: '' })
+export default function Analyze({ go, seed }) { // seed: the CV just built in the builder ({ file, title })
+  const [file, setFile] = useState(seed ? seed.file : null)
+  const [job, setJob] = useState({ title: seed ? seed.title : '', company: '', desc: '' })
   const [st, setSt] = useState({ busy: false, err: '', res: null })
   const [notice, setNotice] = useState(false) // information pop-up shown after an analysis
   const setJ = (k) => (e) => setJob((j) => ({ ...j, [k]: e.target.value }))
@@ -66,9 +66,18 @@ export default function Analyze({ go }) {
     setSt({ busy: true, err: '', res: null })
     try {
       const r = await post('/api/analyze', { file: { type: file.type, data: file.data }, job })
-      setSt({ busy: false, err: '', res: await r.json() })
+      setSt({ busy: false, err: '', res: { ...(await r.json()), source: 'ai' } })
       setNotice(true)
-    } catch (e) { setSt({ busy: false, err: e.status === 429 ? 'تجاوزت عدد المحاولات المسموح، حاول بعد قليل' : e.body && e.body.status === 503 ? 'الذكاء الاصطناعي مزدحم حالياً، حاول بعد دقيقة' : `تعذّر تحليل السيرة، حاول مرة أخرى${e.body && e.body.reason ? ` (${e.body.status || ''} ${e.body.reason})` : ''}`, res: null }) }
+    } catch (e) {
+      // The AI is busy or unavailable: quietly review the CV in the browser instead (no message to the user).
+      try {
+        const { localAnalyze } = await import('./localAnalyze.js')
+        setSt({ busy: false, err: '', res: { ...(await localAnalyze(file, job)), source: 'local' } })
+      } catch {
+        // the browser review could not read the file either: show the original message
+        setSt({ busy: false, err: e.status === 429 ? 'تجاوزت عدد المحاولات المسموح، حاول بعد قليل' : e.body && e.body.status === 503 ? 'الذكاء الاصطناعي مزدحم حالياً، حاول بعد دقيقة' : `تعذّر تحليل السيرة، حاول مرة أخرى${e.body && e.body.reason ? ` (${e.body.status || ''} ${e.body.reason})` : ''}`, res: null })
+      }
+    }
   }
   const ready = file && job.title.trim() && !st.busy // job title is required, description is optional
 
@@ -99,7 +108,7 @@ export default function Analyze({ go }) {
         </div>
       </section>
       <aside className="side">
-        <div className="ph"><h2>نتيجة المراجعة</h2><span className="badge">✦ ذكاء اصطناعي</span></div>
+        <div className="ph"><h2>نتيجة المراجعة</h2>{!(st.res && st.res.source === 'local') && <span className="badge">✦ ذكاء اصطناعي</span>}</div>
         {st.res ? <Result r={st.res} go={go} /> : (
           <div className="card empty"><div className="big">✦</div><p>ارفع سيرتك وأضف الوظيفة المستهدفة ثم اضغط «حلّل» لترى نسبة المطابقة والاقتراحات.</p></div>
         )}
