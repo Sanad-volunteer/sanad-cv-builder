@@ -44,3 +44,12 @@ export const langName = (v, l) => LNAME[l][v] || v || ''
 // Old drafts stored the name as plain text: map the common spellings to the keys.
 const OLD = { arabic: 'lang:ar', 'العربية': 'lang:ar', english: 'lang:en', 'الإنجليزية': 'lang:en', 'الانجليزية': 'lang:en', 'الإنكليزية': 'lang:en', french: 'lang:fr', 'الفرنسية': 'lang:fr' }
 export const langKeyFromText = (t) => OLD[String(t || '').trim().toLowerCase()] || t
+
+// Skill level (optional, per skill): the key is stored in cv.lvl[skill], the label depends on the CV language.
+export const SKILL_LEVELS = ['beginner', 'intermediate', 'advanced', 'expert']
+export const SKILL_LEVEL = {
+  ar: { beginner: 'مبتدئ', intermediate: 'متوسط', advanced: 'متقدم', expert: 'خبير' },
+  en: { beginner: 'Beginner', intermediate: 'Intermediate', advanced: 'Advanced', expert: 'Expert' },
+}
+// "Excel (Advanced)"; the plain name when no level was chosen
+export const skillText = (name, lvl, l) => (SKILL_LEVEL[l] && SKILL_LEVEL[l][lvl] ? `${name} (${SKILL_LEVEL[l][lvl]})` : name)
