@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react'
+import { Analytics } from '@vercel/analytics/react'
 import logo from './assets/sanad-logo.svg'
 import Preview, { MONTH_NAMES, LEVELS, EDU_LEVELS } from './Preview.jsx'
 import Home from './Home.jsx'
@@ -641,6 +642,7 @@ export default function App() {
       </WarnCtx.Provider>
       </LangCtx.Provider>
       )}
+      <Analytics />
     </>
   )
 }

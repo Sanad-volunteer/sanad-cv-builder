@@ -12,6 +12,7 @@
     "@sparticuz/chromium": "^131.0.1",
     "@upstash/ratelimit": "^2.2.0",
     "@upstash/redis": "^1.39.0",
+    "@vercel/analytics": "^2.0.1",
     "docx": "^9.10.0",
     "mammoth": "^1.13.0",
     "nodemailer": "^10.1.0",
