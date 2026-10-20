@@ -7,7 +7,7 @@ const T = {
   ar: { summary: 'نبذة', skills: 'المهارات', tech: 'المهارات التقنية', soft: 'المهارات الناعمة', langs: 'اللغات', courses: 'الدورات وورش العمل', edu: 'التعليم', exp: 'الخبرات', vol: 'العمل التطوعي', confs: 'المؤتمرات', now: 'حتى الآن' },
   en: { summary: 'Summary', skills: 'Skills', tech: 'Technical', soft: 'Soft', langs: 'Languages', courses: 'Courses & Workshops', edu: 'Education', exp: 'Work Experience', vol: 'Volunteer Work', confs: 'Conferences', now: 'Present' },
 }
-import { EDU_LEVEL as EL, langParts, langName } from './_lists.js'
+import { EDU_LEVEL as EL, langParts, langName, skillText, cvFileName } from './_lists.js'
 const FULL = { ar: M.ar, en: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'] }
 const DETAILS = {
   ar: { dob: 'تاريخ الميلاد', gender: 'الجنس', marital: 'الحالة الاجتماعية', male: 'ذكر', female: 'أنثى', single: 'أعزب', singleF: 'عزباء', married: 'متزوج', marriedF: 'متزوجة' },
@@ -48,15 +48,15 @@ const jobs = (items, h, l) => {
 }
 
 // "Mouayad alkassas" -> "Mouayad alkassas-cv" (illegal file-name characters removed)
-export const cvFileName = (name) =>
-  (String(name ?? '').replace(/[\\/:*?"<>|\u0000-\u001f]+/g, '').replace(/\s+/g, ' ').trim().slice(0, 60) || 'CV') + '-cv'
+export { cvFileName } // one definition in _lists.js, shared with the React app
 
 export function cvHtml(cv, opts = {}) {
   const l = cv.lang === 'en' ? 'en' : 'ar'
   const t = T[l]
   const p = cv.p || {}
   const sep = l === 'ar' ? '، ' : ', '
-  const tech = list(cv.tech), soft = list(cv.soft)
+  const lv = cv.lvl || {}
+  const tech = list(cv.tech).map((s) => skillText(s, lv[s], l)), soft = list(cv.soft).map((s) => skillText(s, lv[s], l))
   const contact = [['residence', p.residence], ['city', p.city], ['email', p.email], ['phone', p.phone], ['link', p.link, true]]
     .filter(([, v]) => v)
     .map(([k, v, isLink]) => `<p><b>${CONTACT[l][k]}:</b> <bdi>${isLink ? `<a href="${esc(href(v))}">${esc(v)}</a>` : esc(v)}</bdi></p>`)

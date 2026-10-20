@@ -53,3 +53,7 @@ export const SKILL_LEVEL = {
 }
 // "Excel (Advanced)"; the plain name when no level was chosen
 export const skillText = (name, lvl, l) => (SKILL_LEVEL[l] && SKILL_LEVEL[l][lvl] ? `${name} (${SKILL_LEVEL[l][lvl]})` : name)
+
+// File name used everywhere (download, email attachment, admin, analyzer): "Mouayad Al Kamel" -> "Mouayad_Al_Kamel_cv"
+export const cvFileName = (name) =>
+  (String(name ?? '').replace(/[\\/:*?"<>|\u0000-\u001f]+/g, '').trim().replace(/\s+/g, '_').slice(0, 60) || 'CV') + '_cv'

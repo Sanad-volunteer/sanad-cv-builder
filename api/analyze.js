@@ -17,7 +17,8 @@ Scoring guide for "score": 40% match of skills/keywords to the job, 25% relevanc
 7. "skills" (Skills): a skills section lists 10 to 20 key hard AND soft skills related to the job. Mention the count, and name important skills from the job description that are absent (suggest adding them only if true).
 8. "font" (Font type): a standard, readable font such as Arial, Calibri or Times New Roman at 10 to 12 pt. Judge it from the PDF when you can see it; for DOCX or plain text input use null.
 9. "file" (File types and name): a PDF or DOCX file whose name contains the person's name and CV, like "FirstName_LastName_CV.pdf", without words like final, new, copy or numbers in brackets. Use the file name and source given in the <file> tag; if source is "builder" the file is exported by the CV builder: ok is true.
-Rules: be honest and specific; never invent skills, experience, numbers or achievements. Only rephrase or emphasize what already exists; for gaps say "consider adding if true".`
+If no job title and no description are given, review the CV in general (no job-specific keyword matching): use null for "title_match" and give general missingKeywords only if clearly useful (or an empty list).
+Rules: NEVER advise removing or hiding personal details such as date of birth, marital status, gender or a personal photo; these are the person's own optional choice in this region, and are not part of the review. be honest and specific; never invent skills, experience, numbers or achievements. Only rephrase or emphasize what already exists; for gaps say "consider adding if true".`
 
 import { makeLimiter, clientIp } from './_limit.js'
 import { callGemini } from './_gemini.js'
@@ -35,7 +36,7 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'bad_request' })
 
   // The data the AI works on: the target job + the CV (PDF sent as-is, DOCX as extracted text)
-  const jobText = `<job><title>${str(job.title, 200)}</title><company>${str(job.company, 200)}</company><description>${str(job.desc, 6000)}</description></job>`
+  const jobText = `<job><title>${str(job.title, 200)}</title><description>${str(job.desc, 6000)}</description></job>`
   const fileTag = `<file name="${str(file.name, 120).replace(/"/g, "'")}" source="${['pdf', 'docx', 'builder'].includes(source) ? source : file.type === 'pdf' ? 'pdf' : 'docx'}"/>`
   const parts = file.type === 'pdf'
     ? [
