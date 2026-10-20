@@ -242,7 +242,6 @@ select:disabled{opacity:.6;cursor:not-allowed}
 .adm-t tbody tr.on{background:rgba(58,219,192,.14)}
 
 /* skill level inside a chip + AI suggestions + analyzer shortcut */
-.chip select.lvl{width:auto;font-size:12px;padding:0 20px 0 6px;height:24px;border-radius:999px;border:1px solid var(--teal);background-color:#fff;background-position:left 7px center;margin-inline-start:6px;color:var(--navy);font-weight:600}
 .sugg{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:10px;font-size:12px;color:var(--mut)}
 .chip.pick{background:none;border:1.5px dashed var(--teal);color:var(--navy);cursor:pointer;font:inherit;font-size:13px;padding:1px 12px}.chip.pick:hover{background:rgba(58,219,192,.18)}
 .go-an{margin-top:18px;border:1.5px solid var(--teal);border-radius:14px;padding:14px 16px;background:rgba(58,219,192,.08)}
@@ -254,3 +253,19 @@ select:disabled{opacity:.6;cursor:not-allowed}
 .chk .ic{flex:none;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:15px;color:#fff;margin-top:1px}
 .chk.ok .ic{background:#0a7a52}.chk.no .ic{background:#b3261e}.chk.na .ic{background:#8a8da8}
 .chk.no{border-color:#efc4c0;background:#fdf6f5}.chk.ok{border-color:#bfe3d2}
+
+/* skill levels: switch + list */
+.sw{display:flex;align-items:center;gap:10px;margin-bottom:14px;cursor:pointer;font-size:14px;font-weight:600;color:var(--ink);user-select:none;width:fit-content}
+.sw input{position:absolute;opacity:0;width:1px;height:1px}
+.sw .track{position:relative;width:44px;height:24px;border-radius:999px;background:#cfd0e4;transition:background .2s;flex:none}
+.sw .track::after{content:"";position:absolute;top:3px;inset-inline-start:3px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:inset-inline-start .2s}
+.sw input:checked+.track{background:var(--navy)}.sw input:checked+.track::after{inset-inline-start:23px}
+.sw input:focus-visible+.track{outline:2px solid var(--teal);outline-offset:2px}
+.lvl-list{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.lvl-row{display:grid;grid-template-columns:1fr minmax(150px,200px);gap:10px;align-items:center}
+.lvl-row .chip{justify-self:start;max-width:100%}.lvl-row select{height:40px}
+@media(max-width:480px){.lvl-row{grid-template-columns:1fr}}
+/* light motion between wizard steps */
+@keyframes stepIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.step-in{animation:stepIn .28s ease both}
+@media(prefers-reduced-motion:reduce){.step-in{animation:none}}

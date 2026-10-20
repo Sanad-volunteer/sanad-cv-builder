@@ -4,7 +4,7 @@ import Preview, { MONTH_NAMES, LEVELS, EDU_LEVELS } from './Preview.jsx'
 import Home from './Home.jsx'
 import Analyze from './Analyze.jsx'
 import Admin from './Admin.jsx'
-import { LANG_OPTIONS, isLangKey, langKeyFromText, SKILL_LEVELS, SKILL_LEVEL } from '../api/_lists.js'
+import { LANG_OPTIONS, isLangKey, langKeyFromText, SKILL_LEVELS, SKILL_LEVEL, cvFileName } from '../api/_lists.js'
 import Export from './Export.jsx'
 import { post } from './api.js'
 import { cvToText } from './cvText.js'
@@ -253,7 +253,7 @@ function SkillMenu({ options, onChoose }) {
 // Specialization: pick from the list (stored as a key, printed in the CV language) or choose "غير ذلك" and type it.
 const NO_MAJOR = ['secondary'] // no specialization at all for secondary school
 
-function Chips({ label, items, onChange, placeholder, err, options, lvl = {}, onLevel, suggest = [] }) {
+function Chips({ label, items, onChange, placeholder, err, options, lvl = {}, onLevel, suggest = [], showLvl = false }) {
   const guard = useGuard()
   const [v, setV] = useState('')
   const [other, setOther] = useState(!options) // without a list, typing is always available
@@ -274,19 +274,28 @@ function Chips({ label, items, onChange, placeholder, err, options, lvl = {}, on
         <input dir={v ? 'auto' : 'rtl'} value={v} placeholder={placeholder} onChange={(e) => setV(guard(e.target.value, v))} onBlur={add}
           onKeyDown={(e) => { if (['Enter', ',', '،'].includes(e.key)) { e.preventDefault(); add() } }} />
       )}
-      <div className="chips">
-        {items.map((s) => (
+      {(() => {
+        const chip = (s) => (
           <span className="chip" key={s}>{s}
-            <select className="lvl" aria-label="مستوى المهارة" value={lvl[s] || ''} onChange={(e) => onLevel(s, e.target.value)}>
-              <option value="">المستوى</option>
-              {SKILL_LEVELS.map((k) => <option key={k} value={k}>{SKILL_LEVEL.ar[k]}</option>)}
-            </select>
             <button type="button" aria-label="حذف" onClick={() => { onChange(items.filter((x) => x !== s)); if (onLevel) onLevel(s, '') }}>
               <svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M2 2l8 8M10 2l-8 8" /></svg>
             </button>
           </span>
-        ))}
-      </div>
+        )
+        return showLvl && items.length > 0 ? (
+          <div className="lvl-list">
+            {items.map((s) => (
+              <div className="lvl-row" key={s}>
+                {chip(s)}
+                <select aria-label={`مستوى ${s}`} value={lvl[s] || ''} onChange={(e) => onLevel(s, e.target.value)}>
+                  <option value="">اختر المستوى</option>
+                  {SKILL_LEVELS.map((k) => <option key={k} value={k}>{SKILL_LEVEL.ar[k]}</option>)}
+                </select>
+              </div>
+            ))}
+          </div>
+        ) : <div className="chips">{items.map(chip)}</div>
+      })()}
       {suggest.length > 0 && (
         <div className="sugg">
           <span>مقترحة لوظيفتك:</span>
@@ -468,12 +477,14 @@ export default function App() {
   const [shown, setShown] = useState([]) // steps where the user tried to continue: only those show red asterisks
   useEffect(() => { try { localStorage.setItem(KEY, JSON.stringify(cv)) } catch { /* storage unavailable */ } }, [cv])
 
+  const [lvlOn, setLvlOn] = useState(() => Object.keys(cv.lvl || {}).length > 0) // "skill levels" switch
+  const toggleLvl = (on) => { setLvlOn(on); if (!on) setCv((c) => ({ ...c, lvl: {} })) } // switching off removes the levels from the CV
   const [seed, setSeed] = useState(null) // the CV handed to the analyzer from the last step
   const [sugg, setSugg] = useState({ key: '', tech: [], soft: [] })
   const set = (k, v) => setCv((c) => ({ ...c, [k]: v }))
   const setLvl = (skill, k) => setCv((c) => { const lvl = { ...(c.lvl || {}) }; if (k) lvl[skill] = k; else delete lvl[skill]; return { ...c, lvl } })
   const goView = (v) => { setSeed(null); setView(v) }
-  const analyzeMine = () => { setSeed({ file: { name: cv.lang === 'en' ? 'My CV' : 'سيرتي الذاتية', type: 'text', data: cvToText(cv), builder: true }, title: cv.p.title }); setView('analyze') }
+  const analyzeMine = () => { setSeed({ file: { name: cvFileName(cv.p.name), type: 'text', data: cvToText(cv), builder: true }, title: cv.p.title }); setView('analyze') }
   // AI skill suggestions for the job title: shown only when they arrive; any failure (busy, limit...) is silent
   const skillKey = cv.p.title.trim() ? `${cv.lang}|${cv.p.title.trim().toLowerCase()}` : ''
   useEffect(() => {
@@ -498,7 +509,7 @@ export default function App() {
   const courseBad = (cv.courses || []).some((c) => empty(c.org))
   // Which wizard steps still have missing required data (optional steps always pass)
   const stepBad = [
-    ['name', 'title', 'email', 'phone', 'city', 'residence', 'summary'].some((k) => bad[k]),
+    ['name', 'email', 'phone', 'city', 'residence', 'summary'].some((k) => bad[k]),
     eduBad, false, bad.tech || bad.soft, langBad, courseBad, false,
   ]
   const ev = (b, i) => shown.includes(i) && b
@@ -533,11 +544,12 @@ export default function App() {
       <WarnCtx.Provider value={warn}>
       <main className="layout">
         <div className="topbar no-print">
-          <button type="button" className="back" onClick={() => setView('home')}>→ الصفحة الرئيسية</button>
+          <button type="button" className="back" onClick={() => setView('home')}>→ رجوع</button>
         </div>
         <section className="no-print">
           <div className="clear-row"><button type="button" className="link" onClick={reset}>مسح جميع البيانات</button></div>
           <Stepper step={step} max={maxStep} bad={stepBad} go={goTo} />
+          <div key={step} className="step-in">
           {step === 0 && (<>
           <div className="card">
             <h2><span className="n">🌐</span>لغة السيرة الذاتية</h2>
@@ -552,7 +564,7 @@ export default function App() {
           <Card n="1" title="المعلومات الشخصية">
             <div className="g">
               <Txt name="name" autoComplete="name" label="الاسم الكامل" value={cv.p.name} err={ev(bad.name, 0)} onChange={setP('name')} />
-              <Txt name="job-title" autoComplete="organization-title" label="المسمى الوظيفي" value={cv.p.title} err={ev(bad.title, 0)} onChange={setP('title')} />
+              <Txt name="job-title" autoComplete="organization-title" label="المسمى الوظيفي (اختياري)" value={cv.p.title} onChange={setP('title')} />
               <Txt name="email" autoComplete="email" label="البريد الإلكتروني" type="email" dir="ltr" value={cv.p.email} err={ev(bad.email, 0)} onChange={setP('email')} />
               <Txt name="phone" autoComplete="tel" label="رقم الهاتف" type="tel" dir="ltr" value={cv.p.phone} err={ev(bad.phone, 0)} onChange={setP('phone')} />
               <Txt name="city" autoComplete="address-level2" label="المدينة، الدولة" value={cv.p.city} err={ev(bad.city, 0)} onChange={setP('city')} />
@@ -594,9 +606,14 @@ export default function App() {
           )}
           {step === 3 && (
           <Card n="4" title="المهارات">
-            <Chips label="المهارات التقنية" items={cv.tech} options={SKILL_OPTS[cv.lang].tech} err={ev(bad.tech, 3)} onChange={(v) => set('tech', v)} placeholder="اكتب مهارة واضغط Enter" lvl={cv.lvl} onLevel={setLvl} suggest={sg.tech.filter((s) => !cv.tech.includes(s))} />
+            <label className="sw">
+              <input type="checkbox" role="switch" checked={lvlOn} onChange={(e) => toggleLvl(e.target.checked)} />
+              <span className="track" aria-hidden="true" />
+              <span>مستويات المهارات</span>
+            </label>
+            <Chips label="المهارات التقنية" items={cv.tech} options={SKILL_OPTS[cv.lang].tech} err={ev(bad.tech, 3)} onChange={(v) => set('tech', v)} placeholder="اكتب مهارة واضغط Enter" lvl={cv.lvl} onLevel={setLvl} showLvl={lvlOn} suggest={sg.tech.filter((s) => !cv.tech.includes(s))} />
             <div className="gap" />
-            <Chips label="المهارات الناعمة" items={cv.soft} options={SKILL_OPTS[cv.lang].soft} err={ev(bad.soft, 3)} onChange={(v) => set('soft', v)} placeholder="اكتب مهارة واضغط Enter" lvl={cv.lvl} onLevel={setLvl} suggest={sg.soft.filter((s) => !cv.soft.includes(s))} />
+            <Chips label="المهارات الناعمة" items={cv.soft} options={SKILL_OPTS[cv.lang].soft} err={ev(bad.soft, 3)} onChange={(v) => set('soft', v)} placeholder="اكتب مهارة واضغط Enter" lvl={cv.lvl} onLevel={setLvl} showLvl={lvlOn} suggest={sg.soft.filter((s) => !cv.soft.includes(s))} />
           </Card>
           )}
           {step === 4 && (
@@ -626,6 +643,7 @@ export default function App() {
             </div>
           </Card>
           )}
+          </div>
           <div className="wiz-nav">
             {step > 0 && <button type="button" className="btn ghost" onClick={() => goTo(step - 1)}>السابق</button>}
             {step < STEPS.length - 1 && <button type="button" className="btn" onClick={next}>التالي</button>}

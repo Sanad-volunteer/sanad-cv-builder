@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { post } from './api.js'
 import Notice, { InfoIcon, SHARE_TEXT } from './Notice.jsx'
 
-const fileName = (n) => (String(n || '').replace(/[\\/:*?"<>|\u0000-\u001f]+/g, '').replace(/\s+/g, ' ').trim().slice(0, 60) || 'CV') + '-cv'
+import { cvFileName as fileName } from '../api/_lists.js'
 const REQUIRED_MSG = 'أكمل الحقول المطلوبة المعلّمة بنجمة حمراء *'
 
 function Success({ email, onClose }) {

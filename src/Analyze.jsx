@@ -46,7 +46,7 @@ function Result({ r, go }) {
 
 export default function Analyze({ go, seed }) { // seed: the CV just built in the builder ({ file, title })
   const [file, setFile] = useState(seed ? seed.file : null)
-  const [job, setJob] = useState({ title: seed ? seed.title : '', company: '', desc: '' })
+  const [job, setJob] = useState({ title: seed ? seed.title : '', desc: '' })
   const [st, setSt] = useState({ busy: false, err: '', res: null })
   const [notice, setNotice] = useState(false) // information pop-up shown after an analysis
   const setJ = (k) => (e) => setJob((j) => ({ ...j, [k]: e.target.value }))
@@ -82,11 +82,11 @@ export default function Analyze({ go, seed }) { // seed: the CV just built in th
       }
     }
   }
-  const ready = file && job.title.trim() && !st.busy // job title is required, description is optional
+  const ready = file && !st.busy // job title and description are both optional
 
   return (
     <main className="layout">
-      <button type="button" className="back" onClick={() => go('home')}>→ الصفحة الرئيسية</button>
+      <button type="button" className="back" onClick={() => go('home')}>→ رجوع</button>
       <section>
         <div className="card">
           <h2><span className="n">1</span>ارفع سيرتك الذاتية</h2>
@@ -101,8 +101,7 @@ export default function Analyze({ go, seed }) { // seed: the CV just built in th
         <div className="card ai">
           <h2><span className="n">2</span>الوظيفة المستهدفة</h2>
           <div className="g">
-            <div><label>المسمى الوظيفي</label><input dir={job.title ? 'auto' : 'rtl'} value={job.title} onChange={setJ('title')} /></div>
-            <div><label>الشركة (اختياري)</label><input dir={job.company ? 'auto' : 'rtl'} value={job.company} onChange={setJ('company')} /></div>
+            <div className="full"><label>المسمى الوظيفي (اختياري)</label><input dir={job.title ? 'auto' : 'rtl'} value={job.title} onChange={setJ('title')} /></div>
             <div className="full"><label>وصف الوظيفة (اختياري)</label><textarea dir={job.desc ? 'auto' : 'rtl'} placeholder="الصق وصف الوظيفة هنا…" value={job.desc} onChange={setJ('desc')} /></div>
           </div>
           <button type="button" className="btn s" style={{ marginTop: 14 }} disabled={!ready} onClick={run}>{st.busy ? 'جارٍ التحليل…' : '✦ حلّل سيرتي الذاتية'}</button>
