@@ -7,16 +7,20 @@ Reply with ONE JSON object only (no markdown), written in Arabic (keep job keywo
 "checks":[{"id":"contact","ok":true|false|null,"text":"one or two short sentences"}, ...]}
 Scoring guide for "score": 40% match of skills/keywords to the job, 25% relevance of education and experience, 20% clarity and structure, 15% ATS-readiness.
 
-"checks" must contain EXACTLY these 9 items, in this order, each judged with the rule below. "ok" is true when the CV satisfies the rule, false when something is missing or wrong (the text then says precisely what is missing and how to fix it), and null only when it cannot be judged. When ok is true, still give one short useful tip.
+"checks" must contain EXACTLY these 13 items, in this order, each judged with the rule below. "ok" is true when the CV satisfies the rule, false when something is missing or wrong (the text then says precisely what is missing and how to fix it), and null only when it cannot be judged. When ok is true, still give one short useful tip.
 1. "contact" (Contact Information): the name, phone number, email and location (city and country) are all present near the top, and the email looks professional (based on the person's name, no nicknames or long digit strings).
 2. "summary" (Summary): there is a short summary of 50 to 150 words that highlights the person's core value, top skills and what they can offer the employer, NOT what they want from the employer. Formula to suggest: "[Professional Title] with [Years of Experience] years of experience. Proven track record in [Top Achievement 1] and [Top Achievement 2]. Skilled in [Skill 1], [Skill 2], and [Skill 3]. Known for [Unique Value or Strength]." If it is missing or off-rule, write a short suggested summary built ONLY from facts that are in the CV.
 3. "sections" (Sections): say which standard sections exist and which do not (summary, skills, education, experience; volunteer work may replace experience for fresh graduates). ok only if education, skills and experience (or volunteer work) exist.
 4. "title_match" (Job Title Match): the target job title (or its main words) appears in the CV, ideally at the top or in the summary. If the job description asks for things the CV does not mention, name them here.
 5. "dates" (Date Formatting): dates should use MM/YY, MM/YYYY or Month YYYY (e.g. 03/2022, March 2022). Not ok when only bare years are used, or day-first formats like 25/03/2022 appear, or formats are mixed.
 6. "metrics" (Measurable results): achievements contain numbers, percentages or sizes, e.g. "... secure collaboration solution to millions of ...", "... becoming the #1 Paid Business ...", "... delivered to over one thousand attendees at ...". Not ok when there are fewer than two such results. Never invent numbers; tell the person to add real ones.
-7. "skills" (Skills): a skills section lists 10 to 20 key hard AND soft skills related to the job. Mention the count, and name important skills from the job description that are absent (suggest adding them only if true).
-8. "font" (Font type): a standard, readable font such as Arial, Calibri or Times New Roman at 10 to 12 pt. Judge it from the PDF when you can see it; for DOCX or plain text input use null.
-9. "file" (File types and name): a PDF or DOCX file whose name contains the person's name and CV, like "FirstName_LastName_CV.pdf", without words like final, new, copy or numbers in brackets. Use the file name and source given in the <file> tag; if source is "builder" the file is exported by the CV builder: ok is true.
+7. "bullets" (Bullet Points): the achievements under experience / volunteer work are short bullet points (at most about 30 words) and each starts with a strong past-tense action verb (e.g. Led, Built, Developed, أدرت، طورت). null when the CV has no experience or volunteer section.
+8. "skills" (Skills): a skills section lists 10 to 20 key hard AND soft skills related to the job (both kinds must appear). Mention the count, and name important skills from the job description that are absent (suggest adding them only if true).
+9. "length" (Length): the CV is one or two pages. Use the real page count of the PDF; for other input estimate from its length (about 500 words per page) and say it is approximate.
+10. "gaps" (Employment Gaps): no unexplained gap longer than 6 months between jobs (dates in the experience section). null when fewer than two jobs with dates exist.
+11. "linkedin" (LinkedIn): a LinkedIn profile link is present near the top.
+12. "font" (Font type): a standard, readable font such as Arial, Calibri or Times New Roman at 10 to 12 pt. Judge it from the PDF when you can see it; for DOCX or plain text input use null.
+13. "file" (File types and name): a PDF or DOCX file whose name contains the person's name and CV, like "FirstName_LastName_CV.pdf", without words like final, new, copy or numbers in brackets. Use the file name and source given in the <file> tag; if source is "builder" the file is exported by the CV builder: ok is true.
 If no job title and no description are given, review the CV in general (no job-specific keyword matching): use null for "title_match" and give general missingKeywords only if clearly useful (or an empty list).
 Rules: NEVER advise removing or hiding personal details such as date of birth, marital status, gender or a personal photo; these are the person's own optional choice in this region, and are not part of the review. be honest and specific; never invent skills, experience, numbers or achievements. Only rephrase or emphasize what already exists; for gaps say "consider adding if true".`
 
@@ -64,11 +68,11 @@ export default async function handler(req, res) {
     if (!out.j && out.why === 'MAX_TOKENS') out = read(await ask(48000))
     if (!out.j) { const e = new Error(`bad_ai_answer (${out.why})`); e.status = 0; throw e }
     const j = out.j
-    // keep only the 9 known checks, in a fixed order; a badly formed answer falls back to the browser review
-    const IDS = ['contact', 'summary', 'sections', 'title_match', 'dates', 'metrics', 'skills', 'font', 'file']
+    // keep only the 13 known checks, in a fixed order; a badly formed answer falls back to the browser review
+    const IDS = ['contact', 'summary', 'sections', 'title_match', 'dates', 'metrics', 'bullets', 'skills', 'length', 'gaps', 'linkedin', 'font', 'file']
     const checks = IDS.map((id) => arr(j.checks).find((c) => c && c.id === id)).filter(Boolean)
       .map((c) => ({ id: c.id, ok: c.ok === true ? true : c.ok === false ? false : null, text: str(c.text, 500) }))
-    if (checks.length < 6) { const e = new Error('bad_ai_answer (checks)'); e.status = 0; throw e }
+    if (checks.length < 8) { const e = new Error('bad_ai_answer (checks)'); e.status = 0; throw e }
     res.status(200).json({
       score: Math.max(0, Math.min(100, Math.round(+j.score) || 0)),
       verdict: str(j.verdict, 200),
