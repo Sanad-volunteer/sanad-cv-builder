@@ -13,7 +13,8 @@ const toB64 = (f) => new Promise((ok, no) => {
 
 const CHECK_TITLE = {
   contact: 'معلومات التواصل (Contact Information)', summary: 'النبذة المهنية (Summary)', sections: 'الأقسام (Sections)', title_match: 'مطابقة المسمى الوظيفي (Job Title Match)',
-  dates: 'تنسيق التواريخ (Date Formatting)', metrics: 'النتائج القابلة للقياس (Measurable Results)', skills: 'المهارات (Skills)', font: 'نوع الخط (Font)', file: 'نوع الملف واسمه (File)',
+  dates: 'تنسيق التواريخ (Date Formatting)', metrics: 'النتائج القابلة للقياس (Measurable Results)', bullets: 'صياغة الإنجازات (Bullet Points)', skills: 'المهارات (Skills)',
+  length: 'طول السيرة (Length)', gaps: 'الفجوات الزمنية (Employment Gaps)', linkedin: 'رابط لينكدإن (LinkedIn)', font: 'نوع الخط (Font)', file: 'نوع الملف واسمه (File)',
 }
 function Result({ r, go }) {
   return (
@@ -54,7 +55,9 @@ export default function Analyze({ go, seed }) { // seed: the CV just built in th
 
   const pick = async (e) => {
     const f = e.target.files[0]
+    e.target.value = '' // lets the same file (or a new one) be chosen again after an analysis
     if (!f) return
+    setSt({ busy: false, err: '', res: null }) // a new file starts a fresh analysis: the old result is cleared
     const ext = f.name.split('.').pop().toLowerCase()
     if (!['pdf', 'docx'].includes(ext)) return fail('الصيغ المدعومة: PDF أو DOCX')
     if (f.size > MAX) return fail('الحد الأقصى لحجم الملف 3 ميغابايت')
@@ -99,12 +102,11 @@ export default function Analyze({ go, seed }) { // seed: the CV just built in th
           {file && <div className="fl"><span>{file.name}</span><span>✓</span></div>}
         </div>
         <div className="card ai">
-          <h2><span className="n">2</span>الوظيفة المستهدفة</h2>
+          <h2><span className="n">2</span>الوظيفة المستهدفة<span className="opt-tag">اختياري</span></h2>
           <div className="g">
-            <div className="full"><label>المسمى الوظيفي (اختياري)</label><input dir={job.title ? 'auto' : 'rtl'} value={job.title} onChange={setJ('title')} /></div>
-            <div className="full"><label>وصف الوظيفة (اختياري)</label><textarea dir={job.desc ? 'auto' : 'rtl'} placeholder="الصق وصف الوظيفة هنا…" value={job.desc} onChange={setJ('desc')} /></div>
+            <div className="full"><label>المسمى الوظيفي</label><input dir={job.title ? 'auto' : 'rtl'} value={job.title} onChange={setJ('title')} /></div>
+            <div className="full"><label>وصف الوظيفة</label><textarea dir={job.desc ? 'auto' : 'rtl'} placeholder="الصق وصف الوظيفة هنا…" value={job.desc} onChange={setJ('desc')} /></div>
           </div>
-          <button type="button" className="btn s" style={{ marginTop: 14 }} disabled={!ready} onClick={run}>{st.busy ? 'جارٍ التحليل…' : '✦ حلّل سيرتي الذاتية'}</button>
           {st.err && <p className="err">{st.err}</p>}
           <p className="note start">❗ ملاحظة: الاقتراحات لا تضيف خبرات أو مهارات غير موجودة.</p>
         </div>
@@ -114,6 +116,7 @@ export default function Analyze({ go, seed }) { // seed: the CV just built in th
         {st.res ? <Result r={st.res} go={go} /> : (
           <div className="card empty"><div className="big">✦</div><p>ارفع سيرتك وأضف الوظيفة المستهدفة ثم اضغط «حلّل» لترى نسبة المطابقة والاقتراحات.</p></div>
         )}
+        <button type="button" className="btn s" style={{ marginTop: 14 }} disabled={!ready} onClick={run}>{st.busy ? 'جارٍ التحليل…' : '✦ حلّل سيرتي الذاتية'}</button>
       </aside>
       {notice && <Notice text={AI_TEXT} onClose={() => setNotice(false)} />}
     </main>

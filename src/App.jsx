@@ -8,6 +8,7 @@ import { LANG_OPTIONS, isLangKey, langKeyFromText, SKILL_LEVELS, SKILL_LEVEL, cv
 import Export from './Export.jsx'
 import { post } from './api.js'
 import { cvToText } from './cvText.js'
+import { DropMenu, Select, OTHER } from './Select.jsx'
 
 const LangCtx = createContext('ar') // language of the CV being written; the date pickers follow it
 const WarnCtx = createContext(() => {}) // shows the "wrong language" toast
@@ -133,7 +134,7 @@ function DateSel({ label, value, onChange, now, err, day, minY = MIN_Y, maxY = M
       <div className="dp" ref={box}>
         <button type="button" className="dp-btn" aria-haspopup="dialog" aria-expanded={open} disabled={off} style={off ? { opacity: 0.55, cursor: 'not-allowed' } : undefined} onClick={toggle}>
           <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3" {...stroke} /><path d="M3 10h18M8 3v4M16 3v4" {...stroke} /></svg>
-          <span className={text ? '' : 'ph'}>{text || 'اختر التاريخ'}</span>
+          <span className={text ? '' : 'dp-ph'}>{text || 'اختر التاريخ'}</span>
           <svg viewBox="0 0 12 8" width="12" height="8" aria-hidden="true"><path d="M1 1.5l5 5 5-5" {...stroke} /></svg>
         </button>
         {open && (
@@ -184,7 +185,6 @@ function DateSel({ label, value, onChange, now, err, day, minY = MIN_Y, maxY = M
 }
 
 // Most common skills offered in the drop-down (shown in the CV language). "غير ذلك" lets the user type their own.
-const OTHER = '__other__'
 const SKILL_OPTS = {
   ar: {
     tech: ['مايكروسوفت أوفيس', 'مايكروسوفت وورد', 'مايكروسوفت إكسل', 'مايكروسوفت باوربوينت', 'جوجل وورك سبيس', 'كانفا (Canva)', 'فوتوشوب', 'إليستريتور', 'تحرير الفيديو', 'التصميم الجرافيكي', 'إدارة وسائل التواصل الاجتماعي', 'التسويق الرقمي', 'تحسين محركات البحث (SEO)', 'كتابة المحتوى', 'تحليل البيانات', 'إدخال البيانات', 'الكتابة السريعة على الكمبيوتر', 'البرمجة', 'تطوير المواقع', 'قواعد البيانات (SQL)', 'إدارة المشاريع', 'المحاسبة', 'استخدام أدوات الذكاء الاصطناعي'],
@@ -196,56 +196,6 @@ const SKILL_OPTS = {
   },
 }
 
-// Skills drop-down. A native <select> opens upwards whenever the browser decides there is more room above,
-// so this is a small custom menu that always opens downwards (and scrolls itself into view).
-function MenuItem({ children, onClick, last }) {
-  const [hot, setHot] = useState(false)
-  return (
-    <button type="button" role="option" onClick={onClick} onMouseEnter={() => setHot(true)} onMouseLeave={() => setHot(false)}
-      style={{ display: 'block', width: '100%', textAlign: 'start', background: hot ? 'rgba(0,0,0,.06)' : 'none', border: 0, borderTop: last ? '1px solid rgba(0,0,0,.12)' : 0, padding: '8px 10px', font: 'inherit', color: 'inherit', cursor: 'pointer' }}>
-      {children}
-    </button>
-  )
-}
-// Drop-down that always opens downwards (a native <select> opens upwards whenever the browser sees more room above).
-// groups: [{ label?, items: [{ value, label }] }]. text: what the button shows (empty = placeholder).
-function DropMenu({ placeholder, text, groups, onChoose, other, dir }) {
-  const lang = useContext(LangCtx)
-  const [open, setOpen] = useState(false)
-  const box = useRef(null)
-  const pop = useRef(null)
-  useEffect(() => {
-    if (!open) return
-    pop.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
-    const away = (e) => { if (!box.current?.contains(e.target)) setOpen(false) }
-    const esc = (e) => { if (e.key === 'Escape') setOpen(false) }
-    document.addEventListener('mousedown', away)
-    document.addEventListener('keydown', esc)
-    return () => { document.removeEventListener('mousedown', away); document.removeEventListener('keydown', esc) }
-  }, [open])
-  const choose = (v) => { setOpen(false); onChoose(v) }
-  const stroke = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round' }
-  return (
-    <div className="dp" ref={box}>
-      <button type="button" className="dp-btn" aria-haspopup="listbox" aria-expanded={open} onClick={() => setOpen(!open)}>
-        <span className={text ? '' : 'ph'}>{text || placeholder}</span>
-        <svg viewBox="0 0 12 8" width="12" height="8" aria-hidden="true"><path d="M1 1.5l5 5 5-5" {...stroke} /></svg>
-      </button>
-      {open && (
-        <div className="dp-pop" ref={pop} role="listbox" dir={dir || (lang === 'en' ? 'ltr' : 'rtl')}
-          style={{ width: '100%', maxHeight: 280, overflowY: 'auto', boxSizing: 'border-box' }}>
-          {groups.map((g, i) => (
-            <div key={i}>
-              {g.label && <div style={{ padding: '10px 10px 4px', fontSize: 12, fontWeight: 700, color: 'var(--mut)' }}>{g.label}</div>}
-              {g.items.map((o) => <MenuItem key={o.value} onClick={() => choose(o.value)}>{o.label}</MenuItem>)}
-            </div>
-          ))}
-          {other && <MenuItem last onClick={() => choose(OTHER)}>{other}</MenuItem>}
-        </div>
-      )}
-    </div>
-  )
-}
 function SkillMenu({ options, onChoose }) {
   const lang = useContext(LangCtx)
   return <DropMenu placeholder="اختر مهارة" dir={lang === 'en' ? 'ltr' : 'rtl'} groups={[{ items: options.map((o) => ({ value: o, label: o })) }]} other="غير ذلك" onChoose={onChoose} />
@@ -287,10 +237,7 @@ function Chips({ label, items, onChange, placeholder, err, options, lvl = {}, on
             {items.map((s) => (
               <div className="lvl-row" key={s}>
                 {chip(s)}
-                <select aria-label={`مستوى ${s}`} value={lvl[s] || ''} onChange={(e) => onLevel(s, e.target.value)}>
-                  <option value="">اختر المستوى</option>
-                  {SKILL_LEVELS.map((k) => <option key={k} value={k}>{SKILL_LEVEL.ar[k]}</option>)}
-                </select>
+                <Select label={`مستوى ${s}`} value={lvl[s] || ''} onChange={(v) => onLevel(s, v)} placeholder="اختر المستوى" clear="بدون مستوى" options={SKILL_LEVELS.map((k) => [k, SKILL_LEVEL.ar[k]])} />
               </div>
             ))}
           </div>
@@ -328,10 +275,7 @@ function List({ items, onChange, blank, title, addLabel, render, optional }) {
 const eduFields = (tried) => (it, up) => (
   <>
     <Field full label="المرحلة الدراسية" err={tried && empty(it.level)}>
-      <select value={it.level || ''} onChange={(e) => up(NO_MAJOR.includes(e.target.value) ? { level: e.target.value, major: '' } : { level: e.target.value })}>
-        <option value="">اختر المرحلة</option>
-        {EDU_LEVELS.map(([k, label]) => <option key={k} value={k}>{label}</option>)}
-      </select>
+      <Select label="المرحلة الدراسية" value={it.level || ''} placeholder="اختر المرحلة" options={EDU_LEVELS} onChange={(v) => up(NO_MAJOR.includes(v) ? { level: v, major: '' } : { level: v })} />
     </Field>
     <Txt full label={it.level === 'secondary' ? 'اسم المدرسة' : it.level === 'diploma' ? 'اسم المعهد' : 'اسم الجامعة'} placeholder={it.level === 'secondary' ? 'اكتب اسم المدرسة' : it.level === 'diploma' ? 'اكتب اسم المعهد' : 'اكتب اسم الجامعة'} value={it.school} err={tried && empty(it.school)} onChange={(v) => up({ school: v })} />
     {!NO_MAJOR.includes(it.level) && <Txt full label="اسم التخصص" placeholder="اكتب اسم التخصص" value={it.major} err={tried && empty(it.major)} onChange={(v) => up({ major: v })} />}
@@ -380,10 +324,7 @@ const langFields = (tried) => (it, up) => (
     </label>
     {SKILLS.map(([k, label]) => (
       <Field key={k} label={label} err={tried && !it.native && empty(it[k])}>
-        <select value={it[k] || ''} disabled={!!it.native} style={it.native ? { opacity: 0.5, cursor: 'not-allowed' } : undefined} onChange={(e) => up({ [k]: e.target.value })}>
-          <option value="">اختر المستوى</option>
-          {LEVELS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-        </select>
+        <Select label={label} value={it[k] || ''} disabled={!!it.native} placeholder="اختر المستوى" options={LEVELS} onChange={(v) => up({ [k]: v })} />
       </Field>
     ))}
   </>
@@ -573,18 +514,10 @@ export default function App() {
               <DateSel day minY={1940} maxY={new Date().getFullYear()} label="تاريخ الميلاد (اختياري)" value={dobParts(cv.p.dob)}
                 onChange={(v) => setP('dob')(v.y && v.m && v.d ? `${v.y}-${String(v.m).padStart(2, '0')}-${String(v.d).padStart(2, '0')}` : '')} />
               <Field label="الجنس (اختياري)">
-                <select value={cv.p.gender} onChange={(e) => setP('gender')(e.target.value)}>
-                  <option value="">اختر</option>
-                  <option value="male">ذكر</option>
-                  <option value="female">أنثى</option>
-                </select>
+                <Select label="الجنس" value={cv.p.gender} placeholder="اختر" clear="بدون تحديد" options={[['male', 'ذكر'], ['female', 'أنثى']]} onChange={setP('gender')} />
               </Field>
               <Field label="الحالة الاجتماعية (اختياري)">
-                <select value={cv.p.marital} onChange={(e) => setP('marital')(e.target.value)}>
-                  <option value="">اختر</option>
-                  <option value="single">{cv.p.gender === 'female' ? 'عزباء' : 'أعزب'}</option>
-                  <option value="married">{cv.p.gender === 'female' ? 'متزوجة' : 'متزوج'}</option>
-                </select>
+                <Select label="الحالة الاجتماعية" value={cv.p.marital} placeholder="اختر" clear="بدون تحديد" options={[['single', cv.p.gender === 'female' ? 'عزباء' : 'أعزب'], ['married', cv.p.gender === 'female' ? 'متزوجة' : 'متزوج']]} onChange={setP('marital')} />
               </Field>
               <Area full label="نبذة مختصرة (تعريف قصير بك وبهدفك المهني في جملتين أو ثلاث)" placeholder="مثال: طالب هندسة برمجيات مهتم بتطوير تطبيقات الجوال، أبحث عن فرصة تدريب أنمّي فيها مهاراتي." err={ev(bad.summary, 0)} value={cv.p.summary} onChange={setP('summary')} />
               <PhotoField value={cv.p.photo} onChange={setP('photo')} flash={flash} />
