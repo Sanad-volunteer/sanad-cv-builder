@@ -27,6 +27,12 @@ function Success({ email, onClose }) {
   )
 }
 
+// Small inline icons (same stroke style everywhere)
+const Ico = ({ children }) => <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{children}</svg>
+const FileDown = () => <Ico><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" /><path d="M14 3v5h5M12 11v6M9.5 14.5L12 17l2.5-2.5" /></Ico>
+const MailIco = () => <Ico><rect x="3" y="5" width="18" height="14" rx="2" /><path d="M3 7l9 6 9-6" /></Ico>
+const Spin = () => <span className="spin" aria-hidden="true" />
+
 export default function Export({ cv, onValidate }) {
   const [to, setTo] = useState('')
   const [busy, setBusy] = useState('')
@@ -81,13 +87,14 @@ export default function Export({ cv, onValidate }) {
 
   return (
     <div className="exp no-print">
-      <div className="mail">
-        <button type="button" className="btn p" style={{ flex: 1 }} onClick={download} disabled={!!busy}>{busy === 'pdf' ? 'جارٍ التجهيز…' : '⬇ تحميل PDF'}</button>
-        <button type="button" className="btn p" style={{ flex: 1 }} onClick={downloadWord} disabled={!!busy}>{busy === 'docx' ? 'جارٍ التجهيز…' : '⬇ تحميل Word'}</button>
+      <div className="exp-dl">
+        <button type="button" className="btn p exp-btn" onClick={download} disabled={!!busy}>{busy === 'pdf' ? <Spin /> : <FileDown />}{busy === 'pdf' ? 'جارٍ التجهيز…' : 'تحميل PDF'}</button>
+        <button type="button" className="btn out exp-btn" onClick={downloadWord} disabled={!!busy}>{busy === 'docx' ? <Spin /> : <FileDown />}{busy === 'docx' ? 'جارٍ التجهيز…' : 'تحميل Word'}</button>
       </div>
-      <div className="mail">
+      <div className="exp-or">أو أرسلها إلى بريدك</div>
+      <div className="exp-mail">
         <input type="email" name="recipient" autoComplete="email" dir="ltr" placeholder="recipient@email.com" value={to} onChange={(e) => setTo(e.target.value)} />
-        <button type="button" className="btn s" onClick={send} disabled={!!busy}>{busy === 'mail' ? 'جارٍ الإرسال…' : '✉ إرسال بالبريد'}</button>
+        <button type="button" className="btn exp-send" onClick={send} disabled={!!busy}>{busy === 'mail' ? <Spin /> : <MailIco />}{busy === 'mail' ? 'جارٍ الإرسال…' : 'إرسال'}</button>
       </div>
       {msg && <p className={msg.ok ? 'ok' : 'err'}>{msg.t}</p>}
       {notice && <Notice text={SHARE_TEXT} onClose={() => setNotice(false)} />}

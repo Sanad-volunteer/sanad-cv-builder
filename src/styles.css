@@ -291,3 +291,27 @@ select:disabled{opacity:.6;cursor:not-allowed}
 .steps button:not(:disabled):hover .dot{transform:scale(1.12)}
 .dp-btn:hover{box-shadow:0 2px 8px rgba(26,20,100,.08)}
 @media(prefers-reduced-motion:reduce){.dp-grid button:hover,.dp-head button:hover,.chip.pick:hover,.mi,.dp-arrow{transform:none!important;transition:none!important}}
+
+/* ---- export step: one primary action, one secondary, e-mail as an outlined third option ---- */
+.exp{align-items:stretch;gap:14px}
+.exp-dl{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.exp-btn,.exp-send{display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;font-size:15px}
+.exp-btn svg,.exp-send svg{flex:none}
+.btn.out{background:#fff;color:var(--navy);border:1.5px solid var(--navy)}
+.btn.out:hover:not(:disabled){background:rgba(26,20,100,.06)}
+.exp-or{display:flex;align-items:center;gap:10px;color:var(--mut);font-size:12.5px;font-weight:600}
+.exp-or::before,.exp-or::after{content:"";flex:1;height:1px;background:var(--line)}
+.exp-mail{display:flex;gap:8px}
+.exp-mail input{flex:1;height:48px}
+.exp-send{width:auto;white-space:nowrap;padding-inline:20px;background:#fff;color:var(--navy);border:1.5px solid var(--teal)}
+.exp-send:hover:not(:disabled){background:rgba(58,219,192,.16)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{width:16px;height:16px;flex:none;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite}
+@media(prefers-reduced-motion:reduce){.spin{animation-duration:1.6s}}
+@media(max-width:520px){.exp-dl{grid-template-columns:1fr}.exp-mail{flex-direction:column}.exp-mail input{flex:none}.exp-send{width:100%}}
+.wiz-nav .btn:only-child{flex:0 0 auto;width:auto;min-width:150px;padding-inline:28px} /* "السابق" alone on the last step: not a full-width bar */
+
+/* ---- press feedback: every button sinks a little while it is pressed ---- */
+button:not(:disabled),.drop,.logo{transition-property:all;transition-duration:.15s}
+button:not(:disabled):active,.btn:active:not(:disabled),.back:active,.add:active,.link:active,.logo:active{transform:scale(.96)}
+.dp-btn:active:not(:disabled),.opt:active,.drop:active,.mi:active{transform:scale(.985)}

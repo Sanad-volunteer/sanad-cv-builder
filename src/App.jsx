@@ -566,7 +566,7 @@ export default function App() {
           </Card>
           </>)}
           {step === 6 && (
-          <Card n="✓" title="المراجعة والتصدير">
+          <Card n={<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" /><path d="M14 3v5h5M12 11v6M9.5 14.5L12 17l2.5-2.5" /></svg>} title="المراجعة والتصدير">
             <p className="note start">راجع المعاينة ثم حمّل سيرتك أو أرسلها إلى بريدك.</p>
             <Export cv={cv} onValidate={validate} />
             <div className="go-an">
