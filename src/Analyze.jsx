@@ -89,7 +89,7 @@ export default function Analyze({ go, seed }) { // seed: the CV just built in th
 
   return (
     <main className="layout">
-      <button type="button" className="back" onClick={() => go('home')}>→ رجوع</button>
+      <button type="button" className="back" onClick={() => go('home')}>→ الصفحة الرئيسية</button>
       <section>
         <div className="card">
           <h2><span className="n">1</span>ارفع سيرتك الذاتية</h2>
