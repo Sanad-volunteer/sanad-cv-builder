@@ -6,9 +6,15 @@ export default function Home({ go }) {
     <section className="home">
       <div className="hello">
         <img className="mascot" src={mascot} alt="شخصية سند الشباب" />
-        <div className="bubble" role="status">
-          <h2>كيف تودّ أن تبدأ؟</h2>
-          <p>أنشئ سيرة ذاتية احترافية متوافقة مع أنظمة ATS، أو راجع سيرتك الحالية لوظيفة محددة.</p>
+        <div className="cloud" role="status">
+          <svg viewBox="0 0 350 130" preserveAspectRatio="none" aria-hidden="true">
+            <path d="M50 112A28 28 0 0 1 28 66A30 30 0 0 1 62 28A34 34 0 0 1 130 20A36 36 0 0 1 200 20A32 32 0 0 1 266 30A30 30 0 0 1 296 70A28 28 0 0 1 262 112Z" />
+            <circle cx="318" cy="106" r="6" /><circle cx="336" cy="118" r="3.5" />
+          </svg>
+          <div className="cloud-txt">
+            <h2>كيف تودّ أن تبدأ؟</h2>
+            <p>أنشئ سيرة متوافقة مع ATS أو حلّل سيرتك.</p>
+          </div>
         </div>
       </div>
       <div className="opts">
