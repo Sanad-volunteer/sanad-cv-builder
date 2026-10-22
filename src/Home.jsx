@@ -1,10 +1,16 @@
 import icon from './assets/analyze-icon.png'
+import mascot from './assets/sanad-mascot.svg'
 
 export default function Home({ go }) {
   return (
     <section className="home">
-      <h2>كيف تودّ أن تبدأ؟</h2>
-      <p className="sub">أنشئ سيرة ذاتية احترافية متوافقة مع أنظمة ATS، أو راجع سيرتك الحالية لوظيفة محددة.</p>
+      <div className="hello">
+        <img className="mascot" src={mascot} alt="شخصية سند الشباب" />
+        <div className="bubble" role="status">
+          <h2>كيف تودّ أن تبدأ؟</h2>
+          <p>أنشئ سيرة ذاتية احترافية متوافقة مع أنظمة ATS، أو راجع سيرتك الحالية لوظيفة محددة.</p>
+        </div>
+      </div>
       <div className="opts">
         <button type="button" className="opt" onClick={() => go('create')}>
           <span className="ic">✎</span>

@@ -315,3 +315,16 @@ select:disabled{opacity:.6;cursor:not-allowed}
 button:not(:disabled),.drop,.logo{transition-property:all;transition-duration:.15s}
 button:not(:disabled):active,.btn:active:not(:disabled),.back:active,.add:active,.link:active,.logo:active{transform:scale(.96)}
 .dp-btn:active:not(:disabled),.opt:active,.drop:active,.mi:active{transform:scale(.985)}
+
+/* ---- home: mascot with speech bubble ---- */
+.hello{display:flex;align-items:center;justify-content:center;gap:6px;margin:0 0 26px}
+.mascot{width:190px;height:auto;flex:none;display:block}
+.bubble{position:relative;max-width:520px;text-align:start;background:#fff;border:2px solid var(--navy);border-radius:22px;padding:18px 24px;box-shadow:0 8px 24px rgba(26,20,100,.1);transform-origin:100% 60%;animation:bubbleIn .5s .25s cubic-bezier(.2,1.3,.4,1) backwards}
+.bubble h2{margin:0 0 4px;font-size:26px}
+.bubble p{margin:0;color:var(--mut);font-size:15px;line-height:1.8}
+.bubble::before,.bubble::after{content:"";position:absolute;top:50%;inset-inline-start:-14px;width:0;height:0;border:10px solid transparent;margin-top:-10px}
+.bubble::before{border-inline-end-color:var(--navy);inset-inline-start:-22px}
+.bubble::after{border-inline-end-color:#fff;inset-inline-start:-19px}
+@keyframes bubbleIn{from{opacity:0;transform:scale(.8) translateX(12px)}to{opacity:1;transform:none}}
+@media(max-width:700px){.hello{flex-direction:column;gap:14px}.mascot{width:150px}.bubble{padding:14px 18px}.bubble h2{font-size:22px}.bubble::before,.bubble::after{top:-22px;inset-inline-start:50%;margin:0 0 0 -10px;border-color:transparent}.bubble::before{border-bottom-color:var(--navy);top:-22px}.bubble::after{border-bottom-color:#fff;top:-19px}}
+@media(prefers-reduced-motion:reduce){.bubble{animation:none}}
