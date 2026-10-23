@@ -390,7 +390,7 @@ function PhotoField({ value, onChange, flash }) {
           <b style={{ fontSize: 13, margin: 0 }}>اختر صورة من جهازك</b>
         </button>
       )}
-      <p className="note start">أضف صورة شخصية فقط إذا طلبت الجهة المتقدَّم إليها ذلك صراحةً، أو إذا كانت طبيعة الوظيفة يهمّ فيها المظهر الخارجي.</p>
+      <p className="note start"><strong>أضف صورة شخصية فقط إذا طلبت الجهة المتقدَّم إليها ذلك صراحةً، أو إذا كانت طبيعة الوظيفة يهمّ فيها المظهر الخارجي.</strong></p>
     </Field>
   )
 }
@@ -485,7 +485,7 @@ export default function App() {
       <WarnCtx.Provider value={warn}>
       <main className="layout">
         <div className="topbar no-print">
-          <button type="button" className="back" onClick={() => setView('home')}>→ الصفحة الرئيسية</button>
+          <button type="button" className="back" onClick={() => setView('home')}>→ رجوع</button>
         </div>
         <section className="no-print">
           <div className="clear-row"><button type="button" className="link" onClick={reset}>مسح جميع البيانات</button></div>
@@ -584,7 +584,7 @@ export default function App() {
         </section>
 
         <aside className="side">
-          <div className="ph no-print"><h2>معاينة مباشرة</h2></div>
+          <div className="ph no-print"><h2>معاينة</h2></div>
           <Preview cv={cv} />
         </aside>
       </main>
