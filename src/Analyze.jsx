@@ -90,13 +90,12 @@ export default function Analyze({ go, seed }) { // seed: the CV just built in th
   return (
     <main className="layout analyze-layout">
       <div className="analyze-toolbar no-print">
-        <h2 className="analyze-page-title">تحليل السيرة الذاتية</h2>
         <button type="button" className="back analyze-back" onClick={() => go('home')}>
           <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
             <path d="M3 10.5 12 3l9 7.5" />
             <path d="M5.5 9.5V21h13V9.5M9.5 21v-6h5v6" />
           </svg>
-          <span>الرئيسية</span>
+          <span>الصفحة الرئيسية</span>
         </button>
       </div>
       <section>
@@ -121,7 +120,7 @@ export default function Analyze({ go, seed }) { // seed: the CV just built in th
         </div>
       </section>
       <aside className="side">
-        <div className="ph"><h2>نتيجة المراجعة</h2>{!(st.res && st.res.source === 'local') && <span className="badge">✦ ذكاء اصطناعي</span>}</div>
+        <div className="ph"><h2>نتيجة المراجعة</h2></div>
         {st.res ? <Result r={st.res} go={go} /> : (
           <div className="card empty"><div className="big">✦</div><p>ارفع سيرتك وأضف الوظيفة المستهدفة ثم اضغط «حلّل» لترى نسبة المطابقة والاقتراحات.</p></div>
         )}
