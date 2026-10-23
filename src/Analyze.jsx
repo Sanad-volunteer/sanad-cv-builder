@@ -88,8 +88,17 @@ export default function Analyze({ go, seed }) { // seed: the CV just built in th
   const ready = file && !st.busy // job title and description are both optional
 
   return (
-    <main className="layout">
-      <button type="button" className="back" onClick={() => go('home')}>→ الصفحة الرئيسية</button>
+    <main className="layout analyze-layout">
+      <div className="analyze-toolbar no-print">
+        <h2 className="analyze-page-title">تحليل السيرة الذاتية</h2>
+        <button type="button" className="back analyze-back" onClick={() => go('home')}>
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 10.5 12 3l9 7.5" />
+            <path d="M5.5 9.5V21h13V9.5M9.5 21v-6h5v6" />
+          </svg>
+          <span>الرئيسية</span>
+        </button>
+      </div>
       <section>
         <div className="card">
           <h2><span className="n">1</span>ارفع سيرتك الذاتية</h2>
