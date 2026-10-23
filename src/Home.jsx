@@ -12,8 +12,8 @@ export default function Home({ go }) {
             <circle cx="318" cy="106" r="6" /><circle cx="336" cy="118" r="3.5" />
           </svg>
           <div className="cloud-txt">
-            <h2>كيف تودّ أن تبدأ؟</h2>
-            <p>أنشئ سيرة متوافقة مع ATS أو حلّل سيرتك.</p>
+            <h2>أهلاً بك!</h2>
+            <p>كيف أساعدك اليوم؟</p>
           </div>
         </div>
       </div>
