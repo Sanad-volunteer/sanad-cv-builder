@@ -485,7 +485,13 @@ export default function App() {
       <WarnCtx.Provider value={warn}>
       <main className="layout">
         <div className="topbar no-print">
-          <button type="button" className="back" onClick={() => setView('home')}>→ رجوع</button>
+          <button type="button" className="back analyze-back" onClick={() => setView('home')}>
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 10.5 12 3l9 7.5" />
+              <path d="M5.5 9.5V21h13V9.5M9.5 21v-6h5v6" />
+            </svg>
+            <span>الصفحة الرئيسية</span>
+          </button>
         </div>
         <section className="no-print">
           <div className="clear-row"><button type="button" className="link" onClick={reset}>مسح جميع البيانات</button></div>
@@ -584,7 +590,7 @@ export default function App() {
         </section>
 
         <aside className="side">
-          <div className="ph no-print"><h2>معاينة</h2></div>
+          <div className="ph no-print"><h2>معاينة مباشرة</h2></div>
           <Preview cv={cv} />
         </aside>
       </main>
