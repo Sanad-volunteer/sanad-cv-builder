@@ -347,3 +347,23 @@ button:not(:disabled):active,.btn:active:not(:disabled),.back:active,.add:active
 .layout > .topbar{min-height:0;margin:0}
 @media(max-width:900px){.layout:has(> .topbar){padding-top:8px;row-gap:10px}}
 @media(max-width:600px){.layout > .topbar .back{font-size:13px!important;padding:4px 12px!important;min-height:34px}}
+
+/* ---- header: logo on the right, title in the middle, copyright on the left ---- */
+@media(min-width:601px){
+  .top{display:grid;grid-template-columns:1fr auto 1fr;gap:12px}
+  .top h1{flex:none;text-align:center}
+  .top .logo{justify-self:start}
+  .top .cp{justify-self:end}
+}
+
+/* ---- home: two columns (the two options stacked on the right, the drawing on the left) ---- */
+@media(min-width:901px){
+  .home{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);grid-template-areas:"opts hello" "trust trust";column-gap:56px;align-items:center;padding-top:32px}
+  .home .opts{grid-area:opts;grid-template-columns:1fr;gap:20px}
+  .home .opt{padding:28px 30px}
+  .home .opt .d{margin-bottom:14px}
+  .home .hello{grid-area:hello;flex-direction:column-reverse;align-items:stretch;gap:0;margin:0;width:min(100%,420px);justify-self:center}
+  .home .hello .mascot{width:180px;align-self:flex-start}
+  .home .hello .cloud{align-self:flex-end;margin-bottom:-6px}
+  .home .trust{grid-area:trust;margin-top:36px}
+}
