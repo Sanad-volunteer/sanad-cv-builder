@@ -366,3 +366,22 @@ button:not(:disabled):active,.btn:active:not(:disabled),.back:active,.add:active
   .home .hello .mascot{width:180px;align-self:flex-start}
   .home .hello .cloud{align-self:flex-end;margin-bottom:-6px}
 }
+
+/* ---- home cards: icon on the left, text rises to the top (shorter cards, no scrolling) ---- */
+.opt{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:18px;align-items:start;align-content:start}
+.opt .t,.opt .d{grid-column:1}
+.opt .ic{grid-column:2;grid-row:1 / span 2;margin:0;width:52px;height:52px}
+.opt .t{margin:0 0 4px}
+.opt .d{margin:0}
+@media(min-width:901px){.home .opt{padding:22px 26px}.home .opt .d{margin-bottom:0}}
+@media(max-width:700px){.opt{padding:22px 20px}}
+@media(max-width:700px){.opts{gap:14px}}
+
+/* ---- bigger cloud: fills the empty space and draws the eye ---- */
+.cloud{width:320px;height:130px}
+.cloud-txt{padding:24px 18px 24px 50px}
+.cloud-txt h2{font-size:23px;margin-bottom:4px}
+.cloud-txt p{font-size:15px;line-height:1.5}
+@media(min-width:901px){.home .hello{width:min(100%,460px)}.home .hello .cloud{width:360px;height:146px}.home .cloud-txt{padding:28px 20px 28px 56px}.home .cloud-txt h2{font-size:26px}.home .cloud-txt p{font-size:16.5px}}
+@media(max-width:520px){.cloud{width:250px;height:104px}.cloud-txt{padding:18px 12px 18px 38px}.cloud-txt h2{font-size:17px}.cloud-txt p{font-size:12.5px}}
+@media(max-width:360px){.cloud{width:215px;height:94px}.cloud-txt p{font-size:11.5px}}
