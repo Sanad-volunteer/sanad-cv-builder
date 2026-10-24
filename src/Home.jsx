@@ -26,14 +26,13 @@ export default function Home({ go }) {
         <button type="button" className="opt b" onClick={() => go('analyze')}>
           <span className="ic"><img src={icon} alt="" /></span>
           <span className="t">حلّل سيرتي الذاتية</span>
-          <span className="d">ارفع سيرتك الذاتية لمعرفة نسبة المطابقة والكلمات المفتاحية الناقصة واقتراحات لوظيفة محددة.</span>
+          <span className="d">ارفع سيرتك الحالية لمعرفة نسبة المطابقة والكلمات المفتاحية الناقصة واقتراحات لوظيفة محددة.</span>
         </button>
       </div>
       <ul className="feats" aria-label="مزايا الأداة">
         <li><span className="fi"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7" /></svg></span><b>متوافقة مع ATS</b><span>تمرّ من أنظمة الفرز الآلي</span></li>
         <li><span className="fi"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3c3 3.2 3 14.8 0 18M12 3c-3 3.2-3 14.8 0 18" /></svg></span><b>عربي وإنجليزي</b><span>اكتب سيرتك بلغتك</span></li>
-        <li><span className="fi"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 20h14" /></svg></span><b>PDF وWord</b><span>حمّل أو أرسل بالبريد</span></li>
-        <li><span className="fi"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" /></svg></span><b>تحليل بالذكاء الاصطناعي</b><span>نسبة مطابقة واقتراحات</span></li>
+        <li><span className="fi"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 20h14" /></svg></span><b><bdi>PDF</bdi> و <bdi>Word</bdi></b><span>حمّل أو أرسل بالبريد</span></li>
       </ul>
     </section>
   )
