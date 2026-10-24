@@ -385,3 +385,25 @@ button:not(:disabled):active,.btn:active:not(:disabled),.back:active,.add:active
 @media(min-width:901px){.home .hello{width:min(100%,460px)}.home .hello .cloud{width:360px;height:146px}.home .cloud-txt{padding:28px 20px 28px 56px}.home .cloud-txt h2{font-size:26px}.home .cloud-txt p{font-size:16.5px}}
 @media(max-width:520px){.cloud{width:250px;height:104px}.cloud-txt{padding:18px 12px 18px 38px}.cloud-txt h2{font-size:17px}.cloud-txt p{font-size:12.5px}}
 @media(max-width:360px){.cloud{width:215px;height:94px}.cloud-txt p{font-size:11.5px}}
+
+/* ---- bigger home cards + feature strip underneath ---- */
+@media(min-width:901px){
+  .home{grid-template-areas:"opts hello" "feat feat";row-gap:34px;padding-top:28px}
+  .home .opts{gap:22px}
+  .home .opt{padding:34px 34px;column-gap:24px}
+  .home .opt .ic{width:70px;height:70px;border-radius:20px}
+  .home .opt .ic img{width:38px;height:38px}
+  .home .opt .t{font-size:25px;margin-bottom:8px}
+  .home .opt .d{font-size:16px;line-height:1.85}
+}
+@media(max-width:900px){.opt .ic{width:60px;height:60px}.opt .t{font-size:21px}.opt .d{font-size:15px}}
+.feats{grid-area:feat;list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.feats li{display:flex;flex-direction:column;align-items:center;text-align:center;gap:2px;background:rgba(58,219,192,.1);border:1px solid rgba(58,219,192,.45);border-radius:16px;padding:16px 10px 14px;transition:transform .2s,box-shadow .2s,background .2s}
+.feats li:hover{transform:translateY(-3px);background:rgba(58,219,192,.18);box-shadow:0 8px 20px rgba(26,20,100,.09)}
+.feats .fi{width:42px;height:42px;border-radius:13px;background:var(--navy);display:grid;place-items:center;margin-bottom:6px}
+.feats svg{width:22px;height:22px;fill:none;stroke:#fff;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.feats b{font-size:15px;color:var(--navy)}
+.feats li span:not(.fi){font-size:12.5px;color:var(--mut)}
+@media(max-width:900px){.feats{margin-top:22px}}
+@media(max-width:600px){.feats{grid-template-columns:1fr 1fr;gap:10px}.feats li{padding:12px 8px}.feats b{font-size:13.5px}.feats li span:not(.fi){font-size:11.5px}}
+@media(prefers-reduced-motion:reduce){.feats li{transition:none}.feats li:hover{transform:none}}
