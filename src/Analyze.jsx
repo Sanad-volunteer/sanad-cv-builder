@@ -3,6 +3,9 @@ import mammoth from 'mammoth/mammoth.browser'
 import { post } from './api.js'
 import Notice, { AI_TEXT } from './Notice.jsx'
 
+// the back-office user (logged in at #admin in this tab) also sees which engine produced the result
+const isAdmin = () => { try { return !!sessionStorage.getItem('sanad-admin-pw') } catch { return false } }
+
 const MAX = 3 * 1024 * 1024 // keeps the request under Vercel's 4.5 MB body limit
 const toB64 = (f) => new Promise((ok, no) => {
   const r = new FileReader()
@@ -120,7 +123,10 @@ export default function Analyze({ go, seed }) { // seed: the CV just built in th
         </div>
       </section>
       <aside className="side">
-        <div className="ph"><h2>نتيجة المراجعة</h2></div>
+        <div className="ph"><h2>نتيجة المراجعة</h2>
+          {st.res && st.res.source === 'ai' && <span className="badge">✦ ذكاء اصطناعي</span>}
+          {st.res && st.res.source !== 'ai' && isAdmin() && <span className="badge local">⚙ تحليل المتصفح (للأدمن فقط)</span>}
+        </div>
         {st.res ? <Result r={st.res} go={go} /> : (
           <div className="card empty"><div className="big">✦</div><p>ارفع سيرتك وأضف الوظيفة المستهدفة ثم اضغط «حلّل» لترى نسبة المطابقة والاقتراحات.</p></div>
         )}

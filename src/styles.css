@@ -418,3 +418,20 @@ button:not(:disabled):active,.btn:active:not(:disabled),.back:active,.add:active
 /* three feature cards */
 .feats{grid-template-columns:repeat(3,1fr)}
 @media(max-width:600px){.feats{grid-template-columns:1fr}.feats li{flex-direction:row;text-align:start;gap:10px;padding:12px 14px;flex-wrap:wrap;align-items:center}.feats .fi{margin:0}}
+
+/* ---- AI engine badge + back-office AI status ---- */
+.badge.local{background:var(--line);border-color:#cfd0e4;color:var(--mut)}
+.adm-ai{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 16px;margin-bottom:14px}
+.adm-ai-h{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.adm-ai .btn{width:auto;padding:8px 16px;font-size:13px;background:#fff;color:var(--navy);border:1px solid var(--line)}
+.adm-ai-r{margin:8px 0 0;font-size:14px;font-weight:700}.adm-ai-r.ok{color:#0a7a52}.adm-ai-r.no{color:#b3261e}
+.adm-ai-r span{font-weight:500;color:var(--mut);font-size:12.5px}
+.adm-ai-n{margin:6px 0 0;font-size:12px;color:var(--mut)}
+
+/* ---- the cloud comes out of the character's mouth ---- */
+@media(min-width:901px){
+  .home .hello .mascot{margin-inline-start:-30px}
+  .home .hello .cloud{margin-bottom:-54px;margin-inline-end:-26px}
+}
+
+.adm-filters .dp-btn{height:44px}
