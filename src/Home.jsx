@@ -21,12 +21,12 @@ export default function Home({ go }) {
         <button type="button" className="opt" onClick={() => go('create')}>
           <span className="ic">✎</span>
           <span className="t">أنشئ سيرة ذاتية جديدة</span>
-          <span className="d">املأ أقسامًا بسيطة واحصل على ملف PDF نظيف ومتوافق مع ATS لتحميله أو إرساله بالبريد.</span>
+          <span className="d">>املأ أقسام السيرة الذاتية واحصل عليها كملف PDF أو Word</span>
         </button>
         <button type="button" className="opt b" onClick={() => go('analyze')}>
           <span className="ic"><img src={icon} alt="" /></span>
           <span className="t">حلّل سيرتي الذاتية</span>
-          <span className="d">ارفع سيرتك الحالية واحصل على نسبة المطابقة والكلمات المفتاحية الناقصة واقتراحات لوظيفة محددة.</span>
+          <span className="d">عندك CV جاهزة ؟ ارفعها وحاول تحسنها</span>
         </button>
       </div>
       <ul className="feats" aria-label="مزايا الأداة">
