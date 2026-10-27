@@ -10,7 +10,6 @@ import { FIELDS, COMMON_SKILLS, SOFT_SKILLS, TITLE_GROUPS, ACTION_VERBS } from '
 // ---------- text helpers (Arabic + English) ----------
 const DIACRITICS = /[\u064B-\u065F\u0670\u0640]/g // tashkeel + tatweel
 const ARABIC = /[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]/
-const ARABIC_ALL = new RegExp(ARABIC.source, 'g')
 const INDIC_DIGITS = { '٠': '0', '١': '1', '٢': '2', '٣': '3', '٤': '4', '٥': '5', '٦': '6', '٧': '7', '٨': '8', '٩': '9', '۰': '0', '۱': '1', '۲': '2', '۳': '3', '۴': '4', '۵': '5', '۶': '6', '۷': '7', '۸': '8', '۹': '9' }
 
 // NFKC turns Arabic presentation forms (what many PDFs contain) back into normal letters.
@@ -138,8 +137,10 @@ const startsWithVerb = (line) => {
 const WEIGHTS = { contact: 8, summary: 8, sections: 8, title_match: 6, dates: 6, metrics: 7, bullets: 6, skills: 7, length: 4, gaps: 3, linkedin: 2, font: 2, file: 3 }
 
 // ---------- main ----------
-export function analyzeText(rawText, job = {}, meta = {}) { // meta: { source: 'pdf' | 'docx' | 'builder', name, fonts, pages }
-  const text = clean(rawText).slice(0, 60000)
+export function analyzeText(rawText, jobIn, metaIn) { // meta: { source: 'pdf' | 'docx' | 'builder', name, fonts, pages }
+  const job = jobIn || {}, meta = metaIn || {}
+  // a single 'word' longer than 200 characters is never a real word/e-mail/link: cut it so the e-mail and phone patterns below cannot go quadratic
+  const text = clean(rawText).slice(0, 60000).replace(/\S{200,}/g, (m) => m.slice(0, 200))
   const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean)
   const title = String(job.title || '').trim()
   const desc = String(job.desc || '').slice(0, 8000)
@@ -232,7 +233,6 @@ export function analyzeText(rawText, job = {}, meta = {}) { // meta: { source: '
   // structure
   const sections = findSections(lines)
   const hasEdu = sections.has('education') || DEGREE.test(norm(text)) || DEGREE.test(norm(flip(text)))
-  const hasExp = sections.has('experience') || sections.has('volunteer')
   const email = /[\w.+-]+@[\w-]+\.[\w.-]+/.test(text)
   const phone = /\+?\d[\d\s().-]{7,}\d/.test(text.replace(/\S+@\S+/g, ' '))
   const words = cvWords.length
@@ -248,7 +248,7 @@ export function analyzeText(rawText, job = {}, meta = {}) { // meta: { source: '
   const head = lines.slice(0, 15).join(' ')
   const hasName = !!lines[0] && lines[0].length <= 60 && !/[@\d]/.test(lines[0])
   const emailAddr = (text.match(/[\w.+-]+@[\w-]+\.[\w.-]+/) || [''])[0]
-  const place = /(مكان السكن|المدينة|المدينه|العنوان|الموقع|location|address|city|residence)\s*[:：]/i.test(head) || /[A-Za-z؀-ۿ][\w؀-ۿ ]{1,30},\s*[A-Za-z؀-ۿ][\w؀-ۿ ]{1,30}/.test(head)
+  const place = /(مكان السكن|المدينة|المدينه|العنوان|الموقع|location|address|city|residence)\s*[:：]/i.test(head) || /[A-Za-z؀-ۿ][\w؀-ۿ ]{1,30}[,،]\s*[A-Za-z؀-ۿ][\w؀-ۿ ]{1,30}/.test(head)
   const sillyEmail = !!emailAddr && SILLY_EMAIL.test(emailAddr.split('@')[0])
   const cMiss = [!hasName && 'الاسم', !phone && 'رقم الهاتف', !email && 'البريد الإلكتروني', !place && 'الموقع (المدينة والدولة)'].filter(Boolean)
   chk('contact', !cMiss.length && !sillyEmail,

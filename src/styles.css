@@ -453,3 +453,16 @@ button:not(:disabled):active,.btn:active:not(:disabled),.back:active,.add:active
 .feats li:nth-child(1) svg,.feats li:nth-child(3) svg{stroke:var(--navy)}
 .feats li:nth-child(2) svg{stroke:#fff}
 .feats li:nth-child(3) b{color:var(--navy)}
+
+/* ---- analyzer: score colour, issues filter, drop zone, remove-file ---- */
+.ring{background:conic-gradient(var(--rc,var(--teal)) var(--pct),var(--line) 0)}
+.chk-h{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:16px 0 6px}.chk-h h5{margin:0}
+.seg{display:flex;background:var(--line);border-radius:999px;padding:3px}
+.seg button{border:0;background:none;font:inherit;font-size:12px;font-weight:600;color:var(--ink);padding:3px 12px;border-radius:999px;cursor:pointer}
+.seg button.on{background:var(--navy);color:#fff}
+.drop.over{background:rgba(58,219,192,.22);border-color:var(--navy);border-style:solid}
+.fl{align-items:center}
+.fl-x{flex:none;width:26px;height:26px;border-radius:50%;border:0;background:none;color:var(--mut);display:grid;place-items:center;cursor:pointer}
+.fl-x:hover{background:rgba(179,38,30,.13);color:#b3261e}
+.btn .spin{vertical-align:-3px;margin-inline-end:6px}
+.res:focus{outline:0}

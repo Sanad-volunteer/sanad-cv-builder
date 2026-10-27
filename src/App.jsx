@@ -31,7 +31,6 @@ const nd = () => ({ m: '', y: '' })
 const empty = (v) => !String(v ?? '').trim()
 const dEmpty = (d) => !d.y || (d.y !== 'now' && !d.m) // a date needs a year, and a month unless "until now"
 const blankEdu = () => ({ id: uid(), level: '', school: '', major: '', start: nd(), end: nd() })
-const TODAY = new Date().toISOString().slice(0, 10)
 const SKILLS = [['read', 'القراءة'], ['write', 'الكتابة'], ['listen', 'الاستماع'], ['speak', 'المحادثة']] // each language is rated on all four
 const blankLang = () => ({ id: uid(), name: '', native: false, read: '', write: '', listen: '', speak: '' })
 const blankCourse = () => ({ id: uid(), title: '', org: '', date: nd() })
