@@ -26,6 +26,7 @@ function useGuard() {
 }
 
 const KEY = 'sanad-cv-v1'
+const SCHEMA = 1 // bump when the saved shape changes and add a step to MIGRATIONS below
 const uid = () => Math.random().toString(36).slice(2, 9)
 const nd = () => ({ m: '', y: '' })
 const empty = (v) => !String(v ?? '').trim()
@@ -37,14 +38,14 @@ const blankCourse = () => ({ id: uid(), title: '', org: '', date: nd() })
 const blankConf = () => ({ id: uid(), title: '', date: nd() })
 const blankJob = () => ({ id: uid(), title: '', company: '', start: nd(), end: nd(), bullets: '' })
 const initial = () => ({
+  schema: SCHEMA,
   lang: 'ar',
   p: { name: '', title: '', email: '', phone: '', city: '', residence: '', link: '', photo: '', summary: '', dob: '', gender: '', marital: '' },
   tech: [], soft: [], lvl: {}, courses: [], confs: [], langs: [blankLang()], edu: [blankEdu()], exp: [], vol: [],
 })
-const load = () => {
-  try { const s = localStorage.getItem(KEY); if (!s) return initial()
-    const d = { ...initial(), ...JSON.parse(s) }
-    d.p = { ...initial().p, ...d.p } // fields added in newer versions
+const MIGRATIONS = [
+  // 0 -> 1: everything done before versioning existed
+  (d) => {
     d.langs = (d.langs || []).map((x) => (x.read === undefined ? { ...x, read: x.level || '', write: x.level || '', listen: x.level || '', speak: x.level || '' } : x)) // old single level -> four skills
     d.langs = d.langs.map((x) => { // "native" used to be a level: four natives -> the checkbox, a single native skill -> proficient
       const all = SKILLS.every(([k]) => x[k] === 'native')
@@ -53,6 +54,16 @@ const load = () => {
     })
     d.langs = d.langs.map((x) => ({ ...x, name: langKeyFromText(x.name) })) // plain "English" etc. -> the drop-down keys
     d.edu = (d.edu || []).map((e) => ({ level: '', ...e, ...(e.level === 'basic' ? { level: '' } : {}), ...(e.level === 'secondary' ? { major: '' } : {}), ...(String(e.major || '').startsWith('major:') ? { major: '' } : {}) })) // the old specialization list is gone: its saved keys are cleared // education fields added in newer versions
+  },
+  // 1 -> 2: (d) => { ... }  add future steps here, in order, and bump SCHEMA
+]
+const load = () => {
+  try { const s = localStorage.getItem(KEY); if (!s) return initial()
+    const saved = JSON.parse(s)
+    const d = { ...initial(), ...saved, schema: Number(saved.schema) || 0 } // a copy saved before versioning counts as schema 0
+    d.p = { ...initial().p, ...d.p } // fields added in newer versions
+    for (let v = d.schema; v < SCHEMA; v++) MIGRATIONS[v](d) // run only the steps this saved copy has not seen
+    d.schema = SCHEMA
     if (!d.langs.length) d.langs = [blankLang()] // languages are required: always show one row
     return d } catch { return initial() }
 }
@@ -589,7 +600,7 @@ export default function App() {
         </section>
 
         <aside className="side">
-          <div className="ph no-print"><h2>معاينة</h2></div>
+          <div className="ph no-print"><h2>معاينة مباشرة</h2></div>
           <Preview cv={cv} />
         </aside>
       </main>
