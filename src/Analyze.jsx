@@ -19,13 +19,21 @@ const CHECK_TITLE = {
   dates: 'تنسيق التواريخ (Date Formatting)', metrics: 'النتائج القابلة للقياس (Measurable Results)', bullets: 'صياغة الإنجازات (Bullet Points)', skills: 'المهارات (Skills)',
   length: 'طول السيرة (Length)', gaps: 'الفجوات الزمنية (Employment Gaps)', linkedin: 'رابط لينكدإن (LinkedIn)', font: 'نوع الخط (Font)', file: 'نوع الملف واسمه (File)',
 }
+const WHY = { slow: 'استغرق الذكاء الاصطناعي وقتاً أطول من المعتاد.', busy: 'الذكاء الاصطناعي مزدحم حالياً.', limit: 'تجاوزت عدد المحاولات المسموحة للذكاء الاصطناعي حالياً.', other: 'تعذّر الوصول إلى الذكاء الاصطناعي حالياً.' }
 const ringColor = (n) => (n < 40 ? '#E5484D' : n < 60 ? '#FFC500' : 'var(--teal)') // red / yellow / teal by score
-function Result({ r, go }) {
+// where in the builder each failed check can be fixed (wizard step: 0 personal, 1 education, 2 experience, 3 skills, 5 extras); checks without a step have no button
+const FIX_STEP = { contact: [0, 'المعلومات الشخصية'], summary: [0, 'النبذة'], title_match: [0, 'المسمى الوظيفي'], linkedin: [0, 'رابط لينكدإن'], sections: [1, 'التعليم'], dates: [2, 'الخبرات'], metrics: [2, 'الخبرات'], bullets: [2, 'الخبرات'], gaps: [2, 'الخبرات'], skills: [3, 'المهارات'] }
+function Result({ r, go, fix }) {
   const [onlyBad, setOnlyBad] = useState(false)
   const bad = r.checks.filter((c) => c.ok === false).length
   const list = onlyBad ? r.checks.filter((c) => c.ok === false) : r.checks
   return (
     <div className="card res" role="region" aria-label="نتيجة المراجعة" tabIndex={-1}>
+      {r.source === 'local' && (
+        <p className="local-note" role="status">
+          {WHY[r.why] || WHY.other} هذا تحليل مبسّط يعمل على جهازك، وللحصول على تحليل أعمق أعد المحاولة بعد قليل.
+        </p>
+      )}
       <div className="score">
         <div className="ring" style={{ '--pct': `${r.score}%`, '--rc': ringColor(r.score) }}><span>{r.score}</span></div>
         <div><b>{r.verdict}</b><p className="mut">{r.summary}</p></div>
@@ -50,7 +58,12 @@ function Result({ r, go }) {
           {list.map((c) => (
             <div className={`chk ${c.ok === true ? 'ok' : c.ok === false ? 'no' : 'na'}`} key={c.id}>
               <span className="ic" aria-label={c.ok === true ? 'مناسب' : c.ok === false ? 'يحتاج تعديل' : 'غير محدد'}>{c.ok === true ? '✓' : c.ok === false ? '✗' : '–'}</span>
-              <div><b>{CHECK_TITLE[c.id] || c.id}</b><p>{c.text}</p></div>
+              <div>
+                <b>{CHECK_TITLE[c.id] || c.id}</b><p>{c.text}</p>
+                {fix && c.ok === false && FIX_STEP[c.id] && (
+                  <button type="button" className="chk-fix" onClick={() => fix(FIX_STEP[c.id][0])}>✎ عدّل في {FIX_STEP[c.id][1]}</button>
+                )}
+              </div>
             </div>
           ))}
         </>
@@ -60,7 +73,7 @@ function Result({ r, go }) {
   )
 }
 
-export default function Analyze({ go, seed }) { // seed: the CV just built in the builder ({ file, title })
+export default function Analyze({ go, seed, fix }) { // seed: the CV just built in the builder ({ file, title })
   const [file, setFile] = useState(seed ? seed.file : null)
   const [job, setJob] = useState({ title: seed ? seed.title : '', desc: '' })
   const [st, setSt] = useState({ busy: false, err: '', res: null })
@@ -91,17 +104,18 @@ export default function Analyze({ go, seed }) { // seed: the CV just built in th
   const run = async () => {
     setSt({ busy: true, err: '', res: null })
     try {
-      const r = await post('/api/analyze', { file: { type: file.type, data: file.data, name: file.name }, source: file.builder ? 'builder' : file.ext, job })
+      const r = await post('/api/analyze', { file: { type: file.type, data: file.data, name: file.name }, source: file.builder ? 'builder' : file.ext, job }, 35000) // the server gives the AI 25 s; this is only a safety net
       setSt({ busy: false, err: '', res: { ...(await r.json()), source: 'ai' } })
       setNotice(true)
     } catch (e) {
       // The AI is busy or unavailable: quietly review the CV in the browser instead (no message to the user).
       try {
         const { localAnalyze } = await import('./localAnalyze.js')
-        setSt({ busy: false, err: '', res: { ...(await localAnalyze(file, job)), source: 'local' } })
+        const why = e.status === 429 ? 'limit' : e.name === 'TimeoutError' || (e.body && e.body.status === 504) ? 'slow' : e.body && e.body.status === 503 ? 'busy' : 'other' // why the AI was skipped (shown to the user)
+        setSt({ busy: false, err: '', res: { ...(await localAnalyze(file, job)), source: 'local', why } })
       } catch (e2) {
         // the browser review could not read the file either: say why when we know it
-        setSt({ busy: false, err: e2 && e2.message === 'no_text' ? 'لا يحتوي الملف على نص قابل للقراءة (يبدو صورة أو ملفاً ممسوحاً ضوئياً). صدّر سيرتك من Word أو منشئ السيرة كملف PDF نصي ثم أعد المحاولة.' : e.status === 429 ? 'تجاوزت عدد المحاولات المسموح، حاول بعد قليل' : e.body && e.body.status === 503 ? 'الذكاء الاصطناعي مزدحم حالياً، حاول بعد دقيقة' : `تعذّر تحليل السيرة، حاول مرة أخرى${e.body && e.body.reason ? ` (${e.body.status || ''} ${e.body.reason})` : ''}`, res: null })
+        setSt({ busy: false, err: e2 && e2.message === 'no_text' && file.type === 'text' ? 'السيرة قصيرة جداً للتحليل، أضف معلومات أكثر (النبذة والخبرات والمهارات) ثم أعد المحاولة.' : e2 && e2.message === 'no_text' ? 'لا يحتوي الملف على نص قابل للقراءة (يبدو صورة أو ملفاً ممسوحاً ضوئياً). صدّر سيرتك من Word أو منشئ السيرة كملف PDF نصي ثم أعد المحاولة.' : e.status === 429 ? 'تجاوزت عدد المحاولات المسموح، حاول بعد قليل' : e.body && e.body.status === 503 ? 'الذكاء الاصطناعي مزدحم حالياً، حاول بعد دقيقة' : `تعذّر تحليل السيرة، حاول مرة أخرى${e.body && e.body.reason ? ` (${e.body.status || ''} ${e.body.reason})` : ''}`, res: null })
       }
     }
   }
@@ -155,7 +169,7 @@ export default function Analyze({ go, seed }) { // seed: the CV just built in th
           {st.res && st.res.source === 'ai' && <span className="badge">✦ ذكاء اصطناعي</span>}
           {st.res && st.res.source !== 'ai' && isAdmin() && <span className="badge local">⚙ تحليل المتصفح (للأدمن فقط)</span>}
         </div>
-        {st.res ? <Result r={st.res} go={go} /> : (
+        {st.res ? <Result r={st.res} go={go} fix={file && file.builder ? fix : null} /> : (
           <div className="card empty"><div className="big">✦</div><p>ارفع سيرتك وأضف الوظيفة المستهدفة ثم اضغط «حلّل» لترى نسبة المطابقة والاقتراحات.</p></div>
         )}
         <button type="button" className="btn s" style={{ marginTop: 14 }} disabled={!ready} onClick={run}>{st.busy ? <><span className="spin" aria-hidden="true" /> جارٍ التحليل…</> : '✦ حلّل سيرتي الذاتية'}</button>

@@ -1,5 +1,6 @@
-export async function post(path, body) {
-  const r = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+// timeoutMs (optional): give up after this long (error.name 'TimeoutError') instead of waiting for the server forever
+export async function post(path, body, timeoutMs = 0) {
+  const r = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: timeoutMs ? AbortSignal.timeout(timeoutMs) : undefined })
   if (!r.ok) {
     let body = null
     try { body = await r.json() } catch { /* response was not JSON */ }
