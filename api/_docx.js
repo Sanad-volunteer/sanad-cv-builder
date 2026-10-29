@@ -3,6 +3,7 @@ import {
   AlignmentType, BorderStyle, Document, ExternalHyperlink, HeadingLevel, ImageRun, LevelFormat, LineRuleType,
   Packer, Paragraph, Table, TableCell, TableRow, TextRun, WidthType,
 } from 'docx'
+import { skillText } from './_lists.js'
 import { T, EL, DETAILS, CONTACT, dobText, langParts, langName, range, fmt, list, href } from './_cv.js'
 
 const FONT = 'Arial' // Cairo is not installed on most computers; Arial exists everywhere and has Arabic glyphs
@@ -61,9 +62,10 @@ export async function makeDocx(cv) {
   const entries = (items) => items.flatMap((e, i) => [...(i ? [spacer()] : []), ...e])
 
   // ---- header (name, title, contact lines, gender, date of birth / marital status) ----
+  const top = [] // name and job title: centred across the page header
+  if (p.name) top.push(new Paragraph({ heading: HeadingLevel.HEADING_1, alignment: AlignmentType.CENTER, bidirectional: rtl ? true : undefined, children: [run(p.name)] }))
+  if (p.title) top.push(para([run(p.title, { size: 24 })], { alignment: AlignmentType.CENTER, spacing: { before: 0, after: 100 } }))
   const head = []
-  if (p.name) head.push(new Paragraph({ heading: HeadingLevel.HEADING_1, bidirectional: rtl ? true : undefined, children: [run(p.name)] }))
-  if (p.title) head.push(para([run(p.title, { size: 24 })], { spacing: { before: 0, after: 100 } }))
   const contact = [['residence', p.residence], ['city', p.city], ['email', p.email], ['phone', p.phone], ['link', p.link, true]].filter(([, v]) => v)
   for (const [k, v, isLink] of contact) {
     const ltr = k === 'email' || k === 'phone' || k === 'link'
@@ -80,7 +82,7 @@ export async function makeDocx(cv) {
   for (const [k, v] of details) head.push(labelled(k, v))
 
   const photo = photoOf(p.photo)
-  const children = []
+  const children = [...top]
   if (photo) {
     children.push(new Table({
       width: { size: TEXT_W, type: WidthType.DXA },
@@ -118,7 +120,8 @@ export async function makeDocx(cv) {
   }
   jobs(cv.exp, t.exp)
 
-  const tech = list(cv.tech), soft = list(cv.soft)
+  const lv = cv.lvl || {}
+  const tech = list(cv.tech).map((s) => skillText(s, lv[s], l)), soft = list(cv.soft).map((s) => skillText(s, lv[s], l))
   if (tech.length || soft.length) {
     children.push(h2(t.skills))
     if (tech.length) children.push(labelled(t.tech, tech.join(sep)))

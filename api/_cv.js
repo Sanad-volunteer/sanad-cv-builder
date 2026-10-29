@@ -71,15 +71,17 @@ export function cvHtml(cv, opts = {}) {
   ].filter(Boolean)
   const langs = list(cv.langs).filter((x) => x && String(x.name || '').trim())
   const edu = list(cv.edu).filter((e) => e && (e.school || e.major || e.level))
+  const top = p.name || p.title // name and job title: centred across the page header
+    ? `<div style="text-align:center">${p.name ? `<h1 style="line-height:1.25">${esc(p.name)}</h1>` : ''}${p.title ? `<p style="font-size:1.3em;line-height:1.3;margin-bottom:6px">${esc(p.title)}</p>` : ''}</div>`
+    : ''
   const head = [
-    p.name ? `<h1 style="line-height:1.25">${esc(p.name)}</h1>` : '',
-    p.title ? `<p style="font-size:1.3em;line-height:1.3;margin-bottom:6px">${esc(p.title)}</p>` : '',
     contact, // one line per item (residence, city, email, phone, link)
     genderLine ? `<p><b>${esc(genderLine[0])}:</b> ${esc(genderLine[1])}</p>` : '',
     ...details.map(([k, v]) => `<p><b>${esc(k)}:</b> ${esc(v)}</p>`),
   ].join('')
   const photo = typeof p.photo === 'string' && p.photo.length <= 400000 && PHOTO.test(p.photo) ? p.photo : ''
   const body = [
+    top,
     photo
       ? `<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px"><div>${head}</div><img src="${photo}" alt="" style="width:96px;height:128px;object-fit:cover;flex:none"></div>`
       : head,
