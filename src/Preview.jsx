@@ -76,10 +76,14 @@ export default function Preview({ cv }) {
   const hasJobs = [...exp, ...vol].some((i) => i.title || i.company)
   const empty = !p.name && !p.title && !contact.length && !p.summary && !p.photo && !genderLine && !details.length && !tech.length && !soft.length && !langF.length && !courseF.length && !confF.length && !eduF.length && !hasJobs
 
+  const top = (p.name || p.title) && ( // name and job title: centred across the page header
+    <div style={{ textAlign: 'center' }}>
+      {p.name && <h1 style={{ lineHeight: 1.25 }}>{p.name}</h1>}
+      {p.title && <p style={{ fontSize: '1.3em', lineHeight: 1.3, marginBottom: 6 }}>{p.title}</p>}
+    </div>
+  )
   const head = (
     <>
-    {p.name && <h1 style={{ lineHeight: 1.25 }}>{p.name}</h1>}
-    {p.title && <p style={{ fontSize: '1.3em', lineHeight: 1.3, marginBottom: 6 }}>{p.title}</p>}
     {contact.map(([k, v, isLink]) => (
       <p key={k}><b>{CONTACT[lang][k]}:</b> <bdi>{isLink ? <a href={href(v)} target="_blank" rel="noreferrer">{v}</a> : v}</bdi></p>
     ))}
@@ -94,6 +98,7 @@ export default function Preview({ cv }) {
         <p className="hint">ابدأ بتعبئة النموذج لتظهر سيرتك الذاتية هنا</p>
       ) : (
         <>
+          {top}
           {p.photo && /^data:image\//.test(p.photo) ? (
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
               <div>{head}</div>

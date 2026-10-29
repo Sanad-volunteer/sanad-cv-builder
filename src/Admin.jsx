@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { EDU_LEVELS } from './Preview.jsx'
 import { makeXlsx, makeZip } from './files.js'
 import { Select } from './Select.jsx'
-import AdminAi from './AdminAi.jsx'
 
 // Back office: #admin at the end of the site address. Not linked from anywhere; the password is checked by the server.
 const LEVEL = Object.fromEntries(EDU_LEVELS)
@@ -155,7 +154,7 @@ export default function Admin() {
           <Select label="المرحلة" value={level} onChange={setLevel} placeholder="كل المراحل" clear="كل المراحل" options={EDU_LEVELS} />
         </div>
       </div>
-      <AdminAi pw={pw} />
+      
       {err && <p className="adm-err">{err}</p>}
       {picked.length > 0 && (
         <div className="adm-sel">
