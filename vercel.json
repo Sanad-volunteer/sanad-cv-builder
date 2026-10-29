@@ -11,7 +11,11 @@
       "maxDuration": 30,
       "includeFiles": "node_modules/@sparticuz/chromium/bin/**"
     },
-    "api/translate.js": {
+    "api/admin.js": {
+      "maxDuration": 30,
+      "includeFiles": "node_modules/@sparticuz/chromium/bin/**"
+    },
+    "api/ai-check.js": {
       "maxDuration": 30
     }
   }
