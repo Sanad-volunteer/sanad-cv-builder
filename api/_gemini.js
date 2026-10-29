@@ -4,17 +4,28 @@ const BUSY = [500, 502, 503, 504] // temporary problems on Google's side
 
 // GEMINI_MODEL          main model (default below)
 // GEMINI_FALLBACK_MODEL optional: used when the main model is overloaded for several attempts or no longer exists
-export async function callGemini(body, tries = 3) {
+// deadlineMs (optional): total time allowed for ALL attempts. When it runs out the call fails with status 504 and no more retries are made.
+export async function callGemini(body, tries = 3, deadlineMs = 0) {
+  const end = deadlineMs ? Date.now() + deadlineMs : 0
   const models = [process.env.GEMINI_MODEL || 'gemini-3.8-flash']
   if (process.env.GEMINI_FALLBACK_MODEL) models.push(process.env.GEMINI_FALLBACK_MODEL)
   let last
   for (const model of models) {
     for (let i = 0; i < tries; i++) {
-      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', 'x-goog-api-key': process.env.GEMINI_API_KEY },
-        body: JSON.stringify(body),
-      })
+      const left = end ? end - Date.now() : 0
+      if (end && left < 1500) { const e = new Error('timeout'); e.status = 504; throw e }
+      let r
+      try {
+        r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', 'x-goog-api-key': process.env.GEMINI_API_KEY },
+          body: JSON.stringify(body),
+          signal: end ? AbortSignal.timeout(left) : undefined,
+        })
+      } catch (err) {
+        if (err && (err.name === 'TimeoutError' || err.name === 'AbortError')) { const e = new Error('timeout'); e.status = 504; throw e }
+        throw err
+      }
       if (r.ok) return r.json()
       const j = await r.json().catch(() => ({}))
       last = new Error((j.error && j.error.message) || `HTTP ${r.status}`)

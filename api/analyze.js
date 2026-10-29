@@ -52,11 +52,13 @@ export default async function handler(req, res) {
   try {
     // Newer Gemini models spend part of maxOutputTokens on hidden "thinking", which can cut the JSON answer short.
     // So: a generous limit, thinking parts ignored, and one retry with an even bigger limit if the answer was cut.
+    const DEADLINE = 25000 // the AI gets 25 s in total; after that the browser review takes over (the page falls back on any error)
+    const t0 = Date.now()
     const ask = (maxOutputTokens) => callGemini({
       systemInstruction: { parts: [{ text: SYSTEM }] },
       contents: [{ role: 'user', parts }],
       generationConfig: { responseMimeType: 'application/json', temperature: 0.3, maxOutputTokens },
-    })
+    }, 2, Math.max(0, DEADLINE - (Date.now() - t0)) || 1)
     const read = (d) => {
       const c = d.candidates?.[0]
       const text = arr(c?.content?.parts).filter((p) => !p.thought).map((p) => p.text || '').join('')
