@@ -405,7 +405,7 @@ function PhotoField({ value, onChange, flash }) {
   )
 }
 
-const jobFields = (a, b, c = 'الإنجازات (كل سطر نقطة)') => (it, up) => (
+const jobFields = (a, b, c = 'الانجازات أو المهام (كل سطر نقطة') => (it, up) => (
   <>
     <Txt label={a} value={it.title} onChange={(v) => up({ title: v })} />
     <Txt label={b} value={it.company} onChange={(v) => up({ company: v })} />
