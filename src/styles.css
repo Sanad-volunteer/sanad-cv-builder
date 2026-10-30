@@ -34,12 +34,6 @@ textarea{resize:vertical;min-height:70px}
 .btn{border:0;border-radius:12px;font-weight:700;font-size:15px;padding:12px 18px;cursor:pointer;width:100%}
 .p{background:var(--navy);color:#fff}
 .paper{background:#fff;color:#000;border:1px solid var(--line);border-radius:6px;padding:28px 30px;font-family:Cairo,Arial,sans-serif;font-size:12.5px;line-height:1.6;box-shadow:0 8px 30px rgba(26,20,100,.12);max-height:600px;overflow:auto}
-.paper h1{font-size:21px;margin:0;color:#1A1464}.paper p{margin:0}
-.paper h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;border-bottom:1px solid #000;margin:14px 0 5px;padding-bottom:1px}
-.paper .r{display:flex;justify-content:space-between;gap:12px}.paper .r span{white-space:nowrap}
-.paper section>div+div{margin-top:6px}
-.paper ul{margin:2px 0 4px;padding-inline-start:18px}
-.paper a{color:inherit;text-decoration:underline}
 .paper .hint{color:#777;text-align:center;padding:40px 0}
 @media(max-width:900px){.layout{grid-template-columns:1fr;padding:16px}.side{position:static}.g{grid-template-columns:1fr}.top{padding:12px 16px}}
 @media(max-width:600px){.top h1{display:none}.cp{margin-inline-start:auto;font-size:12px}}
@@ -482,3 +476,17 @@ button:not(:disabled):active,.btn:active:not(:disabled),.back:active,.add:active
 .local-note{margin:0 0 14px;padding:10px 14px;border-radius:12px;background:rgba(255,197,0,.16);border:1px solid rgba(255,197,0,.55);color:var(--ink);font-size:13.5px;line-height:1.6}
 .chk-fix{margin-top:8px;border:1.5px solid var(--navy);background:#fff;color:var(--navy);font:inherit;font-size:12.5px;font-weight:700;padding:5px 14px;border-radius:999px;cursor:pointer;transition:background .15s,color .15s}
 .chk-fix:hover,.chk-fix:focus-visible{background:var(--navy);color:#fff;outline:0}
+
+@font-face{font-family:Lora;font-weight:700;font-display:swap;src:url(./assets/fonts/lora-700.woff2) format('woff2')}
+
+/* ---- create: template picker ---- */
+.lang-chg{margin-inline-start:auto;display:flex;gap:16px;font-size:13px}
+.tp .lp-grid{max-width:900px}
+.tp-card{padding:18px 18px 24px!important;min-height:0!important}
+.tp-prev{display:block;position:relative;width:100%;height:clamp(180px,36vh,380px);overflow:hidden;border-radius:12px;border:1px solid var(--line);background:#fff;-webkit-mask-image:linear-gradient(#000 78%,transparent);mask-image:linear-gradient(#000 78%,transparent);pointer-events:none}
+.tp-sc{display:block;position:absolute;top:0;left:50%;width:560px;--s:.62;margin-left:calc(var(--s) * -280px);transform:scale(var(--s));transform-origin:top left;text-align:start}
+.tp-sc .paper{border:0;box-shadow:none;border-radius:0;max-height:none;overflow:visible;padding:26px 28px}
+@media(max-width:900px){.tp-sc{--s:.5}}
+/* home: more air between the hero and the three feature cards */
+@media(min-width:901px){.home{row-gap:64px}}
+@media(max-width:900px){.feats{margin-top:34px}}

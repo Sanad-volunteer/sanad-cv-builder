@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import logo from './assets/sanad-logo.svg'
 import Preview, { MONTH_NAMES, LEVELS, EDU_LEVELS } from './Preview.jsx'
 import LangPick from './LangPick.jsx'
+import TplPick from './TplPick.jsx'
 import Home from './Home.jsx'
 import Analyze from './Analyze.jsx'
 import Admin from './Admin.jsx'
@@ -41,6 +42,7 @@ const blankJob = () => ({ id: uid(), title: '', company: '', start: nd(), end: n
 const initial = () => ({
   schema: SCHEMA,
   lang: 'ar',
+  tpl: 'classic', // CV template: 'classic' | 'exec'
   p: { name: '', title: '', email: '', phone: '', city: '', residence: '', link: '', photo: '', summary: '', dob: '', gender: '', marital: '' },
   tech: [], soft: [], lvl: {}, courses: [], confs: [], langs: [blankLang()], edu: [blankEdu()], exp: [], vol: [],
 })
@@ -435,8 +437,8 @@ export default function App() {
   const [sugg, setSugg] = useState({ key: '', tech: [], soft: [] })
   const set = (k, v) => setCv((c) => ({ ...c, [k]: v }))
   const setLvl = (skill, k) => setCv((c) => { const lvl = { ...(c.lvl || {}) }; if (k) lvl[skill] = k; else delete lvl[skill]; return { ...c, lvl } })
-  const [picked, setPicked] = useState(false) // CV language chosen on the first screen of 'create'
-  const goView = (v) => { setSeed(null); setPicked(false); setView(v) }
+  const [stage, setStage] = useState('lang') // 'create' opens on the language screen, then the template screen, then the form
+  const goView = (v) => { setSeed(null); setStage('lang'); setView(v) }
   const analyzeMine = () => { setSeed({ file: { name: cvFileName(cv.p.name), type: 'text', data: cvToText(cv), builder: true }, title: cv.p.title }); setView('analyze') }
   // AI skill suggestions for the job title: shown only when they arrive; any failure (busy, limit...) is silent
   const skillKey = cv.p.title.trim() ? `${cv.lang}|${cv.p.title.trim().toLowerCase()}` : ''
@@ -490,10 +492,11 @@ export default function App() {
       </header>
 
       {view === 'home' && <Home go={goView} />}
-      {view === 'analyze' && <Analyze go={goView} seed={seed} fix={(i) => { setSeed(null); setPicked(true); setView('create'); goTo(i) }} />}
+      {view === 'analyze' && <Analyze go={goView} seed={seed} fix={(i) => { setSeed(null); setStage('form'); setView('create'); goTo(i) }} />}
       {view === 'admin' && <Admin />}
-      {view === 'create' && !picked && <LangPick lang={cv.lang} onPick={(k) => { set('lang', k); setPicked(true) }} onBack={() => setView('home')} />}
-      {view === 'create' && picked && (
+      {view === 'create' && stage === 'lang' && <LangPick lang={cv.lang} onPick={(k) => { set('lang', k); setStage('tpl') }} onBack={() => setView('home')} />}
+      {view === 'create' && stage === 'tpl' && <TplPick lang={cv.lang} tpl={cv.tpl || 'classic'} onPick={(k) => { set('tpl', k); setStage('form') }} onBack={() => setStage('lang')} />}
+      {view === 'create' && stage === 'form' && (
       <LangCtx.Provider value={cv.lang}>
       <WarnCtx.Provider value={warn}>
       <main className="layout">
@@ -505,7 +508,10 @@ export default function App() {
             </svg>
             <span>الصفحة الرئيسية</span>
           </button>
-          <button type="button" className="link lang-chg" onClick={() => setPicked(false)}>لغة السيرة: {cv.lang === 'ar' ? 'العربية' : 'English'} · تغيير</button>
+          <span className="lang-chg">
+            <button type="button" className="link" onClick={() => setStage('lang')}>اللغة: {cv.lang === 'ar' ? 'العربية' : 'English'}</button>
+            <button type="button" className="link" onClick={() => setStage('tpl')}>القالب: {(cv.tpl || 'classic') === 'exec' ? 'تنفيذي' : 'كلاسيكي'}</button>
+          </span>
         </div>
         <section className="no-print">
           <div className="clear-row"><button type="button" className="link" onClick={reset}>مسح جميع البيانات</button></div>

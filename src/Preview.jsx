@@ -11,6 +11,7 @@ export const MONTH_NAMES = {
 // Language levels: the key is stored, the label depends on the CV language.
 export const LEVELS = [['beginner', 'مبتدئ'], ['intermediate', 'متوسط'], ['upper', 'فوق المتوسط'], ['fluent', 'متمرس']] // "native" is a separate checkbox (x.native), not a level
 import { EDU_LEVELS, EDU_LEVEL, langParts, langName, skillText } from '../api/_lists.js'
+import { TPL_CSS, tplOf } from '../api/_tpl.js'
 export { EDU_LEVELS }
 // Optional personal details line (date of birth, gender, marital status)
 const DETAILS = {
@@ -42,6 +43,12 @@ const Bullets = ({ text }) => {
   const l = text.split('\n').map((s) => s.trim()).filter(Boolean)
   return l.length ? <ul>{l.map((s, i) => <li key={i}>{s}</li>)}</ul> : null
 }
+const JobRow = ({ i, l }) => (
+  <div className="r">
+    <span className="l">{i.company ? <><b>{i.company}</b>{i.title && <i className="jt">{i.title}</i>}</> : <b>{i.title}</b>}</span>
+    <span>{range(i.start, i.end, l)}</span>
+  </div>
+)
 const Jobs = ({ items, h, l }) => {
   const f = items.filter((i) => i.title || i.company)
   if (!f.length) return null
@@ -49,7 +56,7 @@ const Jobs = ({ items, h, l }) => {
     <Sec h={h}>
       {f.map((i) => (
         <div key={i.id}>
-          <Row a={[i.title, i.company].filter(Boolean).join(' – ')} b={range(i.start, i.end, l)} />
+          <JobRow i={i} l={l} />
           <Bullets text={i.bullets} />
         </div>
       ))}
@@ -76,35 +83,38 @@ export default function Preview({ cv }) {
   const hasJobs = [...exp, ...vol].some((i) => i.title || i.company)
   const empty = !p.name && !p.title && !contact.length && !p.summary && !p.photo && !genderLine && !details.length && !tech.length && !soft.length && !langF.length && !courseF.length && !confF.length && !eduF.length && !hasJobs
 
-  const top = (p.name || p.title) && ( // name and job title: centred across the page header
-    <div style={{ textAlign: 'center' }}>
-      {p.name && <h1 style={{ lineHeight: 1.25 }}>{p.name}</h1>}
-      {p.title && <p style={{ fontSize: '1.3em', lineHeight: 1.3, marginBottom: 6 }}>{p.title}</p>}
-    </div>
-  )
-  const head = (
-    <>
-    {contact.map(([k, v, isLink]) => (
-      <p key={k}><b>{CONTACT[lang][k]}:</b> <bdi>{isLink ? <a href={href(v)} target="_blank" rel="noreferrer">{v}</a> : v}</bdi></p>
-    ))}
-    {genderLine && <p><b>{genderLine[0]}:</b> {genderLine[1]}</p>}
-    {details.map(([k, v]) => <p key={k}><b>{k}:</b> {v}</p>)}
-    </>
+  const photo = p.photo && /^data:image\//.test(p.photo) ? p.photo : ''
+  const join = (xs) => xs.flatMap((x, i) => (i ? [' ', x] : [x]))
+  const line1 = [ // how to reach the person
+    p.residence && <span key="res"><b>{CONTACT[lang].residence}:</b> <bdi>{p.residence}</bdi></span>,
+    p.city && <span key="city"><b>{CONTACT[lang].city}:</b> <bdi>{p.city}</bdi></span>,
+    p.email && <span key="em"><bdi>{p.email}</bdi></span>,
+    p.phone && <span key="ph"><bdi>{p.phone}</bdi></span>,
+    p.link && <span key="ln"><bdi><a href={href(p.link)} target="_blank" rel="noreferrer">{p.link}</a></bdi></span>,
+  ].filter(Boolean)
+  const line2 = [ // gender, date of birth, marital status
+    genderLine && <span key="g"><b>{genderLine[0]}:</b> {genderLine[1]}</span>,
+    ...details.map(([k, v]) => <span key={k}><b>{k}:</b> {v}</span>),
+  ].filter(Boolean)
+  const head = (p.name || p.title || line1.length > 0 || line2.length > 0 || photo) && (
+    <header className={`hd${photo ? ' ph' : ''}`}>
+      <div className="hd-c">
+        {p.name && <h1>{p.name}</h1>}
+        {p.title && <p className="ttl">{p.title}</p>}
+        {(line1.length > 0 || line2.length > 0) && <div className="ct">{line1.length > 0 && <p>{join(line1)}</p>}{line2.length > 0 && <p>{join(line2)}</p>}</div>}
+      </div>
+      {photo && <img src={photo} alt="" />}
+    </header>
   )
 
   return (
-    <div className="paper" dir={lang === 'ar' ? 'rtl' : 'ltr'} lang={lang}>
+    <div className={`paper cv tpl-${tplOf(cv)}`} dir={lang === 'ar' ? 'rtl' : 'ltr'} lang={lang}>
+      <style>{TPL_CSS}</style>
       {empty ? (
         <p className="hint">ابدأ بتعبئة النموذج لتظهر سيرتك الذاتية هنا</p>
       ) : (
         <>
-          {top}
-          {p.photo && /^data:image\//.test(p.photo) ? (
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
-              <div>{head}</div>
-              <img src={p.photo} alt="" style={{ width: 96, height: 128, objectFit: 'cover', flex: 'none' }} />
-            </div>
-          ) : head}
+          {head}
           {p.summary && <Sec h={t.summary}><p>{p.summary}</p></Sec>}
           {eduF.length > 0 && (
             <Sec h={t.edu}>
