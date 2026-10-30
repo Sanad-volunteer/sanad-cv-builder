@@ -1,13 +1,14 @@
 // Word (.docx) version of the CV. Mirrors api/_cv.js: same sections, same order, same wording.
 import {
   AlignmentType, BorderStyle, Document, ExternalHyperlink, HeadingLevel, ImageRun, LevelFormat, LineRuleType,
-  Packer, Paragraph, Table, TableCell, TableRow, TextRun, WidthType,
+  Packer, Paragraph, Table, TableCell, TableRow, TextRun, VerticalAlign, WidthType,
 } from 'docx'
 import { skillText } from './_lists.js'
+import { tplOf } from './_tpl.js'
 import { T, EL, DETAILS, CONTACT, dobText, langParts, langName, range, fmt, list, href } from './_cv.js'
 
 const FONT = 'Arial' // Cairo is not installed on most computers; Arial exists everywhere and has Arabic glyphs
-const NAVY = '1A1464'
+const SERIF = 'Palatino Linotype' // the executive template's serif (Lora in the PDF); Word has Palatino on every Windows/Mac install
 const MARGIN = 794 // 14 mm, same as the PDF
 const TEXT_W = 11906 - 2 * MARGIN // A4 width minus both margins, in twips
 const PHOTO_CELL = 1800
@@ -30,19 +31,21 @@ export async function makeDocx(cv) {
   const d = DETAILS[l]
   const p = cv.p || {}
   const sep = rtl ? '، ' : ', '
+  const exec = tplOf(cv) === 'exec'
+  const RULE = { style: BorderStyle.SINGLE, size: 6, color: '000000', space: 4 }
 
   // ---- small helpers ----
-  const run = (text, { bold, size, ltr } = {}) =>
-    new TextRun({ text: String(text ?? ''), bold, size, rightToLeft: rtl && !ltr ? true : undefined })
-  const para = (children, o = {}) => new Paragraph({ children, bidirectional: rtl ? true : undefined, ...o })
+  const run = (text, { bold, italics, size, ltr, font } = {}) =>
+    new TextRun({ text: String(text ?? ''), bold, italics, size, font, rightToLeft: rtl && !ltr ? true : undefined })
+  const para = (children, o = {}) => new Paragraph({ children, bidirectional: rtl ? true : undefined, alignment: exec ? AlignmentType.JUSTIFIED : undefined, ...o })
   const labelled = (label, value, o) => para([run(`${label}: `, { bold: true }), ...(Array.isArray(value) ? value : [run(value)])], o)
   const spacer = () => new Paragraph({ children: [], spacing: { before: 0, after: 0, line: 100, lineRule: LineRuleType.EXACT } })
-  const h2 = (text) => new Paragraph({ heading: HeadingLevel.HEADING_2, bidirectional: rtl ? true : undefined, keepNext: true, children: [run(text)] })
+  const h2 = (text) => new Paragraph({ heading: HeadingLevel.HEADING_2, bidirectional: rtl ? true : undefined, alignment: exec ? AlignmentType.CENTER : undefined, keepNext: true, children: [run(text)] })
 
   // title on one side, dates on the other (a borderless 2-column table keeps this reliable in RTL and LTR)
   const LW = TEXT_W - 4300
   const RW = 4300
-  const row = (left, right) => new Table({
+  const row = (left, right, bottom) => new Table({
     width: { size: TEXT_W, type: WidthType.DXA },
     columnWidths: [LW, RW],
     borders: NO_BORDERS,
@@ -50,39 +53,55 @@ export async function makeDocx(cv) {
     rows: [new TableRow({
       cantSplit: true,
       children: [
-        new TableCell({ width: { size: LW, type: WidthType.DXA }, borders: CELL_BORDERS, margins: NO_MARGINS, children: [para([run(left, { bold: true })], { keepNext: true })] }),
-        new TableCell({ width: { size: RW, type: WidthType.DXA }, borders: CELL_BORDERS, margins: NO_MARGINS, children: [para(right ? [run(right)] : [], { alignment: AlignmentType.END, keepNext: true })] }),
+        new TableCell({ width: { size: LW, type: WidthType.DXA }, borders: CELL_BORDERS, margins: NO_MARGINS, children: typeof left === 'string' ? [para([run(left, { bold: true })], { keepNext: true })] : left }),
+        new TableCell({ width: { size: RW, type: WidthType.DXA }, borders: CELL_BORDERS, margins: NO_MARGINS, verticalAlign: bottom ? VerticalAlign.BOTTOM : undefined, children: [para(right ? [run(right)] : [], { alignment: AlignmentType.END, keepNext: true })] }),
       ],
     })],
   })
+  // job: company in bold, job title in italics (classic: on a second line, dates level with it; executive: "Company • Title" on one line)
+  const jobRow = (i) => {
+    if (!i.company) return row(i.title, range(i.start, i.end, l))
+    if (!i.title) return row(i.company, range(i.start, i.end, l))
+    if (exec) return row([para([run(i.company, { bold: true }), run('  •  '), run(i.title, { italics: !rtl })], { keepNext: true })], range(i.start, i.end, l))
+    return row([para([run(i.company, { bold: true })], { keepNext: true }), para([run(i.title, { italics: !rtl })], { keepNext: true })], range(i.start, i.end, l), true)
+  }
   const bullets = (text) =>
     String(text || '').split('\n').map((s) => s.trim()).filter(Boolean)
-      .map((s) => para([run(s)], { numbering: { reference: 'bullets', level: 0 } }))
+      .map((s) => para([run(s)], { numbering: { reference: exec ? 'tri' : 'bullets', level: 0 } }))
   // a list of entries, each = [rowTable, ...extra paragraphs]
   const entries = (items) => items.flatMap((e, i) => [...(i ? [spacer()] : []), ...e])
 
   // ---- header (name, title, contact lines, gender, date of birth / marital status) ----
-  const top = [] // name and job title: centred across the page header
+  // ---- header: centred name + job title, then the contact lines (centred, joined with bullets) ----
+  const top = []
   if (p.name) top.push(new Paragraph({ heading: HeadingLevel.HEADING_1, alignment: AlignmentType.CENTER, bidirectional: rtl ? true : undefined, children: [run(p.name)] }))
-  if (p.title) top.push(para([run(p.title, { size: 24 })], { alignment: AlignmentType.CENTER, spacing: { before: 0, after: 100 } }))
-  const head = []
-  const contact = [['residence', p.residence], ['city', p.city], ['email', p.email], ['phone', p.phone], ['link', p.link, true]].filter(([, v]) => v)
-  for (const [k, v, isLink] of contact) {
-    const ltr = k === 'email' || k === 'phone' || k === 'link'
-    const value = isLink
-      ? [new ExternalHyperlink({ link: href(v), children: [new TextRun({ text: String(v) + (rtl ? '\u200E' : ''), underline: {} })] })] // trailing LRM keeps a final "/" from jumping to the wrong side in RTL
-      : [run(v, { ltr })]
-    head.push(labelled(CONTACT[l][k], value))
-  }
-  if (p.gender === 'male' || p.gender === 'female') head.push(labelled(d.gender, d[p.gender]))
+  if (p.title) top.push(para([run(p.title, { size: exec ? 29 : 26, bold: exec, font: exec && !rtl ? SERIF : undefined })], { alignment: AlignmentType.CENTER, spacing: { before: 0, after: exec ? 140 : 40 } }))
+  const lab = (k, v) => [run(`${k}: `, { bold: true }), run(v)]
+  const line1 = [
+    p.residence && lab(CONTACT[l].residence, p.residence),
+    p.city && lab(CONTACT[l].city, p.city),
+    p.email && [run(p.email, { ltr: true })],
+    p.phone && [run(p.phone, { ltr: true })],
+    p.link && [new ExternalHyperlink({ link: href(p.link), children: [new TextRun({ text: String(p.link) + (rtl ? '\u200E' : ''), underline: {} })] })], // trailing LRM keeps a final "/" from jumping to the wrong side in RTL
+  ].filter(Boolean)
   const details = [
     dobText(p.dob, l) && [d.dob, dobText(p.dob, l)],
     (p.marital === 'single' || p.marital === 'married') && [d.marital, d[p.marital + (p.gender === 'female' ? 'F' : '')]],
   ].filter(Boolean)
-  for (const [k, v] of details) head.push(labelled(k, v))
+  const line2 = [
+    (p.gender === 'male' || p.gender === 'female') && lab(d.gender, d[p.gender]),
+    ...details.map(([k, v]) => lab(k, v)),
+  ].filter(Boolean)
+  const lines = [line1, line2].filter((x) => x.length)
+  lines.forEach((g, n) => {
+    const first = n === 0, last = n === lines.length - 1
+    const border = exec ? { ...(first ? { top: RULE } : {}), ...(last ? { bottom: RULE } : {}) } : last ? { bottom: { style: BorderStyle.SINGLE, size: 6, color: 'C8C8C8', space: 6 } } : undefined
+    top.push(para(g.flatMap((x, i) => (i ? [run('  •  '), ...x] : x)), { alignment: AlignmentType.CENTER, border, spacing: { before: first && exec ? 60 : 0, after: last ? 60 : 0 } }))
+  })
+  const head = top
 
   const photo = photoOf(p.photo)
-  const children = [...top]
+  const children = []
   if (photo) {
     children.push(new Table({
       width: { size: TEXT_W, type: WidthType.DXA },
@@ -116,7 +135,7 @@ export async function makeDocx(cv) {
 
   const jobs = (items, h) => {
     const f = list(items).filter((i) => i && (i.title || i.company))
-    if (f.length) children.push(h2(h), ...entries(f.map((i) => [row([i.title, i.company].filter(Boolean).join(' – '), range(i.start, i.end, l)), ...bullets(i.bullets)])))
+    if (f.length) children.push(h2(h), ...entries(f.map((i) => [jobRow(i), ...bullets(i.bullets)])))
   }
   jobs(cv.exp, t.exp)
 
@@ -152,19 +171,21 @@ export async function makeDocx(cv) {
         },
       },
       paragraphStyles: [
-        { id: 'Heading1', name: 'Heading 1', basedOn: 'Normal', next: 'Normal', quickFormat: true, run: { size: 32, bold: true, color: NAVY }, paragraph: { spacing: { before: 0, after: 0, line: 300 }, outlineLevel: 0 } },
+        { id: 'Heading1', name: 'Heading 1', basedOn: 'Normal', next: 'Normal', quickFormat: true, run: exec ? { size: 36, bold: true, color: '000000', font: rtl ? undefined : SERIF, allCaps: !rtl, characterSpacing: rtl ? 0 : 120 } : { size: 36, bold: true, color: '000000' }, paragraph: { spacing: { before: 0, after: exec ? 60 : 0, line: 300 }, outlineLevel: 0 } },
         {
           id: 'Heading2', name: 'Heading 2', basedOn: 'Normal', next: 'Normal', quickFormat: true,
-          run: { size: 20, bold: true, allCaps: true },
-          paragraph: { spacing: { before: 210, after: 70 }, outlineLevel: 1, border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: '000000', space: 1 } } },
+          run: exec ? { size: 22, bold: true, allCaps: true, font: rtl ? undefined : SERIF, characterSpacing: rtl ? 0 : 60 } : { size: 24, bold: true, allCaps: true },
+          paragraph: exec
+            ? { spacing: { before: 280, after: 140 }, outlineLevel: 1, border: { top: RULE, bottom: RULE } }
+            : { spacing: { before: 260, after: 90 }, outlineLevel: 1 },
         },
       ],
     },
     numbering: {
-      config: [{
-        reference: 'bullets',
-        levels: [{ level: 0, format: LevelFormat.BULLET, text: '•', alignment: AlignmentType.START, style: { paragraph: { indent: { start: 540, hanging: 270 } } } }],
-      }],
+      config: [
+        { reference: 'bullets', levels: [{ level: 0, format: LevelFormat.BULLET, text: '•', alignment: AlignmentType.START, style: { paragraph: { indent: { start: 540, hanging: 270 } } } }] },
+        { reference: 'tri', levels: [{ level: 0, format: LevelFormat.BULLET, text: '►', alignment: AlignmentType.START, style: { run: { size: 12, font: 'Arial' }, paragraph: { indent: { start: 540, hanging: 270 } } } }] }, // executive template
+      ],
     },
     sections: [{
       properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: MARGIN, bottom: MARGIN, left: MARGIN, right: MARGIN } } },

@@ -7,6 +7,8 @@ const T = {
   ar: { summary: 'نبذة', skills: 'المهارات', tech: 'المهارات التقنية', soft: 'المهارات الناعمة', langs: 'اللغات', courses: 'الدورات وورش العمل', edu: 'التعليم', exp: 'الخبرات', vol: 'العمل التطوعي', confs: 'المؤتمرات', now: 'حتى الآن' },
   en: { summary: 'Summary', skills: 'Skills', tech: 'Technical', soft: 'Soft', langs: 'Languages', courses: 'Courses & Workshops', edu: 'Education', exp: 'Work Experience', vol: 'Volunteer Work', confs: 'Conferences', now: 'Present' },
 }
+import { TPL_CSS, tplOf } from './_tpl.js'
+import serifCss from './_font_serif.js'
 import { EDU_LEVEL as EL, langParts, langName, skillText, cvFileName } from './_lists.js'
 const FULL = { ar: M.ar, en: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'] }
 const DETAILS = {
@@ -25,11 +27,7 @@ const dobText = (iso, l) => {
 }
 // Only a small inline JPEG/PNG/WebP data URL is accepted as the photo (no external URLs reach the PDF renderer).
 const PHOTO = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/
-const CSS = `body{margin:0;font-family:Cairo,Arial,sans-serif;font-size:12.5px;line-height:1.6;color:#000}
-a{color:inherit;text-decoration:underline}h1{font-size:21px;margin:0;color:#1A1464}p{margin:0}
-h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;border-bottom:1px solid #000;margin:14px 0 5px;padding-bottom:1px}
-.r{display:flex;justify-content:space-between;gap:12px}.r span{white-space:nowrap}
-section>div+div{margin-top:6px}ul{margin:2px 0 4px;padding-inline-start:18px}`
+const CSS = `body{margin:0}${TPL_CSS}`
 
 const href = (u) => (/^https?:\/\//i.test(u) ? u : `https://${u}`)
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
@@ -42,9 +40,11 @@ const bullets = (t) => {
   const l = String(t || '').split('\n').map((s) => s.trim()).filter(Boolean)
   return l.length ? `<ul>${l.map((s) => `<li>${esc(s)}</li>`).join('')}</ul>` : ''
 }
+// company on top (bold), job title below it (the template decides whether it sits on a second line or after a bullet)
+const jobRow = (i, l) => `<div class="r"><span class="l">${i.company ? `<b>${esc(i.company)}</b>${i.title ? `<i class="jt">${esc(i.title)}</i>` : ''}` : `<b>${esc(i.title)}</b>`}</span><span>${range(i.start, i.end, l)}</span></div>`
 const jobs = (items, h, l) => {
   const f = list(items).filter((i) => i.title || i.company)
-  return f.length ? sec(h, f.map((i) => `<div>${row([i.title, i.company].filter(Boolean).join(' – '), range(i.start, i.end, l))}${bullets(i.bullets)}</div>`).join('')) : ''
+  return f.length ? sec(h, f.map((i) => `<div>${jobRow(i, l)}${bullets(i.bullets)}</div>`).join('')) : ''
 }
 
 // "Mouayad alkassas" -> "Mouayad alkassas-cv" (illegal file-name characters removed)
@@ -57,10 +57,6 @@ export function cvHtml(cv, opts = {}) {
   const sep = l === 'ar' ? '، ' : ', '
   const lv = cv.lvl || {}
   const tech = list(cv.tech).map((s) => skillText(s, lv[s], l)), soft = list(cv.soft).map((s) => skillText(s, lv[s], l))
-  const contact = [['residence', p.residence], ['city', p.city], ['email', p.email], ['phone', p.phone], ['link', p.link, true]]
-    .filter(([, v]) => v)
-    .map(([k, v, isLink]) => `<p><b>${CONTACT[l][k]}:</b> <bdi>${isLink ? `<a href="${esc(href(v))}">${esc(v)}</a>` : esc(v)}</bdi></p>`)
-    .join('')
   const courses = list(cv.courses).filter((c) => c && (c.title || c.org))
   const confs = list(cv.confs).filter((c) => c && c.title)
   const d = DETAILS[l]
@@ -71,20 +67,24 @@ export function cvHtml(cv, opts = {}) {
   ].filter(Boolean)
   const langs = list(cv.langs).filter((x) => x && String(x.name || '').trim())
   const edu = list(cv.edu).filter((e) => e && (e.school || e.major || e.level))
-  const top = p.name || p.title // name and job title: centred across the page header
-    ? `<div style="text-align:center">${p.name ? `<h1 style="line-height:1.25">${esc(p.name)}</h1>` : ''}${p.title ? `<p style="font-size:1.3em;line-height:1.3;margin-bottom:6px">${esc(p.title)}</p>` : ''}</div>`
-    : ''
-  const head = [
-    contact, // one line per item (residence, city, email, phone, link)
-    genderLine ? `<p><b>${esc(genderLine[0])}:</b> ${esc(genderLine[1])}</p>` : '',
-    ...details.map(([k, v]) => `<p><b>${esc(k)}:</b> ${esc(v)}</p>`),
-  ].join('')
+  const contact = [ // line 1: how to reach the person
+    p.residence && `<span><b>${CONTACT[l].residence}:</b> <bdi>${esc(p.residence)}</bdi></span>`,
+    p.city && `<span><b>${CONTACT[l].city}:</b> <bdi>${esc(p.city)}</bdi></span>`,
+    p.email && `<span><bdi>${esc(p.email)}</bdi></span>`,
+    p.phone && `<span><bdi>${esc(p.phone)}</bdi></span>`,
+    p.link && `<span><bdi><a href="${esc(href(p.link))}">${esc(p.link)}</a></bdi></span>`,
+  ].filter(Boolean)
+  const personal = [ // line 2: gender, date of birth, marital status
+    genderLine && `<span><b>${esc(genderLine[0])}:</b> ${esc(genderLine[1])}</span>`,
+    ...details.map(([k, v]) => `<span><b>${esc(k)}:</b> ${esc(v)}</span>`),
+  ].filter(Boolean)
+  const ctLines = [contact, personal].filter((x) => x.length).map((x) => `<p>${x.join(' ')}</p>`).join('')
   const photo = typeof p.photo === 'string' && p.photo.length <= 400000 && PHOTO.test(p.photo) ? p.photo : ''
+  const hasHead = p.name || p.title || ctLines || photo
   const body = [
-    top,
-    photo
-      ? `<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px"><div>${head}</div><img src="${photo}" alt="" style="width:96px;height:128px;object-fit:cover;flex:none"></div>`
-      : head,
+    hasHead
+      ? `<header class="hd${photo ? ' ph' : ''}"><div class="hd-c">${p.name ? `<h1>${esc(p.name)}</h1>` : ''}${p.title ? `<p class="ttl">${esc(p.title)}</p>` : ''}${ctLines ? `<div class="ct">${ctLines}</div>` : ''}</div>${photo ? `<img src="${photo}" alt="">` : ''}</header>`
+      : '',
     p.summary ? sec(t.summary, `<p>${esc(p.summary)}</p>`) : '',
     edu.length
       ? sec(t.edu, edu.map((e) => {
@@ -101,7 +101,7 @@ export function cvHtml(cv, opts = {}) {
     jobs(cv.vol, t.vol, l),
     confs.length ? sec(t.confs, confs.map((c) => `<div>${row(c.title, fmt(c.date, l))}</div>`).join('')) : '',
   ].join('')
-  return `<!doctype html><html lang="${l}" dir="${l === 'ar' ? 'rtl' : 'ltr'}"><head><meta charset="utf-8"><style>${opts.fontCss || ''}${CSS}</style></head><body>${opts.wrap ? opts.wrap(body) : body}</body></html>`
+  return `<!doctype html><html lang="${l}" dir="${l === 'ar' ? 'rtl' : 'ltr'}"><head><meta charset="utf-8"><style>${opts.fontCss || ''}${tplOf(cv) === 'exec' ? serifCss : ''}${CSS}</style></head><body><div class="cv tpl-${tplOf(cv)}">${opts.wrap ? opts.wrap(body) : body}</div></body></html>`
 }
 
 // Shared with api/_docx.js so the Word file uses exactly the same wording as the PDF.
