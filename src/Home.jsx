@@ -21,7 +21,7 @@ export default function Home({ go }) {
         <button type="button" className="opt" onClick={() => go('create')}>
           <span className="ic">✎</span>
           <span className="t">أنشئ سيرة ذاتية جديدة</span>
-          <span className="d">>املأ أقسام السيرة الذاتية واحصل عليها كملف PDF أو Word</span>
+          <span className="d">املأ أقسام السيرة الذاتية واحصل عليها كملف PDF أو Word</span>
         </button>
         <button type="button" className="opt b" onClick={() => go('analyze')}>
           <span className="ic"><img src={icon} alt="" /></span>
