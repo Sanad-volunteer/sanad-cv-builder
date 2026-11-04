@@ -21,27 +21,30 @@ export const TPL_CSS = `
 .cv ul{margin:2px 0 4px;padding-inline-start:18px}
 .cv:lang(ar) .jt{font-style:normal}
 
-.tpl-classic .hd{padding-bottom:10px;margin-bottom:4px;border-bottom:1px solid #c8c8c8}
-.tpl-classic h1{font-size:21px;font-weight:700;line-height:1.3}
+/* light, formal colours: dark text colour for names and titles, soft rules (no backgrounds, so print and ATS stay clean) */
+.tpl-classic{--ac:#2C4A7A;--rule:#C5D0E0}
+.tpl-exec{--ac:#1F2A44;--rule:#8E9BB3}
+.tpl-classic .hd{padding-bottom:10px;margin-bottom:4px;border-bottom:1px solid var(--rule)}
+.tpl-classic h1{font-size:21px;font-weight:700;line-height:1.3;color:var(--ac)}
 .tpl-classic .ttl{font-size:13px}
 .tpl-classic .ct{font-size:12px;margin-top:2px}
-.tpl-classic h2{font-size:14px;font-weight:700;text-transform:uppercase;margin:18px 0 6px}
+.tpl-classic h2{font-size:14px;font-weight:700;text-transform:uppercase;margin:18px 0 6px;color:var(--ac);border-bottom:1px solid var(--rule);padding-bottom:2px}
 .tpl-classic .r{align-items:flex-end}
 .tpl-classic .l{display:flex;flex-direction:column}
 .tpl-classic .jt{font-style:italic}
 
-.tpl-exec h1{font-family:${SERIF};font-size:24px;font-weight:700;line-height:1.3}
+.tpl-exec h1{font-family:${SERIF};font-size:24px;font-weight:700;line-height:1.3;color:var(--ac)}
 .tpl-exec h1::before{content:'- '}.tpl-exec h1::after{content:' -'}
 .tpl-exec:lang(en) h1{text-transform:uppercase;letter-spacing:.3em}
-.tpl-exec .ttl{font-family:${SERIF};font-weight:700;font-size:14.5px;margin:10px 0 12px}
-.tpl-exec .ct{border-top:1px solid #000;border-bottom:1px solid #000;padding:7px 0;font-size:12px}
-.tpl-exec h2{font-family:${SERIF};font-size:13px;font-weight:700;text-align:center;text-transform:uppercase;border-top:1px solid #000;border-bottom:1px solid #000;padding:5px 0;margin:20px 0 10px}
+.tpl-exec .ttl{font-family:${SERIF};font-weight:700;font-size:14.5px;margin:10px 0 12px;color:var(--ac)}
+.tpl-exec .ct{border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);padding:7px 0;font-size:12px}
+.tpl-exec h2{font-family:${SERIF};font-size:13px;font-weight:700;text-align:center;text-transform:uppercase;color:var(--ac);border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);padding:5px 0;margin:20px 0 10px}
 .tpl-exec:lang(en) h2{letter-spacing:.22em}
 .tpl-exec p,.tpl-exec li{text-align:justify}
 .tpl-exec .ttl,.tpl-exec .ct>p{text-align:center}
 .tpl-exec .jt::before{content:'•';margin:0 .55em}
 .tpl-exec ul{list-style:none;padding-inline-start:20px}
 .tpl-exec li{position:relative}
-.tpl-exec li::before{content:'';position:absolute;inset-inline-start:-16px;top:.62em;width:0;height:0;border-style:solid;border-width:4px 0 4px 7px;border-color:transparent transparent transparent #000}
-.tpl-exec:lang(ar) li::before{border-width:4px 7px 4px 0;border-color:transparent #000 transparent transparent}
+.tpl-exec li::before{content:'';position:absolute;inset-inline-start:-16px;top:.62em;width:0;height:0;border-style:solid;border-width:4px 0 4px 7px;border-color:transparent transparent transparent var(--ac)}
+.tpl-exec:lang(ar) li::before{border-width:4px 7px 4px 0;border-color:transparent var(--ac) transparent transparent}
 `
