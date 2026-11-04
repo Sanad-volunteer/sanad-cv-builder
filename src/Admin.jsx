@@ -145,7 +145,6 @@ export default function Admin() {
           </div>
           <div className="adm-actions">
             <button type="button" className="btn" onClick={() => load(pw)}>تحديث</button>
-            <button type="button" className="btn p" onClick={exportXlsx} disabled={!shown.length}>{picked.length ? `تصدير Excel (${picked.length})` : 'تصدير Excel'}</button>
           </div>
         </div>
         <div className="adm-filters">
