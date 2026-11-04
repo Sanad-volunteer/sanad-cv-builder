@@ -8,7 +8,7 @@ export default async function handler(req, res) {
   if (!cv || typeof cv !== 'object') return res.status(400).json({ error: 'bad_request' })
   try {
     const pdf = await makePdf(cv)
-    await saveCv(req, cv) // the foundation keeps one copy per user
+    if (req.body.keep === true) await saveCv(req, cv) // a copy is kept only when the person said yes
     res.setHeader('Content-Type', 'application/pdf')
     const fn = `${cvFileName(cv.p && cv.p.name)}.pdf`
     res.setHeader('Content-Disposition', `attachment; filename="cv.pdf"; filename*=UTF-8''${encodeURIComponent(fn)}`)

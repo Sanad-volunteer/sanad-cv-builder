@@ -8,7 +8,7 @@ export default async function handler(req, res) {
   if (!cv || typeof cv !== 'object') return res.status(400).json({ error: 'bad_request' })
   try {
     const file = await makeDocx(cv)
-    await saveCv(req, cv) // the foundation keeps one copy per user
+    if (req.body.keep === true) await saveCv(req, cv) // a copy is kept only when the person said yes
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
     const fn = `${cvFileName(cv.p && cv.p.name)}.docx`
     res.setHeader('Content-Disposition', `attachment; filename="cv.docx"; filename*=UTF-8''${encodeURIComponent(fn)}`)

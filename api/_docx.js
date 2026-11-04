@@ -8,6 +8,8 @@ import { tplOf } from './_tpl.js'
 import { T, EL, DETAILS, CONTACT, dobText, langParts, langName, range, fmt, list, href } from './_cv.js'
 
 const FONT = 'Arial' // Cairo is not installed on most computers; Arial exists everywhere and has Arabic glyphs
+// light formal colours (same values as api/_tpl.js)
+const COLORS = { classic: { ac: '2C4A7A', rule: 'C5D0E0' }, exec: { ac: '1F2A44', rule: '8E9BB3' } }
 const SERIF = 'Palatino Linotype' // the executive template's serif (Lora in the PDF); Word has Palatino on every Windows/Mac install
 const MARGIN = 794 // 14 mm, same as the PDF
 const TEXT_W = 11906 - 2 * MARGIN // A4 width minus both margins, in twips
@@ -32,7 +34,8 @@ export async function makeDocx(cv) {
   const p = cv.p || {}
   const sep = rtl ? '، ' : ', '
   const exec = tplOf(cv) === 'exec'
-  const RULE = { style: BorderStyle.SINGLE, size: 6, color: '000000', space: 4 }
+  const { ac: AC, rule: RC } = COLORS[exec ? 'exec' : 'classic']
+  const RULE = { style: BorderStyle.SINGLE, size: 6, color: RC, space: 4 }
 
   // ---- small helpers ----
   const run = (text, { bold, italics, size, ltr, font } = {}) =>
@@ -75,7 +78,7 @@ export async function makeDocx(cv) {
   // ---- header: centred name + job title, then the contact lines (centred, joined with bullets) ----
   const top = []
   if (p.name) top.push(new Paragraph({ heading: HeadingLevel.HEADING_1, alignment: AlignmentType.CENTER, bidirectional: rtl ? true : undefined, children: [run(p.name)] }))
-  if (p.title) top.push(para([run(p.title, { size: exec ? 29 : 26, bold: exec, font: exec && !rtl ? SERIF : undefined })], { alignment: AlignmentType.CENTER, spacing: { before: 0, after: exec ? 140 : 40 } }))
+  if (p.title) top.push(para([run(p.title, { size: exec ? 29 : 26, bold: exec, font: exec && !rtl ? SERIF : undefined, color: exec ? AC : undefined })], { alignment: AlignmentType.CENTER, spacing: { before: 0, after: exec ? 140 : 40 } }))
   const lab = (k, v) => [run(`${k}: `, { bold: true }), run(v)]
   const line1 = [
     p.residence && lab(CONTACT[l].residence, p.residence),
@@ -95,7 +98,7 @@ export async function makeDocx(cv) {
   const lines = [line1, line2].filter((x) => x.length)
   lines.forEach((g, n) => {
     const first = n === 0, last = n === lines.length - 1
-    const border = exec ? { ...(first ? { top: RULE } : {}), ...(last ? { bottom: RULE } : {}) } : last ? { bottom: { style: BorderStyle.SINGLE, size: 6, color: 'C8C8C8', space: 6 } } : undefined
+    const border = exec ? { ...(first ? { top: RULE } : {}), ...(last ? { bottom: RULE } : {}) } : last ? { bottom: { ...RULE, space: 6 } } : undefined
     top.push(para(g.flatMap((x, i) => (i ? [run('  •  '), ...x] : x)), { alignment: AlignmentType.CENTER, border, spacing: { before: first && exec ? 60 : 0, after: last ? 60 : 0 } }))
   })
   const head = top
@@ -171,20 +174,20 @@ export async function makeDocx(cv) {
         },
       },
       paragraphStyles: [
-        { id: 'Heading1', name: 'Heading 1', basedOn: 'Normal', next: 'Normal', quickFormat: true, run: exec ? { size: 36, bold: true, color: '000000', font: rtl ? undefined : SERIF, allCaps: !rtl, characterSpacing: rtl ? 0 : 120 } : { size: 36, bold: true, color: '000000' }, paragraph: { spacing: { before: 0, after: exec ? 60 : 0, line: 300 }, outlineLevel: 0 } },
+        { id: 'Heading1', name: 'Heading 1', basedOn: 'Normal', next: 'Normal', quickFormat: true, run: exec ? { size: 36, bold: true, color: AC, font: rtl ? undefined : SERIF, allCaps: !rtl, characterSpacing: rtl ? 0 : 120 } : { size: 36, bold: true, color: AC }, paragraph: { spacing: { before: 0, after: exec ? 60 : 0, line: 300 }, outlineLevel: 0 } },
         {
           id: 'Heading2', name: 'Heading 2', basedOn: 'Normal', next: 'Normal', quickFormat: true,
-          run: exec ? { size: 22, bold: true, allCaps: true, font: rtl ? undefined : SERIF, characterSpacing: rtl ? 0 : 60 } : { size: 24, bold: true, allCaps: true },
+          run: exec ? { size: 22, bold: true, allCaps: true, color: AC, font: rtl ? undefined : SERIF, characterSpacing: rtl ? 0 : 60 } : { size: 24, bold: true, allCaps: true, color: AC },
           paragraph: exec
             ? { spacing: { before: 280, after: 140 }, outlineLevel: 1, border: { top: RULE, bottom: RULE } }
-            : { spacing: { before: 260, after: 90 }, outlineLevel: 1 },
+            : { spacing: { before: 260, after: 90 }, outlineLevel: 1, border: { bottom: { ...RULE, space: 2 } } },
         },
       ],
     },
     numbering: {
       config: [
         { reference: 'bullets', levels: [{ level: 0, format: LevelFormat.BULLET, text: '•', alignment: AlignmentType.START, style: { paragraph: { indent: { start: 540, hanging: 270 } } } }] },
-        { reference: 'tri', levels: [{ level: 0, format: LevelFormat.BULLET, text: '►', alignment: AlignmentType.START, style: { run: { size: 12, font: 'Arial' }, paragraph: { indent: { start: 540, hanging: 270 } } } }] }, // executive template
+        { reference: 'tri', levels: [{ level: 0, format: LevelFormat.BULLET, text: '►', alignment: AlignmentType.START, style: { run: { size: 12, font: 'Arial', color: AC }, paragraph: { indent: { start: 540, hanging: 270 } } } }] }, // executive template
       ],
     },
     sections: [{
