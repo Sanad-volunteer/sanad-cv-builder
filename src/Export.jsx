@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { post } from './api.js'
-import Notice, { InfoIcon, SHARE_TEXT } from './Notice.jsx'
+import Consent, { KEEP_ASK } from './Notice.jsx'
 
 import { cvFileName as fileName } from '../api/_lists.js'
 const REQUIRED_MSG = 'أكمل الحقول المطلوبة المعلّمة بنجمة حمراء *'
@@ -20,7 +20,6 @@ function Success({ email, onClose }) {
         <svg className="tick" viewBox="0 0 52 52" aria-hidden="true"><circle cx="26" cy="26" r="24" /><path d="M14 27l8 8 16-17" /></svg>
         <h3 id="ok-title">تم الإرسال بنجاح</h3>
         <p style={{ marginBottom: 12 }}>أُرسلت سيرتك الذاتية إلى <bdi dir="ltr">{email}</bdi></p>
-        <p className="share-note"><InfoIcon />{SHARE_TEXT}</p>
         <button ref={btn} type="button" className="btn p" onClick={onClose}>حسناً</button>
       </div>
     </div>
@@ -38,7 +37,7 @@ export default function Export({ cv, onValidate }) {
   const [busy, setBusy] = useState('')
   const [msg, setMsg] = useState(null)
   const [sentTo, setSentTo] = useState('')
-  const [notice, setNotice] = useState(false) // information pop-up shown after a successful download
+  const [ask, setAsk] = useState('') // which action is waiting for the yes / no answer: 'pdf' | 'docx' | 'mail'
 
   const print = () => {
     const old = document.title
@@ -47,30 +46,34 @@ export default function Export({ cv, onValidate }) {
     document.title = old
   }
   // kind: 'pdf' or 'docx' (the file extension is also the name of the /api endpoint)
-  const save = async (kind) => {
-    if (!onValidate()) return setMsg({ ok: false, t: REQUIRED_MSG })
+  // keep: the person allowed the foundation to keep a copy of the CV (the server stores nothing otherwise)
+  const save = async (kind, keep) => {
     setBusy(kind); setMsg(null)
     try {
-      const r = await post(`/api/${kind}`, { cv })
+      const r = await post(`/api/${kind}`, { cv, keep })
       const url = URL.createObjectURL(await r.blob())
       const a = document.createElement('a')
       a.href = url; a.download = `${fileName(cv.p.name)}.${kind}`; a.click()
       URL.revokeObjectURL(url)
-      setNotice(true)
     } catch (e) {
       console.error(e)
       if (kind === 'pdf') print() // fallback: browser print dialog -> "Save as PDF"
       else setMsg({ ok: false, t: 'تعذّر تجهيز ملف Word، حاول مرة أخرى' })
     } finally { setBusy('') }
   }
-  const download = () => save('pdf')
-  const downloadWord = () => save('docx')
-  const send = async () => {
+  // each button first checks the form, then asks the question; the file is only made after the answer
+  const request = (kind) => {
     if (!onValidate()) return setMsg({ ok: false, t: REQUIRED_MSG })
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return setMsg({ ok: false, t: 'أدخل بريدًا إلكترونيًا صحيحًا' })
+    if (kind === 'mail' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return setMsg({ ok: false, t: 'أدخل بريدًا إلكترونيًا صحيحًا' })
+    setMsg(null); setAsk(kind)
+  }
+  const answered = (keep) => { const k = ask; setAsk(''); if (k === 'mail') send(keep); else save(k, keep) }
+  const download = () => request('pdf')
+  const downloadWord = () => request('docx')
+  const send = async (keep) => {
     setBusy('mail'); setMsg(null)
     try {
-      await post('/api/send-email', { cv, to })
+      await post('/api/send-email', { cv, to, keep })
       setSentTo(to)
     } catch (e) {
       console.error(e)
@@ -94,10 +97,10 @@ export default function Export({ cv, onValidate }) {
       <div className="exp-or">أو أرسلها إلى بريدك</div>
       <div className="exp-mail">
         <input type="email" name="recipient" autoComplete="email" dir="ltr" placeholder="recipient@email.com" value={to} onChange={(e) => setTo(e.target.value)} />
-        <button type="button" className="btn exp-send" onClick={send} disabled={!!busy}>{busy === 'mail' ? <Spin /> : <MailIco />}{busy === 'mail' ? 'جارٍ الإرسال…' : 'إرسال'}</button>
+        <button type="button" className="btn exp-send" onClick={() => request('mail')} disabled={!!busy}>{busy === 'mail' ? <Spin /> : <MailIco />}{busy === 'mail' ? 'جارٍ الإرسال…' : 'إرسال'}</button>
       </div>
       {msg && <p className={msg.ok ? 'ok' : 'err'}>{msg.t}</p>}
-      {notice && <Notice text={SHARE_TEXT} onClose={() => setNotice(false)} />}
+      {ask && <Consent text={KEEP_ASK} yes="نعم، أسمح" no="لا، شكراً" onChoose={answered} onCancel={() => setAsk('')} />}
       {sentTo && createPortal(<Success email={sentTo} onClose={() => setSentTo('')} />, document.body)}
     </div>
   )

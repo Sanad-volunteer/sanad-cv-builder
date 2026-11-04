@@ -562,7 +562,7 @@ export default function App() {
             </label>
             <Chips label="المهارات التقنية" items={cv.tech} options={SKILL_OPTS[cv.lang].tech} err={ev(bad.tech, 3)} onChange={(v) => set('tech', v)} placeholder="اكتب مهارة واضغط Enter" lvl={cv.lvl} onLevel={setLvl} showLvl={lvlOn} suggest={sg.tech.filter((s) => !cv.tech.includes(s))} />
             <div className="gap" />
-            <Chips label="المهارات الناعمة" items={cv.soft} options={SKILL_OPTS[cv.lang].soft} err={ev(bad.soft, 3)} onChange={(v) => set('soft', v)} placeholder="اكتب مهارة واضغط Enter" lvl={cv.lvl} onLevel={setLvl} showLvl={lvlOn} suggest={sg.soft.filter((s) => !cv.soft.includes(s))} />
+            <Chips label="المهارات الشخصية (Interpersonal Skills)" items={cv.soft} options={SKILL_OPTS[cv.lang].soft} err={ev(bad.soft, 3)} onChange={(v) => set('soft', v)} placeholder="اكتب مهارة واضغط Enter" lvl={cv.lvl} onLevel={setLvl} showLvl={lvlOn} suggest={sg.soft.filter((s) => !cv.soft.includes(s))} />
           </Card>
           )}
           {step === 4 && (

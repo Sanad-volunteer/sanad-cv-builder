@@ -340,11 +340,11 @@ export function analyzeText(rawText, jobIn, metaIn) { // meta: { source: 'pdf' |
   const kwNote = missing.length && ranked.length >= 3 ? ` لم نجد في سيرتك بعض مهارات الوظيفة مثل: ${list(missing.slice(0, 4).map((x) => x.label))}؛ أضفها إن كانت صحيحة.` : ''
   const mixOk = nSkills < 10 || (nSoft > 0 && nHard > 0)
   chk('skills', nSkills >= 10 && nSkills <= 20 && mixOk && !(ranked.length >= 3 && missing.length > ranked.length / 2),
-    !sections.has('skills') ? `لم نجد قسم مهارات. أضف قسماً يضم من 10 إلى 20 مهارة تقنية وناعمة مرتبطة بالوظيفة.${kwNote}`
-      : nSkills < 10 ? `عدد المهارات ${nSkills}؛ اجعلها من 10 إلى 20 مهارة تقنية وناعمة مرتبطة بالوظيفة.${kwNote}`
+    !sections.has('skills') ? `لم نجد قسم مهارات. أضف قسماً يضم من 10 إلى 20 مهارة تقنية وشخصية مرتبطة بالوظيفة.${kwNote}`
+      : nSkills < 10 ? `عدد المهارات ${nSkills}؛ اجعلها من 10 إلى 20 مهارة تقنية وشخصية مرتبطة بالوظيفة.${kwNote}`
         : nSkills > 20 ? `عدد المهارات ${nSkills} كبير؛ اختصرها إلى 20 كحد أقصى وأبقِ الأقرب للوظيفة.${kwNote}`
-          : !mixOk ? `المهارات (${nSkills}) من نوع واحد فقط؛ أضف ${nSoft ? 'مهارات تقنية' : 'مهارات ناعمة'} أيضاً.${kwNote}`
-            : `عدد المهارات مناسب (${nSkills}: ${nHard} تقنية و${nSoft} ناعمة).${kwNote}`, nSkills ? 0.5 : 0)
+          : !mixOk ? `المهارات (${nSkills}) من نوع واحد فقط؛ أضف ${nSoft ? 'مهارات تقنية' : 'مهارات شخصية'} أيضاً.${kwNote}`
+            : `عدد المهارات مناسب (${nSkills}: ${nHard} تقنية و${nSoft} شخصية).${kwNote}`, nSkills ? 0.5 : 0)
 
   // 9. length (one to two pages)
   const pages = meta.pages || Math.max(1, Math.ceil(words / 500))

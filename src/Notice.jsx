@@ -1,9 +1,9 @@
 import { useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 
-// Wording of the information notices (edit here).
-export const SHARE_TEXT = 'نُحيطك علماً بأن مؤسسة سند الشباب تحتفظ بنسخة من سيرتك الذاتية وبياناتك الواردة فيها.'
-export const AI_TEXT = 'نُحيطك علماً بأن ملف سيرتك أُرسل إلى خدمة ذكاء اصطناعي من Google ليجري تحليله.'
+// Wording of the two questions (edit here).
+export const KEEP_ASK = 'هل تسمح لمؤسسة سند الشباب بالاحتفاظ بنسخة من سيرتك الذاتية وبياناتك الواردة فيها؟ سيصلك ملفك في الحالتين.'
+export const AI_ASK = 'هل تسمح بإرسال سيرتك الذاتية إلى خدمة ذكاء اصطناعي من Google ليحلّلها؟ إن اخترت «لا» فسيجري تحليلها داخل متصفحك فقط دون إرسالها إلى أي جهة.'
 
 export const InfoIcon = () => (
   <span className="info-ic" aria-hidden="true">
@@ -11,29 +11,24 @@ export const InfoIcon = () => (
   </span>
 )
 
-// Big green tick for the pop-up (the small "i" above stays for the note inside the e-mail success dialog).
-const CheckIcon = () => (
-  <span className="info-ic ok-ic" aria-hidden="true">
-    <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><path d="M5.5 12.5l4.2 4.2L18.5 7.5" pathLength="1" /></svg>
-  </span>
-)
-
-// A friendly pop-up that only informs (nothing to choose): closes with the button, Esc or a click outside.
-export default function Notice({ text, onClose }) {
+// A question with two answers (yes / no). Closing it (Esc, click outside or "إلغاء") answers nothing: the action is not carried out.
+export default function Consent({ text, yes, no, onChoose, onCancel }) {
   const btn = useRef(null)
   useEffect(() => {
     btn.current?.focus()
-    const onKey = (e) => e.key === 'Escape' && onClose()
+    const onKey = (e) => e.key === 'Escape' && onCancel()
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [])
   return createPortal(
-    <div className="modal-bg no-print" onClick={onClose}>
-      <div className="modal" role="dialog" aria-modal="true" aria-labelledby="nt-title" onClick={(e) => e.stopPropagation()}>
-        <CheckIcon />
-        <h3 id="nt-title">إشعار</h3>
+    <div className="modal-bg no-print" onClick={onCancel}>
+      <div className="modal" role="dialog" aria-modal="true" aria-labelledby="cs-title" onClick={(e) => e.stopPropagation()}>
+        <InfoIcon />
+        <h3 id="cs-title">خيارك</h3>
         <p>{text}</p>
-        <button ref={btn} type="button" className="btn p" onClick={onClose}>حسناً</button>
+        <button ref={btn} type="button" className="btn p" onClick={() => onChoose(true)}>{yes}</button>
+        <button type="button" className="btn out" onClick={() => onChoose(false)}>{no}</button>
+        <button type="button" className="link" onClick={onCancel}>إلغاء</button>
       </div>
     </div>,
     document.body,

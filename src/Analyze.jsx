@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import mammoth from 'mammoth/mammoth.browser'
 import { post } from './api.js'
-import Notice, { AI_TEXT } from './Notice.jsx'
+import Consent, { AI_ASK } from './Notice.jsx'
 
 // the back-office user (logged in at #admin in this tab) also sees which engine produced the result
 const isAdmin = () => { try { return !!sessionStorage.getItem('sanad-admin-pw') } catch { return false } }
@@ -19,7 +19,7 @@ const CHECK_TITLE = {
   dates: 'تنسيق التواريخ (Date Formatting)', metrics: 'النتائج القابلة للقياس (Measurable Results)', bullets: 'صياغة الإنجازات (Bullet Points)', skills: 'المهارات (Skills)',
   length: 'طول السيرة (Length)', gaps: 'الفجوات الزمنية (Employment Gaps)', linkedin: 'رابط لينكدإن (LinkedIn)', font: 'نوع الخط (Font)', file: 'نوع الملف واسمه (File)',
 }
-const WHY = { slow: 'استغرق الذكاء الاصطناعي وقتاً أطول من المعتاد.', busy: 'الذكاء الاصطناعي مزدحم حالياً.', limit: 'تجاوزت عدد المحاولات المسموحة للذكاء الاصطناعي حالياً.', other: 'تعذّر الوصول إلى الذكاء الاصطناعي حالياً.' }
+const WHY = { private: 'حلّلنا سيرتك داخل متصفحك فقط دون إرسالها إلى أي جهة، وهذا تحليل مبسّط. للحصول على تحليل أعمق بالذكاء الاصطناعي أعد التحليل واختر «نعم».', slow: 'استغرق الذكاء الاصطناعي وقتاً أطول من المعتاد.', busy: 'الذكاء الاصطناعي مزدحم حالياً.', limit: 'تجاوزت عدد المحاولات المسموحة للذكاء الاصطناعي حالياً.', other: 'تعذّر الوصول إلى الذكاء الاصطناعي حالياً.' }
 const ringColor = (n) => (n < 40 ? '#E5484D' : n < 60 ? '#FFC500' : 'var(--teal)') // red / yellow / teal by score
 // where in the builder each failed check can be fixed (wizard step: 0 personal, 1 education, 2 experience, 3 skills, 5 extras); checks without a step have no button
 const FIX_STEP = { contact: [0, 'المعلومات الشخصية'], summary: [0, 'النبذة'], title_match: [0, 'المسمى الوظيفي'], linkedin: [0, 'رابط لينكدإن'], sections: [1, 'التعليم'], dates: [2, 'الخبرات'], metrics: [2, 'الخبرات'], bullets: [2, 'الخبرات'], gaps: [2, 'الخبرات'], skills: [3, 'المهارات'] }
@@ -31,7 +31,7 @@ function Result({ r, go, fix }) {
     <div className="card res" role="region" aria-label="نتيجة المراجعة" tabIndex={-1}>
       {r.source === 'local' && (
         <p className="local-note" role="status">
-          {WHY[r.why] || WHY.other} هذا تحليل مبسّط يعمل على جهازك، وللحصول على تحليل أعمق أعد المحاولة بعد قليل.
+          {r.why === 'private' ? WHY.private : `${WHY[r.why] || WHY.other} هذا تحليل مبسّط يعمل على جهازك، وللحصول على تحليل أعمق أعد المحاولة بعد قليل.`}
         </p>
       )}
       <div className="score">
@@ -77,7 +77,7 @@ export default function Analyze({ go, seed, fix }) { // seed: the CV just built 
   const [file, setFile] = useState(seed ? seed.file : null)
   const [job, setJob] = useState({ title: seed ? seed.title : '', desc: '' })
   const [st, setSt] = useState({ busy: false, err: '', res: null })
-  const [notice, setNotice] = useState(false) // information pop-up shown after an analysis
+  const [ask, setAsk] = useState(false) // the yes / no question about sending the CV to the AI is open
   const setJ = (k) => (e) => setJob((j) => ({ ...j, [k]: e.target.value }))
   const fail = (err) => setSt((s) => ({ ...s, err }))
 
@@ -101,17 +101,18 @@ export default function Analyze({ go, seed, fix }) { // seed: the CV just built 
       fail('')
     } catch { setFile(null); fail('تعذّرت قراءة الملف') }
   }
-  const run = async () => {
+  // allowAi false: the person said no, so the CV never leaves the browser (browser review only)
+  const run = async (allowAi) => {
     setSt({ busy: true, err: '', res: null })
     try {
+      if (!allowAi) { const e = new Error('declined'); e.declined = true; throw e }
       const r = await post('/api/analyze', { file: { type: file.type, data: file.data, name: file.name }, source: file.builder ? 'builder' : file.ext, job }, 35000) // the server gives the AI 25 s; this is only a safety net
       setSt({ busy: false, err: '', res: { ...(await r.json()), source: 'ai' } })
-      setNotice(true)
     } catch (e) {
       // The AI is busy or unavailable: quietly review the CV in the browser instead (no message to the user).
       try {
         const { localAnalyze } = await import('./localAnalyze.js')
-        const why = e.status === 429 ? 'limit' : e.name === 'TimeoutError' || (e.body && e.body.status === 504) ? 'slow' : e.body && e.body.status === 503 ? 'busy' : 'other' // why the AI was skipped (shown to the user)
+        const why = e.declined ? 'private' : e.status === 429 ? 'limit' : e.name === 'TimeoutError' || (e.body && e.body.status === 504) ? 'slow' : e.body && e.body.status === 503 ? 'busy' : 'other' // why the AI was skipped (shown to the user)
         setSt({ busy: false, err: '', res: { ...(await localAnalyze(file, job)), source: 'local', why } })
       } catch (e2) {
         // the browser review could not read the file either: say why when we know it
@@ -172,9 +173,9 @@ export default function Analyze({ go, seed, fix }) { // seed: the CV just built 
         {st.res ? <Result r={st.res} go={go} fix={file && file.builder ? fix : null} /> : (
           <div className="card empty"><div className="big">✦</div><p>ارفع سيرتك وأضف الوظيفة المستهدفة ثم اضغط «حلّل» لترى نسبة المطابقة والاقتراحات.</p></div>
         )}
-        <button type="button" className="btn s" style={{ marginTop: 14 }} disabled={!ready} onClick={run}>{st.busy ? <><span className="spin" aria-hidden="true" /> جارٍ التحليل…</> : '✦ حلّل سيرتي الذاتية'}</button>
+        <button type="button" className="btn s" style={{ marginTop: 14 }} disabled={!ready} onClick={() => setAsk(true)}>{st.busy ? <><span className="spin" aria-hidden="true" /> جارٍ التحليل…</> : '✦ حلّل سيرتي الذاتية'}</button>
       </aside>
-      {notice && <Notice text={AI_TEXT} onClose={() => setNotice(false)} />}
+      {ask && <Consent text={AI_ASK} yes="نعم، أسمح" no="لا، حلّل في المتصفح" onChoose={(ok) => { setAsk(false); run(ok) }} onCancel={() => setAsk(false)} />}
     </main>
   )
 }
