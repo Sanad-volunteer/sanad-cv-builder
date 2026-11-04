@@ -57,3 +57,20 @@ export const skillText = (name, lvl, l) => (SKILL_LEVEL[l] && SKILL_LEVEL[l][lvl
 // File name used everywhere (download, email attachment, admin, analyzer): "Mouayad Al Kamel" -> "Mouayad_Al_Kamel_cv"
 export const cvFileName = (name) =>
   (String(name ?? '').replace(/[\\/:*?"<>|\u0000-\u001f]+/g, '').trim().replace(/\s+/g, '_').slice(0, 60) || 'CV') + '_cv'
+
+// Newest first, whatever order the person typed the entries in (experience, volunteer work, education).
+// Order: the end date (a job that is still going on - "now" - comes first), then the start date; entries without any date stay last, in their original order.
+const monthKey = (d) => (!d || !d.y ? null : d.y === 'now' ? Infinity : (+d.y || 0) * 12 + (+d.m || 0))
+export const byRecent = (items) => (Array.isArray(items) ? items : [])
+  .map((x, i) => ({ x, i }))
+  .sort((a, b) => {
+    for (const key of [(o) => monthKey(o.x && o.x.end) ?? monthKey(o.x && o.x.start), (o) => monthKey(o.x && o.x.start)]) {
+      const ka = key(a), kb = key(b)
+      if (ka === kb) continue
+      if (ka === null) return 1 // no date: last
+      if (kb === null) return -1
+      return ka > kb ? -1 : 1
+    }
+    return a.i - b.i
+  })
+  .map((o) => o.x)

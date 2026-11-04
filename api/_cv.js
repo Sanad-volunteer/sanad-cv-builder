@@ -9,7 +9,7 @@ const T = {
 }
 import { TPL_CSS, tplOf } from './_tpl.js'
 import serifCss from './_font_serif.js'
-import { EDU_LEVEL as EL, langParts, langName, skillText, cvFileName } from './_lists.js'
+import { EDU_LEVEL as EL, langParts, langName, skillText, cvFileName, byRecent } from './_lists.js'
 const FULL = { ar: M.ar, en: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'] }
 const DETAILS = {
   ar: { dob: 'تاريخ الميلاد', gender: 'الجنس', marital: 'الحالة الاجتماعية', male: 'ذكر', female: 'أنثى', single: 'أعزب', singleF: 'عزباء', married: 'متزوج', marriedF: 'متزوجة' },
@@ -43,7 +43,7 @@ const bullets = (t) => {
 // company on top (bold), job title below it (the template decides whether it sits on a second line or after a bullet)
 const jobRow = (i, l) => `<div class="r"><span class="l">${i.company ? `<b>${esc(i.company)}</b>${i.title ? `<i class="jt">${esc(i.title)}</i>` : ''}` : `<b>${esc(i.title)}</b>`}</span><span>${range(i.start, i.end, l)}</span></div>`
 const jobs = (items, h, l) => {
-  const f = list(items).filter((i) => i.title || i.company)
+  const f = byRecent(list(items).filter((i) => i.title || i.company))
   return f.length ? sec(h, f.map((i) => `<div>${jobRow(i, l)}${bullets(i.bullets)}</div>`).join('')) : ''
 }
 
@@ -66,7 +66,7 @@ export function cvHtml(cv, opts = {}) {
     (p.marital === 'single' || p.marital === 'married') && [d.marital, d[p.marital + (p.gender === 'female' ? 'F' : '')]],
   ].filter(Boolean)
   const langs = list(cv.langs).filter((x) => x && String(x.name || '').trim())
-  const edu = list(cv.edu).filter((e) => e && (e.school || e.major || e.level))
+  const edu = byRecent(list(cv.edu).filter((e) => e && (e.school || e.major || e.level)))
   const contact = [ // line 1: how to reach the person
     p.residence && `<span><b>${CONTACT[l].residence}:</b> <bdi>${esc(p.residence)}</bdi></span>`,
     p.city && `<span><b>${CONTACT[l].city}:</b> <bdi>${esc(p.city)}</bdi></span>`,

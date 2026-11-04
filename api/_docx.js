@@ -3,7 +3,7 @@ import {
   AlignmentType, BorderStyle, Document, ExternalHyperlink, HeadingLevel, ImageRun, LevelFormat, LineRuleType,
   Packer, Paragraph, Table, TableCell, TableRow, TextRun, VerticalAlign, WidthType,
 } from 'docx'
-import { skillText } from './_lists.js'
+import { skillText, byRecent } from './_lists.js'
 import { tplOf } from './_tpl.js'
 import { T, EL, DETAILS, CONTACT, dobText, langParts, langName, range, fmt, list, href } from './_cv.js'
 
@@ -128,7 +128,7 @@ export async function makeDocx(cv) {
   // ---- sections (same order as the PDF) ----
   if (p.summary) children.push(h2(t.summary), para([run(p.summary)]))
 
-  const edu = list(cv.edu).filter((e) => e && (e.school || e.major || e.level))
+  const edu = byRecent(list(cv.edu).filter((e) => e && (e.school || e.major || e.level)))
   if (edu.length) {
     children.push(h2(t.edu), ...entries(edu.map((e) => {
       const line = EL[l][e.level] || ''
@@ -137,7 +137,7 @@ export async function makeDocx(cv) {
   }
 
   const jobs = (items, h) => {
-    const f = list(items).filter((i) => i && (i.title || i.company))
+    const f = byRecent(list(items).filter((i) => i && (i.title || i.company)))
     if (f.length) children.push(h2(h), ...entries(f.map((i) => [jobRow(i), ...bullets(i.bullets)])))
   }
   jobs(cv.exp, t.exp)
