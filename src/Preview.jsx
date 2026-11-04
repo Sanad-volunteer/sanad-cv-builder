@@ -10,7 +10,7 @@ export const MONTH_NAMES = {
 
 // Language levels: the key is stored, the label depends on the CV language.
 export const LEVELS = [['beginner', 'مبتدئ'], ['intermediate', 'متوسط'], ['upper', 'فوق المتوسط'], ['fluent', 'متمرس']] // "native" is a separate checkbox (x.native), not a level
-import { EDU_LEVELS, EDU_LEVEL, langParts, langName, skillText } from '../api/_lists.js'
+import { EDU_LEVELS, EDU_LEVEL, langParts, langName, skillText, byRecent } from '../api/_lists.js'
 import { TPL_CSS, tplOf } from '../api/_tpl.js'
 export { EDU_LEVELS }
 // Optional personal details line (date of birth, gender, marital status)
@@ -50,7 +50,7 @@ const JobRow = ({ i, l }) => (
   </div>
 )
 const Jobs = ({ items, h, l }) => {
-  const f = items.filter((i) => i.title || i.company)
+  const f = byRecent(items.filter((i) => i.title || i.company))
   if (!f.length) return null
   return (
     <Sec h={h}>
@@ -79,7 +79,7 @@ export default function Preview({ cv }) {
   ].filter(Boolean)
   const sep = lang === 'ar' ? '، ' : ', '
   const contact = [['residence', p.residence], ['city', p.city], ['email', p.email], ['phone', p.phone], ['link', p.link, true]].filter(([, v]) => v) // [key, text, isLink]
-  const eduF = edu.filter((e) => e.school || e.major || e.level)
+  const eduF = byRecent(edu.filter((e) => e.school || e.major || e.level))
   const hasJobs = [...exp, ...vol].some((i) => i.title || i.company)
   const empty = !p.name && !p.title && !contact.length && !p.summary && !p.photo && !genderLine && !details.length && !tech.length && !soft.length && !langF.length && !courseF.length && !confF.length && !eduF.length && !hasJobs
 

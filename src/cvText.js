@@ -4,7 +4,7 @@ const CONTACT = {
   ar: { residence: 'مكان السكن', city: 'المدينة', email: 'البريد الإلكتروني', phone: 'الهاتف', link: 'لينكدإن' },
   en: { residence: 'Residence', city: 'City', email: 'Email', phone: 'Phone', link: 'LinkedIn' },
 }
-import { EDU_LEVEL, langParts, langName, skillText } from '../api/_lists.js'
+import { EDU_LEVEL, langParts, langName, skillText, byRecent } from '../api/_lists.js'
 
 const H = {
   ar: { summary: 'نبذة', skills: 'المهارات', tech: 'المهارات التقنية', soft: 'المهارات الشخصية', langs: 'اللغات', courses: 'الدورات وورش العمل', edu: 'التعليم', exp: 'الخبرات', vol: 'العمل التطوعي', confs: 'المؤتمرات', now: 'حتى الآن' },
@@ -19,8 +19,8 @@ export function cvToText(cv) {
   const sec = (title, lines) => { const f = lines.filter(Boolean); if (f.length) out.push('', title, ...f) }
   out.push(p.name, p.title, ...['residence', 'city', 'email', 'phone', 'link'].filter((k) => p[k]).map((k) => `${CONTACT[l][k]}: ${p[k]}`))
   sec(h.summary, [p.summary])
-  sec(h.edu, (cv.edu || []).flatMap((e) => [[e.school, e.major].filter(Boolean).join(' - ') + ` ${range(e.start, e.end)}`, EDU_LEVEL[l][e.level]]))
-  const jobs = (items) => (items || []).flatMap((i) => [`${[i.title, i.company].filter(Boolean).join(' - ')} ${range(i.start, i.end)}`, ...String(i.bullets || '').split('\n').map((s) => s.trim()).filter(Boolean).map((s) => `- ${s}`)])
+  sec(h.edu, byRecent(cv.edu).flatMap((e) => [[e.school, e.major].filter(Boolean).join(' - ') + ` ${range(e.start, e.end)}`, EDU_LEVEL[l][e.level]]))
+  const jobs = (items) => byRecent(items).flatMap((i) => [`${[i.title, i.company].filter(Boolean).join(' - ')} ${range(i.start, i.end)}`, ...String(i.bullets || '').split('\n').map((s) => s.trim()).filter(Boolean).map((s) => `- ${s}`)])
   sec(h.exp, jobs(cv.exp))
   const tech = (cv.tech || []).map((s) => skillText(s, lv[s], l)), soft = (cv.soft || []).map((s) => skillText(s, lv[s], l))
   sec(h.skills, [tech.length && `${h.tech}: ${tech.join(', ')}`, soft.length && `${h.soft}: ${soft.join(', ')}`])
