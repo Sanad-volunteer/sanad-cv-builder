@@ -1,3 +1,4 @@
+import { normCity } from './cities.js'
 import { useEffect, useMemo, useState } from 'react'
 import { EDU_LEVELS } from './Preview.jsx'
 import { makeXlsx, makeZip } from './files.js'
@@ -64,12 +65,12 @@ export default function Admin() {
     try { await call(pw, `action=delete&id=${row.id}`, { method: 'POST' }); setRows((r) => r.filter((x) => x.id !== row.id)); setSel((s) => { const n = new Set(s); n.delete(row.id); return n }) } catch { setErr('تعذّر الحذف') }
   }
 
-  const cities = useMemo(() => [...new Set((rows || []).map((r) => (r.city || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ar')), [rows])
+  const cities = useMemo(() => [...new Set((rows || []).map((r) => normCity(r.city)).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ar')), [rows])
   const shown = useMemo(() => {
     const n = q.trim().toLowerCase()
     return (rows || []).filter((r) =>
-      (!city || (r.city || '').trim() === city) && (!level || r.level === level) &&
-      (!n || [r.name, r.email, r.phone, r.city, r.university, r.major, r.title].some((v) => String(v || '').toLowerCase().includes(n))))
+      (!city || normCity(r.city) === city) && (!level || r.level === level) &&
+      (!n || [r.name, r.email, r.phone, r.city, normCity(r.city), r.university, r.major, r.title].some((v) => String(v || '').toLowerCase().includes(n))))
   }, [rows, q, city, level])
 
   const picked = useMemo(() => (rows || []).filter((r) => sel.has(r.id)), [rows, sel])
@@ -82,7 +83,7 @@ export default function Admin() {
   const exportXlsx = () => {
     const list = picked.length ? picked : shown
     const head = ['الاسم', 'المسمى', 'البريد', 'الهاتف', 'المدينة', 'السكن', 'المرحلة', 'الجامعة/المؤسسة', 'التخصص', 'لغة السيرة', 'أول حفظ', 'آخر تحديث']
-    const body = list.map((r) => [r.name, r.title, r.email, r.phone, r.city, r.residence, LEVEL[r.level] || '', r.university, r.major, r.lang === 'en' ? 'EN' : 'AR', when(r.created_at), when(r.updated_at)])
+    const body = list.map((r) => [r.name, r.title, r.email, r.phone, normCity(r.city), r.residence, LEVEL[r.level] || '', r.university, r.major, r.lang === 'en' ? 'EN' : 'AR', when(r.created_at), when(r.updated_at)])
     saveBlob(makeXlsx(head, body, 'السير الذاتية'), `sanad-cvs-${stamp()}.xlsx`)
   }
   // Files are fetched one by one (each is its own server call), then packed into one ZIP.
@@ -174,7 +175,7 @@ export default function Admin() {
                 <td><b>{r.name}</b><small>{r.title}</small></td>
                 <td dir="ltr">{r.email}</td>
                 <td dir="ltr">{r.phone}</td>
-                <td>{r.city}</td>
+                <td>{normCity(r.city)}</td>
                 <td>{[LEVEL[r.level], r.university, r.major].filter(Boolean).join(' · ')}</td>
                 <td>{fmtDate(r.updated_at)}</td>
                 <td className="adm-act">
