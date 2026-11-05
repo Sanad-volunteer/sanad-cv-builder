@@ -45,7 +45,7 @@ const Bullets = ({ text }) => {
 }
 const JobRow = ({ i, l }) => (
   <div className="r">
-    <span className="l">{i.company ? <><b>{i.company}</b>{i.title && <i className="jt">{i.title}</i>}</> : <b>{i.title}</b>}</span>
+    <span className="l">{i.company ? <><b>{i.company}</b>{i.title && <> - <i className="jt">{i.title}</i></>}</> : <b>{i.title}</b>}</span>
     <span>{range(i.start, i.end, l)}</span>
   </div>
 )
