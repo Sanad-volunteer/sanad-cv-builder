@@ -29,8 +29,6 @@ export const TPL_CSS = `
 .tpl-classic .ttl{font-size:13px}
 .tpl-classic .ct{font-size:12px;margin-top:2px}
 .tpl-classic h2{font-size:14px;font-weight:700;text-transform:uppercase;margin:18px 0 6px;color:var(--ac);border-bottom:1px solid var(--rule);padding-bottom:2px}
-.tpl-classic .r{align-items:flex-end}
-.tpl-classic .l{display:flex;flex-direction:column}
 .tpl-classic .jt{font-style:italic}
 
 .tpl-exec h1{font-family:${SERIF};font-size:24px;font-weight:700;line-height:1.3;color:var(--ac)}
@@ -42,7 +40,6 @@ export const TPL_CSS = `
 .tpl-exec:lang(en) h2{letter-spacing:.22em}
 .tpl-exec p,.tpl-exec li{text-align:justify}
 .tpl-exec .ttl,.tpl-exec .ct>p{text-align:center}
-.tpl-exec .jt::before{content:'•';margin:0 .55em}
 .tpl-exec ul{list-style:none;padding-inline-start:20px}
 .tpl-exec li{position:relative}
 .tpl-exec li::before{content:'';position:absolute;inset-inline-start:-16px;top:.62em;width:0;height:0;border-style:solid;border-width:4px 0 4px 7px;border-color:transparent transparent transparent var(--ac)}

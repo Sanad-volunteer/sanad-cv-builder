@@ -61,12 +61,11 @@ export async function makeDocx(cv) {
       ],
     })],
   })
-  // job: company in bold, job title in italics (classic: on a second line, dates level with it; executive: "Company • Title" on one line)
+  // job: "Company - Job title" on one line (company in bold, title in italics), dates on the other side
   const jobRow = (i) => {
     if (!i.company) return row(i.title, range(i.start, i.end, l))
     if (!i.title) return row(i.company, range(i.start, i.end, l))
-    if (exec) return row([para([run(i.company, { bold: true }), run('  •  '), run(i.title, { italics: !rtl })], { keepNext: true })], range(i.start, i.end, l))
-    return row([para([run(i.company, { bold: true })], { keepNext: true }), para([run(i.title, { italics: !rtl })], { keepNext: true })], range(i.start, i.end, l), true)
+    return row([para([run(i.company, { bold: true }), run(' - '), run(i.title, { italics: !rtl })], { keepNext: true })], range(i.start, i.end, l))
   }
   const bullets = (text) =>
     String(text || '').split('\n').map((s) => s.trim()).filter(Boolean)

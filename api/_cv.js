@@ -40,8 +40,8 @@ const bullets = (t) => {
   const l = String(t || '').split('\n').map((s) => s.trim()).filter(Boolean)
   return l.length ? `<ul>${l.map((s) => `<li>${esc(s)}</li>`).join('')}</ul>` : ''
 }
-// company on top (bold), job title below it (the template decides whether it sits on a second line or after a bullet)
-const jobRow = (i, l) => `<div class="r"><span class="l">${i.company ? `<b>${esc(i.company)}</b>${i.title ? `<i class="jt">${esc(i.title)}</i>` : ''}` : `<b>${esc(i.title)}</b>`}</span><span>${range(i.start, i.end, l)}</span></div>`
+// "Company - Job title" on one line (company in bold)
+const jobRow = (i, l) => `<div class="r"><span class="l">${i.company ? `<b>${esc(i.company)}</b>${i.title ? ` - <i class="jt">${esc(i.title)}</i>` : ''}` : `<b>${esc(i.title)}</b>`}</span><span>${range(i.start, i.end, l)}</span></div>`
 const jobs = (items, h, l) => {
   const f = byRecent(list(items).filter((i) => i.title || i.company))
   return f.length ? sec(h, f.map((i) => `<div>${jobRow(i, l)}${bullets(i.bullets)}</div>`).join('')) : ''
