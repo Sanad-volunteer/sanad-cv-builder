@@ -525,7 +525,7 @@ export default function App() {
               <Txt name="email" autoComplete="email" label="البريد الإلكتروني" type="email" dir="ltr" value={cv.p.email} err={ev(bad.email, 0)} onChange={setP('email')} />
               <Txt name="phone" autoComplete="tel" label="رقم الهاتف" type="tel" dir="ltr" value={cv.p.phone} err={ev(bad.phone, 0)} onChange={setP('phone')} />
               <Txt name="city" autoComplete="address-level2" label="المدينة، الدولة" value={cv.p.city} err={ev(bad.city, 0)} onChange={setP('city')} />
-              <Txt name="residence" autoComplete="off" label="مكان السكن الحالي" value={cv.p.residence} err={ev(bad.residence, 0)} onChange={setP('residence')} />
+              <Txt name="residence" autoComplete="off" label="مكان السكن الحالي (المنطقة)" value={cv.p.residence} err={ev(bad.residence, 0)} onChange={setP('residence')} />
               <Txt name="linkedin" autoComplete="url" label="رابط لينكدإن (اختياري)" dir="ltr" placeholder="linkedin.com/in/username" value={cv.p.link} onChange={setP('link')} />
               <DateSel day minY={1940} maxY={new Date().getFullYear()} label="تاريخ الميلاد (اختياري)" value={dobParts(cv.p.dob)}
                 onChange={(v) => setP('dob')(v.y && v.m && v.d ? `${v.y}-${String(v.m).padStart(2, '0')}-${String(v.d).padStart(2, '0')}` : '')} />
