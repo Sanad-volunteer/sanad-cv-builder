@@ -125,7 +125,7 @@ export default function Admin() {
         <form className="card adm-login" onSubmit={(e) => { e.preventDefault(); input && load(input) }}>
           <h2>لوحة التحكم</h2>
           <label htmlFor="admpw">كلمة المرور</label>
-          <input id="admpw" type="password" autoComplete="current-password" value={input} onChange={(e) => setInput(e.target.value)} />
+          <input id="admpw" name="password" type="password" autoComplete="current-password" value={input} onChange={(e) => setInput(e.target.value)} />
           {err && <p className="adm-err">{err}</p>}
           <button type="submit" className="btn p" disabled={!input}>دخول</button>
         </form>
@@ -149,7 +149,7 @@ export default function Admin() {
           </div>
         </div>
         <div className="adm-filters">
-          <input type="search" placeholder="بحث بالاسم أو البريد أو الهاتف…" value={q} onChange={(e) => setQ(e.target.value)} />
+          <input type="search" name="search" aria-label="بحث" placeholder="بحث بالاسم أو البريد أو الهاتف…" value={q} onChange={(e) => setQ(e.target.value)} />
           <Select label="المدينة" value={city} onChange={setCity} placeholder="كل المدن" clear="كل المدن" options={cities.map((c) => [c, c])} />
           <Select label="المرحلة" value={level} onChange={setLevel} placeholder="كل المراحل" clear="كل المراحل" options={EDU_LEVELS} />
         </div>
@@ -167,11 +167,11 @@ export default function Admin() {
       )}
       <div className="adm-wrap">
         <table className="adm-t">
-          <thead><tr><th className="adm-ck"><label className="adm-box"><input type="checkbox" aria-label="تحديد الكل" checked={allShown} ref={(el) => { if (el) el.indeterminate = someShown && !allShown }} onChange={toggleAll} disabled={!shown.length} /></label></th><th>الاسم</th><th>البريد</th><th>الهاتف</th><th>المدينة</th><th>التعليم</th><th>آخر تحديث</th><th></th></tr></thead>
+          <thead><tr><th className="adm-ck"><label className="adm-box"><input type="checkbox" name="select-all" aria-label="تحديد الكل" checked={allShown} ref={(el) => { if (el) el.indeterminate = someShown && !allShown }} onChange={toggleAll} disabled={!shown.length} /></label></th><th>الاسم</th><th>البريد</th><th>الهاتف</th><th>المدينة</th><th>التعليم</th><th>آخر تحديث</th><th></th></tr></thead>
           <tbody>
             {shown.map((r) => (
               <tr key={r.id} className={sel.has(r.id) ? 'on' : ''}>
-                <td className="adm-ck"><label className="adm-box"><input type="checkbox" aria-label="تحديد" checked={sel.has(r.id)} onChange={() => toggle(r.id)} /></label></td>
+                <td className="adm-ck"><label className="adm-box"><input type="checkbox" name="select-row" aria-label="تحديد" checked={sel.has(r.id)} onChange={() => toggle(r.id)} /></label></td>
                 <td><b>{r.name}</b><small>{r.title}</small></td>
                 <td dir="ltr">{r.email}</td>
                 <td dir="ltr">{r.phone}</td>

@@ -99,7 +99,7 @@ export default function Export({ cv, onValidate }) {
       </div>
       <div className="exp-or">أو أرسلها إلى بريدك</div>
       <div className="exp-mail">
-        <input type="email" name="recipient" autoComplete="email" dir="ltr" placeholder="recipient@email.com" value={to} onChange={(e) => setTo(e.target.value)} />
+        <input type="email" id="recipient" name="recipient" aria-label="البريد الإلكتروني" autoComplete="email" dir="ltr" placeholder="recipient@email.com" value={to} onChange={(e) => setTo(e.target.value)} />
         <button type="button" className="btn exp-send" onClick={() => request('mail')} disabled={!!busy}>{busy === 'mail' ? <Spin /> : <MailIco />}{busy === 'mail' ? 'جارٍ الإرسال…' : 'إرسال'}</button>
       </div>
       {msg && <p className={msg.ok ? 'ok' : 'err'}>{msg.t}</p>}

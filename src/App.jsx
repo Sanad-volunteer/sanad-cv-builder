@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useRef, useState } from 'react'
+import { createContext, useContext, useEffect, useId, useRef, useState } from 'react'
 import logo from './assets/sanad-logo.svg'
 import Preview, { MONTH_NAMES, LEVELS, EDU_LEVELS } from './Preview.jsx'
 import LangPick from './LangPick.jsx'
@@ -104,9 +104,10 @@ const Txt = ({ label, full, err, name, value, onChange, free, ...rest }) => { //
 }
 const Area = ({ label, full, err, value, onChange, placeholder }) => {
   const guard = useGuard()
+  const id = useId()
   return (
-    <Field label={label} full={full} err={err}>
-      <textarea dir={value ? 'auto' : 'rtl'} placeholder={placeholder} value={value} onChange={(e) => onChange(guard(e.target.value, value))} />
+    <Field label={label} full={full} err={err} htmlFor={id}>
+      <textarea id={id} name={id} dir={value ? 'auto' : 'rtl'} placeholder={placeholder} value={value} onChange={(e) => onChange(guard(e.target.value, value))} />
     </Field>
   )
 }
@@ -184,7 +185,7 @@ function DateSel({ label, value, onChange, now, err, day, minY = MIN_Y, maxY = M
       </div>
       {now && (
         <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, marginTop: 10, fontWeight: 'normal', cursor: 'pointer', userSelect: 'none' }}>
-          <input type="checkbox" checked={value.y === 'now'}
+          <input type="checkbox" name="now" checked={value.y === 'now'}
             style={{
               appearance: 'none', WebkitAppearance: 'none', width: 24, height: 24, padding: 0, margin: 0, flex: 'none', cursor: 'pointer',
               borderRadius: 8, border: `2px solid ${value.y === 'now' ? '#1A1464' : '#cfd0e4'}`, background: value.y === 'now' ? '#1A1464' : '#fff',
@@ -223,6 +224,7 @@ function Chips({ label, items, onChange, placeholder, err, options, lvl = {}, on
   const guard = useGuard()
   const [v, setV] = useState('')
   const [other, setOther] = useState(!options) // without a list, typing is always available
+  const id = useId()
   const add = () => {
     const t = v.trim()
     if (t && !items.includes(t)) onChange([...items, t])
@@ -233,11 +235,11 @@ function Chips({ label, items, onChange, placeholder, err, options, lvl = {}, on
     else if (s && !items.includes(s)) onChange([...items, s])
   }
   return (
-    <Field label={label} full err={err}>
+    <Field label={label} full err={err} htmlFor={id}>
       {options && <SkillMenu options={options.filter((o) => !items.includes(o))} onChoose={pick} />}
       {options && other && <div className="gap" />}
       {other && (
-        <input dir={v ? 'auto' : 'rtl'} value={v} placeholder={placeholder} onChange={(e) => setV(guard(e.target.value, v))} onBlur={add}
+        <input id={id} name={id} autoComplete="off" dir={v ? 'auto' : 'rtl'} value={v} placeholder={placeholder} onChange={(e) => setV(guard(e.target.value, v))} onBlur={add}
           onKeyDown={(e) => { if (['Enter', ',', '،'].includes(e.key)) { e.preventDefault(); add() } }} />
       )}
       {(() => {
@@ -322,13 +324,14 @@ function LangNameField({ value, onChange, err }) {
 }
 function LangOther({ value, onChange }) {
   const guard = useGuard()
-  return <input dir={value ? 'auto' : 'rtl'} autoComplete="off" placeholder="اكتب اسم اللغة" value={value} onChange={(e) => onChange(guard(e.target.value, value))} />
+  const id = useId()
+  return <input id={id} name={id} aria-label="اسم اللغة" dir={value ? 'auto' : 'rtl'} autoComplete="off" placeholder="اكتب اسم اللغة" value={value} onChange={(e) => onChange(guard(e.target.value, value))} />
 }
 const langFields = (tried) => (it, up) => (
   <>
     <LangNameField value={it.name} err={tried && empty(it.name)} onChange={(v) => up({ name: v })} />
     <label style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: 10, fontWeight: 'normal', cursor: 'pointer', userSelect: 'none' }}>
-      <input type="checkbox" checked={!!it.native}
+      <input type="checkbox" name="native" checked={!!it.native}
         style={{
           appearance: 'none', WebkitAppearance: 'none', width: 24, height: 24, padding: 0, margin: 0, flex: 'none', cursor: 'pointer',
           borderRadius: 8, border: `2px solid ${it.native ? '#1A1464' : '#cfd0e4'}`, background: it.native ? '#1A1464' : '#fff',
@@ -388,7 +391,7 @@ function PhotoField({ value, onChange, flash }) {
   }
   return (
     <Field full label="الصورة الشخصية (اختياري)">
-      <input ref={input} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={choose} />
+      <input ref={input} name="photo" type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={choose} />
       {value ? (
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 14 }}>
           <img src={value} alt="الصورة الشخصية" style={{ width: 120, height: 160, objectFit: 'cover', display: 'block', borderRadius: 12, border: '1.5px solid var(--line)' }} />
@@ -560,7 +563,7 @@ export default function App() {
           {step === 3 && (
           <Card n="4" title="المهارات">
             <label className="sw">
-              <input type="checkbox" role="switch" checked={lvlOn} onChange={(e) => toggleLvl(e.target.checked)} />
+              <input type="checkbox" name="levels" role="switch" checked={lvlOn} onChange={(e) => toggleLvl(e.target.checked)} />
               <span className="track" aria-hidden="true" />
               <span>مستويات المهارات</span>
             </label>

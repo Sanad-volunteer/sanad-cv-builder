@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import mammoth from 'mammoth/mammoth.browser'
 import { post } from './api.js'
 import Consent, { AI_ASK } from './Notice.jsx'
@@ -77,6 +77,7 @@ export default function Analyze({ go, seed, fix }) { // seed: the CV just built 
   const [file, setFile] = useState(seed ? seed.file : null)
   const [job, setJob] = useState({ title: seed ? seed.title : '', desc: '' })
   const [st, setSt] = useState({ busy: false, err: '', res: null })
+  const idT = useId(), idD = useId()
   const [ask, setAsk] = useState(false) // the yes / no question about sending the CV to the AI is open
   const setJ = (k) => (e) => setJob((j) => ({ ...j, [k]: e.target.value }))
   const fail = (err) => setSt((s) => ({ ...s, err }))
@@ -106,7 +107,7 @@ export default function Analyze({ go, seed, fix }) { // seed: the CV just built 
     setSt({ busy: true, err: '', res: null })
     try {
       if (!allowAi) { const e = new Error('declined'); e.declined = true; throw e }
-      const { extractCv } = await import('./localAnalyze.js') // DeepSeek reads text only, so the text is extracted here first
+      const { extractCv } = await import('./localAnalyze.js') // the AI reads text only, so the text is extracted here first
       const pdf = await extractCv(file)
       const r = await post('/api/analyze', { file: { type: 'text', data: pdf.text, name: file.name }, meta: { pages: pdf.pages, fonts: pdf.fonts }, source: file.builder ? 'builder' : file.ext, job }, 35000) // the server gives the AI 25 s; this is only a safety net
       setSt({ busy: false, err: '', res: { ...(await r.json()), source: 'ai' } })
@@ -143,7 +144,7 @@ export default function Analyze({ go, seed, fix }) { // seed: the CV just built 
         <div className="card">
           <h2><span className="n">1</span>ارفع سيرتك الذاتية</h2>
           <label className={`drop${over ? ' over' : ''}`} onDragOver={(e) => { e.preventDefault(); setOver(true) }} onDragLeave={() => setOver(false)} onDrop={drop}>
-            <input type="file" accept=".pdf,.docx" onChange={pick} />
+            <input type="file" name="cv-file" accept=".pdf,.docx" onChange={pick} />
             <span className="big">⬆</span>
             <b>اضغط لاختيار الملف</b>
             <span className="note">PDF أو DOCX · الحد الأقصى 3 ميغابايت · أو اسحب الملف وأفلته هنا</span>
@@ -160,8 +161,8 @@ export default function Analyze({ go, seed, fix }) { // seed: the CV just built 
         <div className="card ai">
           <h2><span className="n">2</span>الوظيفة المستهدفة<span className="opt-tag">اختياري</span></h2>
           <div className="g">
-            <div className="full"><label>المسمى الوظيفي</label><input dir={job.title ? 'auto' : 'rtl'} value={job.title} onChange={setJ('title')} /></div>
-            <div className="full"><label>وصف الوظيفة</label><textarea dir={job.desc ? 'auto' : 'rtl'} placeholder="الصق وصف الوظيفة هنا…" value={job.desc} onChange={setJ('desc')} /></div>
+            <div className="full"><label htmlFor={idT}>المسمى الوظيفي</label><input id={idT} name="job-title" autoComplete="off" dir={job.title ? 'auto' : 'rtl'} value={job.title} onChange={setJ('title')} /></div>
+            <div className="full"><label htmlFor={idD}>وصف الوظيفة</label><textarea id={idD} name="job-desc" dir={job.desc ? 'auto' : 'rtl'} placeholder="الصق وصف الوظيفة هنا…" value={job.desc} onChange={setJ('desc')} /></div>
           </div>
           {st.err && <p className="err">{st.err}</p>}
           <p className="note start">❗ ملاحظة: الاقتراحات لا تضيف خبرات أو مهارات غير موجودة.</p>
