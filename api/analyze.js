@@ -16,16 +16,16 @@ Scoring guide for "score": 40% match of skills/keywords to the job, 25% relevanc
 6. "metrics" (Measurable results): achievements contain numbers, percentages or sizes, e.g. "... secure collaboration solution to millions of ...", "... becoming the #1 Paid Business ...", "... delivered to over one thousand attendees at ...". Not ok when there are fewer than two such results. Never invent numbers; tell the person to add real ones.
 7. "bullets" (Bullet Points): the achievements under experience / volunteer work are short bullet points (at most about 30 words) and each starts with a strong past-tense action verb (e.g. Led, Built, Developed, أدرت، طورت). null when the CV has no experience or volunteer section.
 8. "skills" (Skills): a skills section lists 10 to 20 key hard AND soft skills related to the job (both kinds must appear). Mention the count, and name important skills from the job description that are absent (suggest adding them only if true).
-9. "length" (Length): the CV is one or two pages. Use the real page count of the PDF; for other input estimate from its length (about 500 words per page) and say it is approximate.
+9. "length" (Length): the CV is one or two pages. Use the page count in <pdf_info> when given; for other input estimate from its length (about 500 words per page) and say it is approximate.
 10. "gaps" (Employment Gaps): no unexplained gap longer than 6 months between jobs (dates in the experience section). null when fewer than two jobs with dates exist.
 11. "linkedin" (LinkedIn): a LinkedIn profile link is present near the top.
-12. "font" (Font type): a standard, readable font such as Arial, Calibri or Times New Roman at 10 to 12 pt. Judge it from the PDF when you can see it; for DOCX or plain text input use null.
+12. "font" (Font type): a standard, readable font such as Arial, Calibri or Times New Roman at 10 to 12 pt. Judge it from the font names in <pdf_info> (null when unknown); for DOCX or plain text input use null.
 13. "file" (File types and name): a PDF or DOCX file whose name contains the person's name and CV, like "FirstName_LastName_CV.pdf", without words like final, new, copy or numbers in brackets. Use the file name and source given in the <file> tag; if source is "builder" the file is exported by the CV builder: ok is true.
 If no job title and no description are given, review the CV in general (no job-specific keyword matching): use null for "title_match" and give general missingKeywords only if clearly useful (or an empty list).
 Rules: NEVER advise removing or hiding personal details such as date of birth, marital status, gender or a personal photo; these are the person's own optional choice in this region, and are not part of the review. be honest and specific; never invent skills, experience, numbers or achievements. Only rephrase or emphasize what already exists; for gaps say "consider adding if true".`
 
 import { makeLimiter, clientIp } from './_limit.js'
-import { callGemini } from './_gemini.js'
+import { callAI } from './_ai.js'
 const limited = makeLimiter('ai', 10) // 10 analyses per hour per visitor
 
 const str = (v, n = 600) => String(v ?? '').slice(0, n)
@@ -33,41 +33,32 @@ const arr = (v) => (Array.isArray(v) ? v : [])
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'method_not_allowed' })
-  if (!process.env.GEMINI_API_KEY) return res.status(500).json({ error: 'missing_api_key' })
+  if (!process.env.DEEPSEEK_API_KEY) return res.status(500).json({ error: 'missing_api_key' })
   if (await limited(clientIp(req))) return res.status(429).json({ error: 'rate_limited' })
   const { file, job, source } = req.body || {}
-  if (!file || !job || !['pdf', 'text'].includes(file.type) || typeof file.data !== 'string' || file.data.length > 4_000_000)
+  if (!file || !job || file.type !== 'text' || typeof file.data !== 'string' || file.data.length > 4_000_000)
     return res.status(400).json({ error: 'bad_request' })
 
-  // The data the AI works on: the target job + the CV (PDF sent as-is, DOCX as extracted text)
+  // The data the AI works on: the target job + the CV as TEXT (the browser extracts it from PDF/DOCX; DeepSeek cannot read PDF files)
   const jobText = `<job><title>${str(job.title, 200)}</title><description>${str(job.desc, 6000)}</description></job>`
-  const fileTag = `<file name="${str(file.name, 120).replace(/"/g, "'")}" source="${['pdf', 'docx', 'builder'].includes(source) ? source : file.type === 'pdf' ? 'pdf' : 'docx'}"/>`
-  const parts = file.type === 'pdf'
-    ? [
-        { inlineData: { mimeType: 'application/pdf', data: file.data } },
-        { text: `${jobText}\n${fileTag}\nThe CV is the attached PDF. Review it for this job.` },
-      ]
-    : [{ text: `${jobText}\n${fileTag}\n<cv>${file.data.slice(0, 20000)}</cv>\nReview this CV for the job.` }]
+  const src = ['pdf', 'docx', 'builder'].includes(source) ? source : file.type === 'pdf' ? 'pdf' : 'docx'
+  const fileTag = `<file name="${str(file.name, 120).replace(/"/g, "'")}" source="${src}"/>`
+  const m = req.body.meta || {}
+  const pages = Math.max(0, Math.min(50, +m.pages || 0))
+  const fonts = arr(m.fonts).slice(0, 8).map((f) => str(f, 60)).join(', ')
+  const pdfInfo = src === 'pdf' ? `<pdf_info pages="${pages || 'unknown'}" fonts="${fonts.replace(/"/g, "'") || 'unknown'}"/>\n` : ''
+  const user = `${jobText}\n${fileTag}\n${pdfInfo}<cv>${file.data.slice(0, 20000)}</cv>\nReview this CV for the job. Reply with the JSON object only.`
 
   try {
-    // Newer Gemini models spend part of maxOutputTokens on hidden "thinking", which can cut the JSON answer short.
-    // So: a generous limit, thinking parts ignored, and one retry with an even bigger limit if the answer was cut.
     const DEADLINE = 25000 // the AI gets 25 s in total; after that the browser review takes over (the page falls back on any error)
     const t0 = Date.now()
-    const ask = (maxOutputTokens) => callGemini({
-      systemInstruction: { parts: [{ text: SYSTEM }] },
-      contents: [{ role: 'user', parts }],
-      generationConfig: { responseMimeType: 'application/json', temperature: 0.3, maxOutputTokens },
-    }, 2, Math.max(0, DEADLINE - (Date.now() - t0)) || 1)
+    const ask = (maxTokens) => callAI({ system: SYSTEM, user, temperature: 0.3, maxTokens }, 2, Math.max(0, DEADLINE - (Date.now() - t0)) || 1)
     const read = (d) => {
-      const c = d.candidates?.[0]
-      const text = arr(c?.content?.parts).filter((p) => !p.thought).map((p) => p.text || '').join('')
       let j = null
-      try { j = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1)) } catch { /* cut off or not JSON */ }
-      return { j, why: d.promptFeedback?.blockReason ? `blocked:${d.promptFeedback.blockReason}` : c?.finishReason || 'no_candidates' }
+      try { j = JSON.parse(d.text.slice(d.text.indexOf('{'), d.text.lastIndexOf('}') + 1)) } catch { /* cut off or not JSON */ }
+      return { j, why: d.finish }
     }
-    let out = read(await ask(16000))
-    if (!out.j && out.why === 'MAX_TOKENS') out = read(await ask(48000))
+    const out = read(await ask(6000))
     if (!out.j) { const e = new Error(`bad_ai_answer (${out.why})`); e.status = 0; throw e }
     const j = out.j
     // keep only the 13 known checks, in a fixed order; a badly formed answer falls back to the browser review

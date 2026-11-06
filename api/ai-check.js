@@ -1,8 +1,8 @@
-// Public status check: is the AI (Gemini) working?  GET /api/ai-check -> { ok, ms, reason, checkedAt }
-// No password. To stop anyone from draining the Gemini quota, the result is cached for 5 seconds
-// (many visitors in the same moment share one real Gemini call)
+// Public status check: is the AI (DeepSeek) working?  GET /api/ai-check -> { ok, ms, reason, checkedAt }
+// No password. To stop anyone from draining the AI quota, the result is cached for 5 seconds
+// (many visitors in the same moment share one real AI call)
 // and each visitor is rate limited. Nothing sensitive (keys, model names) is returned.
-import { callGemini } from './_gemini.js'
+import { callAI } from './_ai.js'
 import { makeLimiter, clientIp } from './_limit.js'
 
 const limited = makeLimiter('aicheck', 30)
@@ -11,13 +11,13 @@ let cache = null // { at, out }
 let running = null // a check already in flight is shared by everyone who asks meanwhile
 
 const check = async () => {
-  if (!process.env.GEMINI_API_KEY) return { ok: false, ms: 0, reason: 'مفتاح الذكاء الاصطناعي غير مضبوط' }
+  if (!process.env.DEEPSEEK_API_KEY) return { ok: false, ms: 0, reason: 'مفتاح الذكاء الاصطناعي غير مضبوط' }
   const t = Date.now()
   try {
-    await callGemini({ contents: [{ role: 'user', parts: [{ text: 'Reply with: ok' }] }], generationConfig: { maxOutputTokens: 200 } }, 1)
+    await callAI({ system: 'Reply with the word ok.', user: 'ok', maxTokens: 20, json: false }, 1)
     return { ok: true, ms: Date.now() - t, reason: '' }
   } catch (e) {
-    const reason = e.status === 429 ? 'تم تجاوز الحصة (quota)' : e.status === 400 || e.status === 403 ? 'المفتاح غير صالح أو غير مسموح' : e.status === 404 ? 'النموذج غير موجود' : [500, 502, 503, 504].includes(e.status) ? 'الخدمة مزدحمة حالياً' : 'خطأ غير متوقع'
+    const reason = e.status === 402 ? 'رصيد الحساب غير كافٍ' : e.status === 429 ? 'تم تجاوز الحصة (quota)' : e.status === 401 || e.status === 403 ? 'المفتاح غير صالح أو غير مسموح' : e.status === 404 ? 'النموذج غير موجود' : [500, 502, 503, 504].includes(e.status) ? 'الخدمة مزدحمة حالياً' : 'خطأ غير متوقع'
     return { ok: false, ms: Date.now() - t, reason }
   }
 }
