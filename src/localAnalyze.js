@@ -435,6 +435,13 @@ async function pdfText(b64) {
   return { text: out, fonts: [...fonts], pages: doc.numPages }
 }
 
+// For the AI: the plain text of the CV (+ page count and font names for a PDF). Throws 'no_text' for a scanned file.
+export async function extractCv(file) {
+  const pdf = file.type === 'pdf' ? await pdfText(file.data) : { text: String(file.data || ''), fonts: [], pages: 0 }
+  if (clean(pdf.text).trim().length < 40) throw new Error('no_text')
+  return pdf
+}
+
 // file: { name, type: 'pdf' | 'text', data, builder? } exactly as Analyze.jsx keeps it. job: { title, company, desc }
 export async function localAnalyze(file, job) {
   const pdf = file.type === 'pdf' ? await pdfText(file.data) : { text: String(file.data || ''), fonts: [], pages: 0 }

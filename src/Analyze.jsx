@@ -106,7 +106,9 @@ export default function Analyze({ go, seed, fix }) { // seed: the CV just built 
     setSt({ busy: true, err: '', res: null })
     try {
       if (!allowAi) { const e = new Error('declined'); e.declined = true; throw e }
-      const r = await post('/api/analyze', { file: { type: file.type, data: file.data, name: file.name }, source: file.builder ? 'builder' : file.ext, job }, 35000) // the server gives the AI 25 s; this is only a safety net
+      const { extractCv } = await import('./localAnalyze.js') // DeepSeek reads text only, so the text is extracted here first
+      const pdf = await extractCv(file)
+      const r = await post('/api/analyze', { file: { type: 'text', data: pdf.text, name: file.name }, meta: { pages: pdf.pages, fonts: pdf.fonts }, source: file.builder ? 'builder' : file.ext, job }, 35000) // the server gives the AI 25 s; this is only a safety net
       setSt({ busy: false, err: '', res: { ...(await r.json()), source: 'ai' } })
     } catch (e) {
       // The AI is busy or unavailable: quietly review the CV in the browser instead (no message to the user).
