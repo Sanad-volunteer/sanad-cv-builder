@@ -1,18 +1,17 @@
-// One place that talks to DeepSeek (OpenAI-compatible API). Retries when the service is busy.
-// DEEPSEEK_API_KEY  required (set it only as an environment variable on Vercel)
-// DEEPSEEK_MODEL    optional, default "deepseek-chat"
+// One place that talks to the AI through OpenRouter (OpenAI-compatible API). Retries when the service is busy.
+// OPENROUTER_API_KEY  required (set it only as an environment variable on Vercel)
+// OPENROUTER_MODEL    optional, default "nvidia/nemotron-3.5-super-vl:free". Any model id from openrouter.ai/models works, e.g. "deepseek/deepseek-chat-v3.1:free"
 // deadlineMs (optional): total time allowed for ALL attempts. When it runs out the call fails with status 504 and no more retries are made.
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
-const BUSY = [429, 500, 502, 503, 504] // temporary problems (429 = DeepSeek asks to slow down)
+const BUSY = [429, 500, 502, 503, 504] // temporary problems (429 = free models are rate limited)
 const fail = (status, msg) => { const e = new Error(msg); e.status = status; return e }
 
 // Returns { text, finish } where finish is "stop" or "length" (answer cut off).
 export async function callAI({ system, user, temperature = 0.3, maxTokens = 4000, json = true }, tries = 3, deadlineMs = 0) {
   const end = deadlineMs ? Date.now() + deadlineMs : 0
-  const model = process.env.DEEPSEEK_MODEL || 'deepseek-chat'
+  const model = process.env.OPENROUTER_MODEL || 'nvidia/nemotron-3.5-super-vl:free'
   const body = JSON.stringify({
     model, temperature, max_tokens: maxTokens, stream: false,
-    ...(json ? { response_format: { type: 'json_object' } } : {}),
     messages: [{ role: 'system', content: system }, { role: 'user', content: user }],
   })
   let last
@@ -21,9 +20,9 @@ export async function callAI({ system, user, temperature = 0.3, maxTokens = 4000
     if (end && left < 1500) throw fail(504, 'timeout')
     let r
     try {
-      r = await fetch('https://api.deepseek.com/chat/completions', {
+      r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
-        headers: { 'content-type': 'application/json', authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}` },
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`, 'x-title': 'Sanad CV' },
         body,
         signal: end ? AbortSignal.timeout(left) : undefined,
       })

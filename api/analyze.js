@@ -33,13 +33,13 @@ const arr = (v) => (Array.isArray(v) ? v : [])
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'method_not_allowed' })
-  if (!process.env.DEEPSEEK_API_KEY) return res.status(500).json({ error: 'missing_api_key' })
+  if (!process.env.OPENROUTER_API_KEY) return res.status(500).json({ error: 'missing_api_key' })
   if (await limited(clientIp(req))) return res.status(429).json({ error: 'rate_limited' })
   const { file, job, source } = req.body || {}
   if (!file || !job || file.type !== 'text' || typeof file.data !== 'string' || file.data.length > 4_000_000)
     return res.status(400).json({ error: 'bad_request' })
 
-  // The data the AI works on: the target job + the CV as TEXT (the browser extracts it from PDF/DOCX; DeepSeek cannot read PDF files)
+  // The data the AI works on: the target job + the CV as TEXT (the browser extracts it from PDF/DOCX; the AI cannot read PDF files)
   const jobText = `<job><title>${str(job.title, 200)}</title><description>${str(job.desc, 6000)}</description></job>`
   const src = ['pdf', 'docx', 'builder'].includes(source) ? source : file.type === 'pdf' ? 'pdf' : 'docx'
   const fileTag = `<file name="${str(file.name, 120).replace(/"/g, "'")}" source="${src}"/>`

@@ -14,7 +14,7 @@ const clean = (v) => (Array.isArray(v) ? v : []).map((s) => String(s || '').trim
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'method_not_allowed' })
-  if (!process.env.DEEPSEEK_API_KEY) return res.status(500).json({ error: 'missing_api_key' })
+  if (!process.env.OPENROUTER_API_KEY) return res.status(500).json({ error: 'missing_api_key' })
   const { title, lang } = req.body || {}
   const t = String(title || '').trim().slice(0, 120)
   if (!t) return res.status(400).json({ error: 'bad_request' })
