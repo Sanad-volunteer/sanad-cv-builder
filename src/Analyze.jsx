@@ -112,6 +112,7 @@ export default function Analyze({ go, seed, fix }) { // seed: the CV just built 
       const r = await post('/api/analyze', { file: { type: 'text', data: pdf.text, name: file.name }, meta: { pages: pdf.pages, fonts: pdf.fonts }, source: file.builder ? 'builder' : file.ext, job }, 35000) // the server gives the AI 25 s; this is only a safety net
       setSt({ busy: false, err: '', res: { ...(await r.json()), source: 'ai' } })
     } catch (e) {
+      console.error('AI analysis failed:', e, e && e.body)
       // The AI is busy or unavailable: quietly review the CV in the browser instead (no message to the user).
       try {
         const { localAnalyze } = await import('./localAnalyze.js')
