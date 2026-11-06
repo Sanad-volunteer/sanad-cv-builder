@@ -33,6 +33,9 @@ const uid = () => Math.random().toString(36).slice(2, 9)
 const nd = () => ({ m: '', y: '' })
 const empty = (v) => !String(v ?? '').trim()
 const dEmpty = (d) => !d.y || (d.y !== 'now' && !d.m) // a date needs a year, and a month unless "until now"
+// Experience / volunteer entries: the sections are optional, but an entry the person started to fill needs a job title and a company
+const jobUsed = (i) => !empty(i.title) || !empty(i.company) || !empty(i.bullets) || !!(i.start && i.start.y) || !!(i.end && i.end.y)
+const jobBad = (items) => (items || []).some((i) => jobUsed(i) && (empty(i.title) || empty(i.company)))
 const blankEdu = () => ({ id: uid(), level: '', school: '', major: '', start: nd(), end: nd() })
 const SKILLS = [['read', 'القراءة'], ['write', 'الكتابة'], ['listen', 'الاستماع'], ['speak', 'المحادثة']] // each language is rated on all four
 const blankLang = () => ({ id: uid(), name: '', native: false, read: '', write: '', listen: '', speak: '' })
@@ -408,10 +411,11 @@ function PhotoField({ value, onChange, flash }) {
   )
 }
 
-const jobFields = (a, b, c = 'الإنجازات (كل سطر نقطة)') => (it, up) => (
+// show: the person already tried to continue, so the missing required fields get the red asterisk; ph: [title example, company example]
+const jobFields = (a, b, c = 'الإنجازات (كل سطر نقطة)', show = false, ph = []) => (it, up) => (
   <>
-    <Txt label={a} value={it.title} onChange={(v) => up({ title: v })} />
-    <Txt label={b} value={it.company} onChange={(v) => up({ company: v })} />
+    <Txt label={a} value={it.title} err={show && jobUsed(it) && empty(it.title)} placeholder={ph[0]} onChange={(v) => up({ title: v })} />
+    <Txt label={b} value={it.company} err={show && jobUsed(it) && empty(it.company)} placeholder={ph[1]} onChange={(v) => up({ company: v })} />
     <DateSel label="تاريخ البدء" value={it.start} onChange={(v) => up({ start: v })} />
     <DateSel label="تاريخ الانتهاء" value={it.end} now onChange={(v) => up({ end: v })} />
     <Area full label={c} value={it.bullets} onChange={(v) => up({ bullets: v })} />
@@ -465,7 +469,7 @@ export default function App() {
   // Which wizard steps still have missing required data (optional steps always pass)
   const stepBad = [
     ['name', 'email', 'phone', 'city', 'residence', 'summary'].some((k) => bad[k]),
-    eduBad, false, bad.tech || bad.soft, langBad, courseBad, false,
+    eduBad, jobBad(cv.exp), bad.tech || bad.soft, langBad, courseBad || jobBad(cv.vol), false,
   ]
   const ev = (b, i) => shown.includes(i) && b
   const scrollInvalid = () => setTimeout(() => document.querySelector('.invalid')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 80)
@@ -525,7 +529,7 @@ export default function App() {
               <Txt name="email" autoComplete="email" label="البريد الإلكتروني" type="email" dir="ltr" value={cv.p.email} err={ev(bad.email, 0)} onChange={setP('email')} />
               <Txt name="phone" autoComplete="tel" label="رقم الهاتف" type="tel" dir="ltr" value={cv.p.phone} err={ev(bad.phone, 0)} onChange={setP('phone')} />
               <Txt name="city" autoComplete="address-level2" label="المدينة، الدولة" value={cv.p.city} err={ev(bad.city, 0)} onChange={setP('city')} />
-              <Txt name="residence" autoComplete="off" label="مكان السكن الحالي (المنطقة)" value={cv.p.residence} err={ev(bad.residence, 0)} onChange={setP('residence')} />
+              <Txt name="residence" autoComplete="off" label="مكان السكن الحالي" value={cv.p.residence} err={ev(bad.residence, 0)} onChange={setP('residence')} />
               <Txt name="linkedin" autoComplete="url" label="رابط لينكدإن (اختياري)" dir="ltr" placeholder="linkedin.com/in/username" value={cv.p.link} onChange={setP('link')} />
               <DateSel day minY={1940} maxY={new Date().getFullYear()} label="تاريخ الميلاد (اختياري)" value={dobParts(cv.p.dob)}
                 onChange={(v) => setP('dob')(v.y && v.m && v.d ? `${v.y}-${String(v.m).padStart(2, '0')}-${String(v.d).padStart(2, '0')}` : '')} />
@@ -550,7 +554,7 @@ export default function App() {
           {step === 2 && (
           <Card n="3" title="الخبرات" opt>
             <p className="note start">رتّب إدخالاتك من الأحدث إلى الأقدم.</p>
-            <List items={cv.exp} onChange={(v) => set('exp', v)} blank={blankJob} optional title="خبرة" addLabel="إضافة خبرة" render={jobFields('المسمى الوظيفي', 'الشركة', 'المسؤوليات والإنجازات (كل سطر نقطة)')} />
+            <List items={cv.exp} onChange={(v) => set('exp', v)} blank={blankJob} optional title="خبرة" addLabel="إضافة خبرة" render={jobFields('المسمى الوظيفي', 'الشركة', 'المسؤوليات والإنجازات (كل سطر نقطة)', shown.includes(2), ['مثال: مصمم UI/UX، متدرب، عمل حر', 'مثال: شركة سند'])} />
           </Card>
           )}
           {step === 3 && (
@@ -560,7 +564,7 @@ export default function App() {
               <span className="track" aria-hidden="true" />
               <span>مستويات المهارات</span>
             </label>
-            <Chips label="المهارات التقنية (Technical Skills)" items={cv.tech} options={SKILL_OPTS[cv.lang].tech} err={ev(bad.tech, 3)} onChange={(v) => set('tech', v)} placeholder="اكتب مهارة واضغط Enter" lvl={cv.lvl} onLevel={setLvl} showLvl={lvlOn} suggest={sg.tech.filter((s) => !cv.tech.includes(s))} />
+            <Chips label="المهارات التقنية" items={cv.tech} options={SKILL_OPTS[cv.lang].tech} err={ev(bad.tech, 3)} onChange={(v) => set('tech', v)} placeholder="اكتب مهارة واضغط Enter" lvl={cv.lvl} onLevel={setLvl} showLvl={lvlOn} suggest={sg.tech.filter((s) => !cv.tech.includes(s))} />
             <div className="gap" />
             <Chips label="المهارات الشخصية (Interpersonal Skills)" items={cv.soft} options={SKILL_OPTS[cv.lang].soft} err={ev(bad.soft, 3)} onChange={(v) => set('soft', v)} placeholder="اكتب مهارة واضغط Enter" lvl={cv.lvl} onLevel={setLvl} showLvl={lvlOn} suggest={sg.soft.filter((s) => !cv.soft.includes(s))} />
           </Card>
@@ -572,7 +576,7 @@ export default function App() {
           )}
           {step === 5 && (<>
           <Card title="العمل التطوعي" opt>
-            <List items={cv.vol} onChange={(v) => set('vol', v)} blank={blankJob} optional title="عمل تطوعي" addLabel="إضافة عمل تطوعي" render={jobFields('الدور', 'المنظمة')} />
+            <List items={cv.vol} onChange={(v) => set('vol', v)} blank={blankJob} optional title="عمل تطوعي" addLabel="إضافة عمل تطوعي" render={jobFields('الدور', 'المنظمة', undefined, shown.includes(5), ['مثال: متطوع، منسّق فعاليات', 'مثال: سند الشباب'])} />
           </Card>
           <Card title="الدورات وورش العمل" opt>
             <List items={cv.courses} onChange={(v) => set('courses', v)} blank={blankCourse} optional title="دورة" addLabel="إضافة دورة أو ورشة" render={courseFields(shown.includes(5))} />
