@@ -56,7 +56,7 @@ export default function Admin() {
     setBusy(row.id + fmt)
     try {
       const blob = await (await call(pw, `action=file&id=${row.id}&fmt=${fmt}`)).blob()
-      saveBlob(blob, `${safeName(row.name)}-cv.${fmt}`)
+      saveBlob(blob, `${safeName(row.name)}-cv.${row.source === 'analyzed' ? 'txt' : fmt}`)
     } catch { setErr('تعذّر تنزيل الملف') }
     setBusy('')
   }
@@ -97,7 +97,7 @@ export default function Admin() {
         let name = `${safeName(picked[i].name)}-cv`
         for (let n = 2; used.has(name); n++) name = `${safeName(picked[i].name)}-cv (${n})`
         used.add(name)
-        files.push({ name: `${name}.${fmt}`, data })
+        files.push({ name: `${name}.${picked[i].source === 'analyzed' ? 'txt' : fmt}`, data })
       } catch { failed++ }
     }
     setProg('')
@@ -172,15 +172,19 @@ export default function Admin() {
             {shown.map((r) => (
               <tr key={r.id} className={sel.has(r.id) ? 'on' : ''}>
                 <td className="adm-ck"><label className="adm-box"><input type="checkbox" name="select-row" aria-label="تحديد" checked={sel.has(r.id)} onChange={() => toggle(r.id)} /></label></td>
-                <td><b>{r.name}</b><small>{r.title}</small></td>
+                <td><b>{r.name}</b>{r.source === 'analyzed' && <em className="adm-tag">محلَّلة</em>}<small>{r.title}</small></td>
                 <td dir="ltr">{r.email}</td>
                 <td dir="ltr">{r.phone}</td>
                 <td>{normCity(r.city)}</td>
                 <td>{[LEVEL[r.level], r.university, r.major].filter(Boolean).join(' · ')}</td>
                 <td>{fmtDate(r.updated_at)}</td>
                 <td className="adm-act">
-                  <button type="button" onClick={() => download(r, 'pdf')} disabled={busy === r.id + 'pdf'}>{busy === r.id + 'pdf' ? '…' : 'PDF'}</button>
-                  <button type="button" onClick={() => download(r, 'docx')} disabled={busy === r.id + 'docx'}>{busy === r.id + 'docx' ? '…' : 'Word'}</button>
+                  {r.source === 'analyzed'
+                    ? <button type="button" onClick={() => download(r, 'txt')} disabled={busy === r.id + 'txt'}>{busy === r.id + 'txt' ? '…' : 'نص'}</button>
+                    : <>
+                      <button type="button" onClick={() => download(r, 'pdf')} disabled={busy === r.id + 'pdf'}>{busy === r.id + 'pdf' ? '…' : 'PDF'}</button>
+                      <button type="button" onClick={() => download(r, 'docx')} disabled={busy === r.id + 'docx'}>{busy === r.id + 'docx' ? '…' : 'Word'}</button>
+                    </>}
                   <button type="button" className="del" onClick={() => remove(r)}>حذف</button>
                 </td>
               </tr>

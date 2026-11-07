@@ -19,7 +19,6 @@ const CHECK_TITLE = {
   dates: 'تنسيق التواريخ (Date Formatting)', metrics: 'النتائج القابلة للقياس (Measurable Results)', bullets: 'صياغة الإنجازات (Bullet Points)', skills: 'المهارات (Skills)',
   length: 'طول السيرة (Length)', gaps: 'الفجوات الزمنية (Employment Gaps)', linkedin: 'رابط لينكدإن (LinkedIn)', font: 'نوع الخط (Font)', file: 'نوع الملف واسمه (File)',
 }
-const WHY = { private: 'حلّلنا سيرتك داخل متصفحك فقط دون إرسالها إلى أي جهة، وهذا تحليل مبسّط. للحصول على تحليل أعمق بالذكاء الاصطناعي أعد التحليل واختر «نعم».', slow: 'استغرق الذكاء الاصطناعي وقتاً أطول من المعتاد.', busy: 'الذكاء الاصطناعي مزدحم حالياً.', limit: 'تجاوزت عدد المحاولات المسموحة للذكاء الاصطناعي حالياً.', other: 'تعذّر الوصول إلى الذكاء الاصطناعي حالياً.' }
 const ringColor = (n) => (n < 40 ? '#E5484D' : n < 60 ? '#FFC500' : 'var(--teal)') // red / yellow / teal by score
 // where in the builder each failed check can be fixed (wizard step: 0 personal, 1 education, 2 experience, 3 skills, 5 extras); checks without a step have no button
 const FIX_STEP = { contact: [0, 'المعلومات الشخصية'], summary: [0, 'النبذة'], title_match: [0, 'المسمى الوظيفي'], linkedin: [0, 'رابط لينكدإن'], sections: [1, 'التعليم'], dates: [2, 'الخبرات'], metrics: [2, 'الخبرات'], bullets: [2, 'الخبرات'], gaps: [2, 'الخبرات'], skills: [3, 'المهارات'] }
@@ -29,11 +28,6 @@ function Result({ r, go, fix }) {
   const list = onlyBad ? r.checks.filter((c) => c.ok === false) : r.checks
   return (
     <div className="card res" role="region" aria-label="نتيجة المراجعة" tabIndex={-1}>
-      {r.source === 'local' && (
-        <p className="local-note" role="status">
-          {r.why === 'private' ? WHY.private : `${WHY[r.why] || WHY.other} هذا تحليل مبسّط يعمل على جهازك، وللحصول على تحليل أعمق أعد المحاولة بعد قليل.`}
-        </p>
-      )}
       <div className="score">
         <div className="ring" style={{ '--pct': `${r.score}%`, '--rc': ringColor(r.score) }}><span>{r.score}</span></div>
         <div><b>{r.verdict}</b><p className="mut">{r.summary}</p></div>
@@ -109,10 +103,9 @@ export default function Analyze({ go, seed, fix }) { // seed: the CV just built 
       if (!allowAi) { const e = new Error('declined'); e.declined = true; throw e }
       const { extractCv } = await import('./localAnalyze.js') // the AI reads text only, so the text is extracted here first
       const pdf = await extractCv(file)
-      const r = await post('/api/analyze', { file: { type: 'text', data: pdf.text, name: file.name }, meta: { pages: pdf.pages, fonts: pdf.fonts }, source: file.builder ? 'builder' : file.ext, job }, 35000) // the server gives the AI 25 s; this is only a safety net
+      const r = await post('/api/analyze', { file: { type: 'text', data: pdf.text, name: file.name }, meta: { pages: pdf.pages, fonts: pdf.fonts }, keep: true, source: file.builder ? 'builder' : file.ext, job }, 52000) // the server gives the AI 45 s; this is only a safety net
       setSt({ busy: false, err: '', res: { ...(await r.json()), source: 'ai' } })
     } catch (e) {
-      console.error('AI analysis failed:', e, e && e.body)
       // The AI is busy or unavailable: quietly review the CV in the browser instead (no message to the user).
       try {
         const { localAnalyze } = await import('./localAnalyze.js')

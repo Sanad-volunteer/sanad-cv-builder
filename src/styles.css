@@ -490,3 +490,5 @@ button:not(:disabled):active,.btn:active:not(:disabled),.back:active,.add:active
 /* home: more air between the hero and the three feature cards */
 @media(min-width:901px){.home{row-gap:64px}}
 @media(max-width:900px){.feats{margin-top:34px}}
+
+.adm-tag{display:inline-block;margin-inline-start:8px;padding:1px 8px;border-radius:999px;background:#E8FBF7;color:#0B6B5B;font-size:11px;font-style:normal;font-weight:700}
