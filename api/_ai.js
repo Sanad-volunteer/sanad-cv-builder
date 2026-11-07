@@ -31,7 +31,11 @@ export async function callAI({ system, user, temperature = 0.3, maxTokens = 4000
       throw err
     }
     if (r.ok) {
-      const d = await r.json()
+      let d
+      try { d = await r.json() } catch (err) { // the deadline can also run out while the answer is still being downloaded
+        if (err && (err.name === 'TimeoutError' || err.name === 'AbortError')) throw fail(504, 'timeout')
+        throw err
+      }
       const c = d.choices && d.choices[0]
       return { text: (c && c.message && c.message.content) || '', finish: (c && c.finish_reason) || 'no_choices' }
     }
