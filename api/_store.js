@@ -1,5 +1,6 @@
 // Keeps ONE CV per user (the e-mail written on the CV) in Supabase, through its REST API (no extra npm package).
 // Variables: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY (server only, never put it in the browser code).
+import crypto from 'node:crypto'
 import { makeLimiter, clientIp } from './_limit.js'
 
 const base = () => String(process.env.SUPABASE_URL || '').trim().replace(/\/$/, '')
@@ -38,11 +39,11 @@ export async function saveCv(req, cv) {
     if (json.length > 1_500_000) return false
     if (await limited(clientIp(req))) return false
     const e = (Array.isArray(cv.edu) && cv.edu[0]) || {} // the form asks for newest first, so [0] is the latest education
-    await sb('cvs?on_conflict=email', {
+    await sb('cvs?on_conflict=email,source', {
       method: 'POST',
       headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
       body: {
-        email, name: s(p.name, 120), title: s(p.title, 160), phone: s(p.phone, 40), city: s(p.city, 80), residence: s(p.residence, 120),
+        source: 'builder', email, name: s(p.name, 120), title: s(p.title, 160), phone: s(p.phone, 40), city: s(p.city, 80), residence: s(p.residence, 120),
         university: s(e.school, 160), major: s(e.major, 160), level: s(e.level, 20), lang: cv.lang === 'en' ? 'en' : 'ar',
         cv, updated_at: new Date().toISOString(),
       },
@@ -50,6 +51,34 @@ export async function saveCv(req, cv) {
     return true
   } catch (err) {
     console.error('saveCv failed', err.message)
+    return false
+  }
+}
+
+// A CV uploaded to the analyzer (only its text is kept). One row per e-mail found in the text; without an e-mail, one row per identical text.
+// Never throws. Returns true when saved.
+export async function saveAnalyzed(req, { text, fileName, jobTitle }) {
+  try {
+    if (!storeReady()) return false
+    const t = String(text || '').slice(0, 60000)
+    if (t.trim().length < 40) return false
+    if (await limited(clientIp(req))) return false
+    const found = (t.match(/[\w.+-]+@[\w-]+\.[\w.-]+/) || [''])[0].toLowerCase()
+    const email = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(found) && found.length <= 200 ? found : `no-email-${crypto.createHash('sha1').update(t).digest('hex').slice(0, 16)}@analyzed.invalid`
+    const first = (t.split(/\r?\n/).map((l) => l.trim()).find(Boolean) || '')
+    const name = first.length <= 60 && !/[@\d]/.test(first) ? first : ''
+    const phone = (t.replace(/\S+@\S+/g, ' ').match(/\+?\d[\d\s().-]{7,}\d/) || [''])[0]
+    await sb('cvs?on_conflict=email,source', {
+      method: 'POST',
+      headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+      body: {
+        source: 'analyzed', email, name: s(name, 120), title: s(jobTitle, 160), phone: s(phone, 40), file_name: s(fileName, 160),
+        lang: /[\u0600-\u06FF]/.test(t) ? 'ar' : 'en', cv: { raw: t }, updated_at: new Date().toISOString(),
+      },
+    })
+    return true
+  } catch (err) {
+    console.error('saveAnalyzed failed', err.message)
     return false
   }
 }

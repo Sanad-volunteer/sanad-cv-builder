@@ -26,6 +26,7 @@ Rules: NEVER advise removing or hiding personal details such as date of birth, m
 
 import { makeLimiter, clientIp } from './_limit.js'
 import { callAI } from './_ai.js'
+import { saveAnalyzed } from './_store.js'
 const limited = makeLimiter('ai', 10) // 10 analyses per hour per visitor
 
 const str = (v, n = 600) => String(v ?? '').slice(0, n)
@@ -39,6 +40,9 @@ export default async function handler(req, res) {
   if (!file || !job || file.type !== 'text' || typeof file.data !== 'string' || file.data.length > 4_000_000)
     return res.status(400).json({ error: 'bad_request' })
 
+  // a copy of the CV is kept only when the person said yes (the question names both the AI and the copy); CVs made in the builder are already saved at export
+  if (req.body.keep === true && source !== 'builder') await saveAnalyzed(req, { text: file.data, fileName: file.name, jobTitle: job.title })
+
   // The data the AI works on: the target job + the CV as TEXT (the browser extracts it from PDF/DOCX; the AI cannot read PDF files)
   const jobText = `<job><title>${str(job.title, 200)}</title><description>${str(job.desc, 6000)}</description></job>`
   const src = ['pdf', 'docx', 'builder'].includes(source) ? source : file.type === 'pdf' ? 'pdf' : 'docx'
@@ -50,7 +54,7 @@ export default async function handler(req, res) {
   const user = `${jobText}\n${fileTag}\n${pdfInfo}<cv>${file.data.slice(0, 20000)}</cv>\nReview this CV for the job. Reply with the JSON object only.`
 
   try {
-    const DEADLINE = 25000 // the AI gets 25 s in total; after that the browser review takes over (the page falls back on any error)
+    const DEADLINE = +process.env.AI_DEADLINE_MS || 45000 // the AI gets 45 s in total (the function may run 60 s, see vercel.json); after that the browser review takes over
     const t0 = Date.now()
     const ask = (maxTokens) => callAI({ system: SYSTEM, user, temperature: 0.3, maxTokens }, 2, Math.max(0, DEADLINE - (Date.now() - t0)) || 1)
     const read = (d) => {

@@ -8,19 +8,21 @@ import { sb, storeReady } from './_store.js'
 import { makePdf } from './_pdf.js'
 import { makeDocx } from './_docx.js'
 import { cvFileName } from './_cv.js'
-import { makeLimiter, clientIp } from './_limit.js'
+import { makeLimiter, makeFailGuard, clientIp } from './_limit.js'
 
-const limited = makeLimiter('admin', 600) // also slows down anyone guessing the password (use a long one)
+const limited = makeLimiter('admin', 600) // general flood protection for the admin API
+const guard = makeFailGuard('adminfail', 10) // wrong-password attempts: 10 per hour per IP, then locked out until the hour passes
 const hash = (v) => crypto.createHash('sha256').update(String(v)).digest()
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-const COLS = 'id,email,name,title,phone,city,residence,university,major,level,lang,created_at,updated_at'
+const COLS = 'id,email,name,title,phone,city,residence,university,major,level,lang,source,file_name,created_at,updated_at'
 
 export default async function handler(req, res) {
   const pass = process.env.ADMIN_PASSWORD
   if (!pass || !storeReady()) return res.status(500).json({ error: 'not_configured' })
-  if (await limited(clientIp(req))) return res.status(429).json({ error: 'rate_limited' })
+  const ip = clientIp(req)
+  if ((await limited(ip)) || (await guard.blocked(ip))) return res.status(429).json({ error: 'rate_limited' })
   const given = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '')
-  if (!crypto.timingSafeEqual(hash(given), hash(pass))) return res.status(401).json({ error: 'unauthorized' })
+  if (!crypto.timingSafeEqual(hash(given), hash(pass))) { await guard.fail(ip); return res.status(401).json({ error: 'unauthorized' }) }
 
   const { action, id, fmt } = req.query || {}
   try {
@@ -33,6 +35,11 @@ export default async function handler(req, res) {
       const rows = await (await sb(`cvs?id=eq.${id}&select=cv`)).json()
       if (!rows.length) return res.status(404).json({ error: 'not_found' })
       const cv = rows[0].cv
+      if (cv && typeof cv.raw === 'string') { // a CV from the analyzer: only its text exists
+        res.setHeader('Content-Type', 'text/plain; charset=utf-8')
+        res.setHeader('Content-Disposition', `attachment; filename="cv.txt"`)
+        return res.status(200).send(cv.raw)
+      }
       const base = cvFileName(cv.p && cv.p.name)
       const send = (type, ext, body) => {
         res.setHeader('Content-Type', type)
