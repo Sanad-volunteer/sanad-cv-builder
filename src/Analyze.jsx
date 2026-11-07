@@ -34,7 +34,7 @@ function Result({ r, go, fix }) {
       </div>
       {r.missingKeywords.length > 0 && (
         <>
-          <h5>كلمات مفتاحية ناقصة (أضفها إن كانت صحيحة)</h5>
+          <h5>كلمات مفتاحية نقترح اضافتها</h5>
           <div className="chips">{r.missingKeywords.map((k) => <span className="chip miss" key={k}>{k}</span>)}</div>
         </>
       )}
