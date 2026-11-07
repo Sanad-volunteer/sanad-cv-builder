@@ -41,7 +41,7 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'bad_request' })
 
   // a copy of the CV is kept only when the person said yes (the question names both the AI and the copy); CVs made in the builder are already saved at export
-  if (req.body.keep === true && source !== 'builder') await saveAnalyzed(req, { text: file.data, fileName: file.name, jobTitle: job.title })
+  if (req.body.keep === true && source !== 'builder') await saveAnalyzed(req, { text: file.data, fileName: file.name, jobTitle: job.title, orig: req.body.orig, ext: source })
 
   // The data the AI works on: the target job + the CV as TEXT (the browser extracts it from PDF/DOCX; the AI cannot read PDF files)
   const jobText = `<job><title>${str(job.title, 200)}</title><description>${str(job.desc, 6000)}</description></job>`

@@ -57,10 +57,12 @@ export async function saveCv(req, cv) {
 
 // A CV uploaded to the analyzer (only its text is kept). One row per e-mail found in the text; without an e-mail, one row per identical text.
 // Never throws. Returns true when saved.
-export async function saveAnalyzed(req, { text, fileName, jobTitle }) {
+export async function saveAnalyzed(req, { text, fileName, jobTitle, orig, ext }) {
   try {
     if (!storeReady()) return false
     const t = String(text || '').slice(0, 60000)
+    // the uploaded file itself: only a real PDF (%PDF) or DOCX (zip) up to ~3.4 MB of base64 is kept
+    const okFile = typeof orig === 'string' && orig.length <= 3_500_000 && ((ext === 'pdf' && orig.startsWith('JVBERi')) || (ext === 'docx' && orig.startsWith('UEsD')))
     if (t.trim().length < 40) return false
     if (await limited(clientIp(req))) return false
     const found = (t.match(/[\w.+-]+@[\w-]+\.[\w.-]+/) || [''])[0].toLowerCase()
@@ -73,7 +75,7 @@ export async function saveAnalyzed(req, { text, fileName, jobTitle }) {
       headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
       body: {
         source: 'analyzed', email, name: s(name, 120), title: s(jobTitle, 160), phone: s(phone, 40), file_name: s(fileName, 160),
-        lang: /[\u0600-\u06FF]/.test(t) ? 'ar' : 'en', cv: { raw: t }, updated_at: new Date().toISOString(),
+        lang: /[\u0600-\u06FF]/.test(t) ? 'ar' : 'en', cv: okFile ? { raw: t, file: { ext, b64: orig } } : { raw: t }, updated_at: new Date().toISOString(),
       },
     })
     return true
