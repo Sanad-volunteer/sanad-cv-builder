@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 
 // Wording of the two questions (edit here).
-export const KEEP_ASK = 'هل تسمح لمؤسسة سند الشباب بالاحتفاظ بنسخة من سيرتك الذاتية وبياناتك الواردة فيها؟ سيصلك ملفك في الحالتين.'
+export const KEEP_ASK = 'هل توافق على ان تحتفظ "سند" بملف سيرتك الذاتية؟'
 export const AI_ASK = 'هل توافق على أن تحتفظ «سند» بملف سيرتك الذاتية؟'
 
 export const InfoIcon = () => (
