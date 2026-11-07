@@ -169,7 +169,7 @@ export default function Admin() {
       )}
       <div className="adm-wrap">
         <table className="adm-t">
-          <thead><tr><th className="adm-ck"><label className="adm-box"><input type="checkbox" name="select-all" aria-label="تحديد الكل" checked={allShown} ref={(el) => { if (el) el.indeterminate = someShown && !allShown }} onChange={toggleAll} disabled={!shown.length} /></label></th><th>الاسم</th><th>البريد</th><th>الهاتف</th><th>المدينة</th><th>التعليم</th><th>آخر تحديث</th><th></th></tr></thead>
+          <thead><tr><th className="adm-ck"><label className="adm-box"><input type="checkbox" name="select-all" aria-label="تحديد الكل" checked={allShown} ref={(el) => { if (el) el.indeterminate = someShown && !allShown }} onChange={toggleAll} disabled={!shown.length} /></label></th><th>الاسم</th><th>البريد</th><th>الهاتف</th><th>المدينة</th><th>التعليم</th><th className="adm-date">تاريخ الإنشاء</th><th></th></tr></thead>
           <tbody>
             {shown.map((r) => (
               <tr key={r.id} className={sel.has(r.id) ? 'on' : ''}>
@@ -179,7 +179,7 @@ export default function Admin() {
                 <td dir="ltr">{r.phone}</td>
                 <td>{normCity(r.city)}</td>
                 <td>{[LEVEL[r.level], r.university, r.major].filter(Boolean).join(' · ')}</td>
-                <td>{fmtDate(r.updated_at)}</td>
+                <td className="adm-date">{fmtDate(r.created_at)}</td>
                 <td className="adm-act">
                   {r.source === 'analyzed'
                     ? <button type="button" onClick={() => download(r, own(r))} disabled={busy === r.id + own(r)}>{busy === r.id + own(r) ? '…' : { pdf: 'PDF', docx: 'Word' }[own(r)] || 'نص'}</button>
