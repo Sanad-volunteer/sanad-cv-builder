@@ -51,7 +51,7 @@ export default async function handler(req, res) {
   const pages = Math.max(0, Math.min(50, +m.pages || 0))
   const fonts = arr(m.fonts).slice(0, 8).map((f) => str(f, 60)).join(', ')
   const pdfInfo = src === 'pdf' ? `<pdf_info pages="${pages || 'unknown'}" fonts="${fonts.replace(/"/g, "'") || 'unknown'}"/>\n` : ''
-  const user = `${jobText}\n${fileTag}\n${pdfInfo}<cv>${file.data.slice(0, 20000)}</cv>\nReview this CV for the job. Reply with the JSON object only, and keep every "text" under 30 words so the whole answer stays short.`
+  const user = `${jobText}\n${fileTag}\n${pdfInfo}<cv>${file.data.slice(0, 20000)}</cv>\nReview this CV for the job. Reply with the JSON object only, and keep every "text" under 30 words so the whole answer stays short.\nLANGUAGE: write "verdict", "summary" and every check "text" in ${req.body.ui === 'en' ? 'English' : 'ARABIC (العربية), even when the CV or the job text is in English'}; only job keywords, tool names and file names stay in their original language.`
 
   try {
     const DEADLINE = +process.env.AI_DEADLINE_MS || 45000 // the AI gets 45 s in total (the function may run 60 s, see vercel.json); after that the browser review takes over
