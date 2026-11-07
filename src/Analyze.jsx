@@ -6,7 +6,7 @@ import Consent, { AI_ASK } from './Notice.jsx'
 // the back-office user (logged in at #admin in this tab) also sees which engine produced the result
 const isAdmin = () => { try { return !!sessionStorage.getItem('sanad-admin-pw') } catch { return false } }
 
-const MAX = 3 * 1024 * 1024 // keeps the request under Vercel's 4.5 MB body limit
+const MAX = 2.5 * 1024 * 1024 // the file travels as base64 (+33%), which must stay under Vercel's 4.5 MB body limit
 const toB64 = (f) => new Promise((ok, no) => {
   const r = new FileReader()
   r.onload = () => ok(String(r.result).split(',')[1])
@@ -88,11 +88,11 @@ export default function Analyze({ go, seed, fix }) { // seed: the CV just built 
     setSt({ busy: false, err: '', res: null }) // a new file starts a fresh analysis: the old result is cleared
     const ext = f.name.split('.').pop().toLowerCase()
     if (!['pdf', 'docx'].includes(ext)) return fail('الصيغ المدعومة: PDF أو DOCX')
-    if (f.size > MAX) return fail('الحد الأقصى لحجم الملف 3 ميغابايت')
+    if (f.size > MAX) return fail('الحد الأقصى لحجم الملف 2.5 ميغابايت')
     try {
       const data = ext === 'pdf' ? await toB64(f) : (await mammoth.extractRawText({ arrayBuffer: await f.arrayBuffer() })).value
       if (!data.trim()) throw new Error('empty')
-      setFile({ name: f.name, type: ext === 'pdf' ? 'pdf' : 'text', data, ext })
+      setFile({ name: f.name, type: ext === 'pdf' ? 'pdf' : 'text', data, ext, orig: ext === 'pdf' ? data : await toB64(f) }) // orig: the uploaded file itself (base64), kept by the foundation only when the person agrees
       fail('')
     } catch { setFile(null); fail('تعذّرت قراءة الملف') }
   }
@@ -103,7 +103,7 @@ export default function Analyze({ go, seed, fix }) { // seed: the CV just built 
       if (!allowAi) { const e = new Error('declined'); e.declined = true; throw e }
       const { extractCv } = await import('./localAnalyze.js') // the AI reads text only, so the text is extracted here first
       const pdf = await extractCv(file)
-      const r = await post('/api/analyze', { file: { type: 'text', data: pdf.text, name: file.name }, meta: { pages: pdf.pages, fonts: pdf.fonts }, keep: true, source: file.builder ? 'builder' : file.ext, job }, 52000) // the server gives the AI 45 s; this is only a safety net
+      const r = await post('/api/analyze', { file: { type: 'text', data: pdf.text, name: file.name }, meta: { pages: pdf.pages, fonts: pdf.fonts }, keep: true, orig: file.orig, source: file.builder ? 'builder' : file.ext, job }, 52000) // the server gives the AI 45 s; this is only a safety net
       setSt({ busy: false, err: '', res: { ...(await r.json()), source: 'ai' } })
     } catch (e) {
       // The AI is busy or unavailable: quietly review the CV in the browser instead (no message to the user).
@@ -141,7 +141,7 @@ export default function Analyze({ go, seed, fix }) { // seed: the CV just built 
             <input type="file" name="cv-file" accept=".pdf,.docx" onChange={pick} />
             <span className="big">⬆</span>
             <b>اضغط لاختيار الملف</b>
-            <span className="note">PDF أو DOCX · الحد الأقصى 3 ميغابايت · أو اسحب الملف وأفلته هنا</span>
+            <span className="note">PDF أو DOCX · الحد الأقصى 2.5 ميغابايت · أو اسحب الملف وأفلته هنا</span>
           </label>
           {file && (
             <div className="fl">

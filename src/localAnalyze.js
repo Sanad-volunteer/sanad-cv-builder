@@ -407,6 +407,36 @@ export function analyzeText(rawText, jobIn, metaIn) { // meta: { source: 'pdf' |
 }
 
 // ---------- reading the CV file in the browser ----------
+// PDF text items come in visual (left-to-right) order. Arabic must be read right-to-left, so every run of Arabic items on a line is put back in
+// reading order (largest x first). Runs that are already in reading order stay as they are. Items: pdf.js text items { str, dir, hasEOL, transform }.
+export function joinItems(items) {
+  const lines = []
+  let cur = [], y = null
+  for (const it of items) {
+    if (typeof it.str !== 'string') continue
+    const iy = it.transform ? it.transform[5] : 0
+    if (cur.length && y !== null && Math.abs(iy - y) > 3) { lines.push(cur); cur = [] }
+    if (it.str !== '' || !cur.length) y = iy
+    if (it.str !== '') cur.push(it)
+    if (it.hasEOL) { lines.push(cur); cur = []; y = null }
+  }
+  if (cur.length) lines.push(cur)
+  return lines.map((line) => {
+    const out = []
+    let i = 0
+    while (i < line.length) {
+      if (line[i].dir !== 'rtl') { out.push(line[i]); i++; continue }
+      let j = i + 1, last = i // a run: Arabic items plus the spaces between them
+      while (j < line.length && (line[j].dir === 'rtl' || !line[j].str.trim())) { if (line[j].dir === 'rtl') last = j; j++ }
+      const run = line.slice(i, last + 1).map((it, k) => ({ it, k }))
+      run.sort((a, b) => (b.it.transform ? b.it.transform[4] : 0) - (a.it.transform ? a.it.transform[4] : 0) || a.k - b.k)
+      out.push(...run.map((r) => r.it))
+      i = last + 1
+    }
+    return out.map((it) => it.str).join('')
+  }).join('\n')
+}
+
 async function pdfText(b64) {
   const bin = atob(b64)
   const data = new Uint8Array(bin.length)
@@ -423,8 +453,7 @@ async function pdfText(b64) {
   for (let i = 1; i <= Math.min(doc.numPages, 8); i++) {
     const page = await doc.getPage(i)
     const content = await page.getTextContent()
-    for (const it of content.items) { out += it.str; if (it.hasEOL) out += '\n' }
-    out += '\n'
+    out += joinItems(content.items) + '\n'
     try { // real font names (best effort)
       await page.getOperatorList()
       for (const id of new Set(content.items.map((it) => it.fontName))) {
@@ -432,7 +461,7 @@ async function pdfText(b64) {
       }
     } catch { /* font names stay unknown */ }
   }
-  return { text: out, fonts: [...fonts], pages: doc.numPages }
+  return { text: out.normalize('NFKC'), fonts: [...fonts], pages: doc.numPages } // NFKC: Arabic presentation forms back to normal letters
 }
 
 // For the AI: the plain text of the CV (+ page count and font names for a PDF). Throws 'no_text' for a scanned file.

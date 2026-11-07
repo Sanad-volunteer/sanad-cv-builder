@@ -7,6 +7,8 @@ import { Select } from './Select.jsx'
 // Back office: #admin at the end of the site address. Not linked from anywhere; the password is checked by the server.
 const LEVEL = Object.fromEntries(EDU_LEVELS)
 const KEY = 'sanad-admin-pw'
+// A CV uploaded to the analyzer is only available in the format it came in (PDF, Word, or text when the file itself was not kept); CVs made in the builder come in both.
+const own = (row, fmt) => (row.source === 'analyzed' ? row.file_ext || 'txt' : fmt)
 const fmtDate = (iso) => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleString('ar', { dateStyle: 'medium', timeStyle: 'short' }) }
 const safeName = (s) => String(s || 'cv').replace(/[\\/:*?"<>|]+/g, ' ').trim() || 'cv'
 const stamp = () => new Date().toISOString().slice(0, 10)
@@ -56,7 +58,7 @@ export default function Admin() {
     setBusy(row.id + fmt)
     try {
       const blob = await (await call(pw, `action=file&id=${row.id}&fmt=${fmt}`)).blob()
-      saveBlob(blob, `${safeName(row.name)}-cv.${row.source === 'analyzed' ? 'txt' : fmt}`)
+      saveBlob(blob, `${safeName(row.name)}-cv.${own(row, fmt)}`)
     } catch { setErr('تعذّر تنزيل الملف') }
     setBusy('')
   }
@@ -93,11 +95,11 @@ export default function Admin() {
     for (let i = 0; i < picked.length; i++) {
       setProg(`جارٍ التجهيز ${i + 1} / ${picked.length}`)
       try {
-        const data = new Uint8Array(await (await call(pw, `action=file&id=${picked[i].id}&fmt=${fmt}`)).arrayBuffer())
+        const data = new Uint8Array(await (await call(pw, `action=file&id=${picked[i].id}&fmt=${own(picked[i], fmt)}`)).arrayBuffer())
         let name = `${safeName(picked[i].name)}-cv`
         for (let n = 2; used.has(name); n++) name = `${safeName(picked[i].name)}-cv (${n})`
         used.add(name)
-        files.push({ name: `${name}.${picked[i].source === 'analyzed' ? 'txt' : fmt}`, data })
+        files.push({ name: `${name}.${own(picked[i], fmt)}`, data })
       } catch { failed++ }
     }
     setProg('')
@@ -180,7 +182,7 @@ export default function Admin() {
                 <td>{fmtDate(r.updated_at)}</td>
                 <td className="adm-act">
                   {r.source === 'analyzed'
-                    ? <button type="button" onClick={() => download(r, 'txt')} disabled={busy === r.id + 'txt'}>{busy === r.id + 'txt' ? '…' : 'نص'}</button>
+                    ? <button type="button" onClick={() => download(r, own(r))} disabled={busy === r.id + own(r)}>{busy === r.id + own(r) ? '…' : { pdf: 'PDF', docx: 'Word' }[own(r)] || 'نص'}</button>
                     : <>
                       <button type="button" onClick={() => download(r, 'pdf')} disabled={busy === r.id + 'pdf'}>{busy === r.id + 'pdf' ? '…' : 'PDF'}</button>
                       <button type="button" onClick={() => download(r, 'docx')} disabled={busy === r.id + 'docx'}>{busy === r.id + 'docx' ? '…' : 'Word'}</button>
