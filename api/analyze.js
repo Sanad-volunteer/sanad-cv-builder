@@ -51,7 +51,7 @@ export default async function handler(req, res) {
   const pages = Math.max(0, Math.min(50, +m.pages || 0))
   const fonts = arr(m.fonts).slice(0, 8).map((f) => str(f, 60)).join(', ')
   const pdfInfo = src === 'pdf' ? `<pdf_info pages="${pages || 'unknown'}" fonts="${fonts.replace(/"/g, "'") || 'unknown'}"/>\n` : ''
-  const user = `${jobText}\n${fileTag}\n${pdfInfo}<cv>${file.data.slice(0, 20000)}</cv>\nReview this CV for the job. Reply with the JSON object only.`
+  const user = `${jobText}\n${fileTag}\n${pdfInfo}<cv>${file.data.slice(0, 20000)}</cv>\nReview this CV for the job. Reply with the JSON object only, and keep every "text" under 30 words so the whole answer stays short.`
 
   try {
     const DEADLINE = +process.env.AI_DEADLINE_MS || 45000 // the AI gets 45 s in total (the function may run 60 s, see vercel.json); after that the browser review takes over
@@ -62,7 +62,7 @@ export default async function handler(req, res) {
       try { j = JSON.parse(d.text.slice(d.text.indexOf('{'), d.text.lastIndexOf('}') + 1)) } catch { /* cut off or not JSON */ }
       return { j, why: d.finish }
     }
-    const out = read(await ask(6000))
+    const out = read(await ask(4000))
     if (!out.j) { const e = new Error(`bad_ai_answer (${out.why})`); e.status = 0; throw e }
     const j = out.j
     // keep only the 13 known checks, in a fixed order; a badly formed answer falls back to the browser review
