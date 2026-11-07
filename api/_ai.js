@@ -12,6 +12,9 @@ export async function callAI({ system, user, temperature = 0.3, maxTokens = 4000
   const model = process.env.OPENROUTER_MODEL || 'nvidia/nemotron-3.5-super-vl:free'
   const body = JSON.stringify({
     model, temperature, max_tokens: maxTokens, stream: false,
+    // Speed: no hidden "thinking" (it can take minutes on reasoning models; set AI_THINKING=1 to allow it) and prefer the fastest providers
+    ...(process.env.AI_THINKING === '1' ? {} : { reasoning: { enabled: false } }),
+    provider: { sort: 'throughput' },
     messages: [{ role: 'system', content: system }, { role: 'user', content: user }],
   })
   let last
