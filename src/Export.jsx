@@ -103,7 +103,7 @@ export default function Export({ cv, onValidate }) {
         <button type="button" className="btn exp-send" onClick={() => request('mail')} disabled={!!busy}>{busy === 'mail' ? <Spin /> : <MailIco />}{busy === 'mail' ? 'جارٍ الإرسال…' : 'إرسال'}</button>
       </div>
       {msg && <p className={msg.ok ? 'ok' : 'err'}>{msg.t}</p>}
-      {ask && <Consent text={KEEP_ASK} yes="نعم، أسمح" no="لا، شكراً" onChoose={answered} onCancel={() => setAsk('')} />}
+      {ask && <Consent text={KEEP_ASK} yes=" أوافق" no="لا شكراً" onChoose={answered} onCancel={() => setAsk('')} />}
       {done && createPortal(<Success title="تم التحميل بنجاح" onClose={() => setDone('')}>تم تحميل سيرتك الذاتية بصيغة <bdi>{done === 'pdf' ? 'PDF' : 'Word'}</bdi>.</Success>, document.body)}
       {sentTo && createPortal(<Success title="تم الإرسال بنجاح" onClose={() => setSentTo('')}>أُرسلت سيرتك الذاتية إلى <bdi dir="ltr">{sentTo}</bdi></Success>, document.body)}
     </div>
