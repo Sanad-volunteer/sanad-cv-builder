@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 
 // Wording of the two questions (edit here).
 export const KEEP_ASK = 'هل تسمح لمؤسسة سند الشباب بالاحتفاظ بنسخة من سيرتك الذاتية وبياناتك الواردة فيها؟ سيصلك ملفك في الحالتين.'
-export const AI_ASK = 'هل تسمح بإرسال سيرتك الذاتية إلى خدمة ذكاء اصطناعي خارجية لتحليلها، وبأن تحتفظ مؤسسة سند الشباب بنسخة منها وبالبيانات الواردة فيها؟ إن اخترت «لا» فسيجري تحليلها داخل متصفحك فقط دون إرسالها أو حفظها.'
+export const AI_ASK = 'هل توافق على أن تحتفظ «سند» بملف سيرتك الذاتية؟'
 
 export const InfoIcon = () => (
   <span className="info-ic" aria-hidden="true">

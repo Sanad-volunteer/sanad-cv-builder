@@ -28,6 +28,7 @@ function Result({ r, go, fix }) {
   const list = onlyBad ? r.checks.filter((c) => c.ok === false) : r.checks
   return (
     <div className="card res" role="region" aria-label="نتيجة المراجعة" tabIndex={-1}>
+      {r.dbg && /[?&]debug\b/.test(window.location.search) && <pre dir="ltr" style={{ whiteSpace: 'pre-wrap', fontSize: 12, background: '#FFF4D6', padding: 10, borderRadius: 8 }}>AI skipped: {r.dbg}</pre>}
       <div className="score">
         <div className="ring" style={{ '--pct': `${r.score}%`, '--rc': ringColor(r.score) }}><span>{r.score}</span></div>
         <div><b>{r.verdict}</b><p className="mut">{r.summary}</p></div>
@@ -96,21 +97,20 @@ export default function Analyze({ go, seed, fix }) { // seed: the CV just built 
       fail('')
     } catch { setFile(null); fail('تعذّرت قراءة الملف') }
   }
-  // allowAi false: the person said no, so the CV never leaves the browser (browser review only)
-  const run = async (allowAi) => {
+  // keep: the person allowed the foundation to keep a copy. The AI review runs in both cases (the question says so).
+  const run = async (keep) => {
     setSt({ busy: true, err: '', res: null })
     try {
-      if (!allowAi) { const e = new Error('declined'); e.declined = true; throw e }
       const { extractCv } = await import('./localAnalyze.js') // the AI reads text only, so the text is extracted here first
       const pdf = await extractCv(file)
-      const r = await post('/api/analyze', { file: { type: 'text', data: pdf.text, name: file.name }, meta: { pages: pdf.pages, fonts: pdf.fonts }, keep: true, orig: file.orig, source: file.builder ? 'builder' : file.ext, job }, 52000) // the server gives the AI 45 s; this is only a safety net
+      const r = await post('/api/analyze', { file: { type: 'text', data: pdf.text, name: file.name }, meta: { pages: pdf.pages, fonts: pdf.fonts }, keep: keep === true, orig: keep === true ? file.orig : undefined, source: file.builder ? 'builder' : file.ext, job }, 52000) // the server gives the AI 45 s; this is only a safety net
       setSt({ busy: false, err: '', res: { ...(await r.json()), source: 'ai' } })
     } catch (e) {
       // The AI is busy or unavailable: quietly review the CV in the browser instead (no message to the user).
       try {
         const { localAnalyze } = await import('./localAnalyze.js')
         const why = e.declined ? 'private' : e.status === 429 ? 'limit' : e.name === 'TimeoutError' || (e.body && e.body.status === 504) ? 'slow' : e.body && e.body.status === 503 ? 'busy' : 'other' // why the AI was skipped (shown to the user)
-        setSt({ busy: false, err: '', res: { ...(await localAnalyze(file, job)), source: 'local', why } })
+        setSt({ busy: false, err: '', res: { ...(await localAnalyze(file, job)), source: 'local', why, dbg: `${e.name}: ${e.message} | status=${e.status || ''} | ${JSON.stringify(e.body || '')}` } })
       } catch (e2) {
         // the browser review could not read the file either: say why when we know it
         setSt({ busy: false, err: e2 && e2.message === 'no_text' && file.type === 'text' ? 'السيرة قصيرة جداً للتحليل، أضف معلومات أكثر (النبذة والخبرات والمهارات) ثم أعد المحاولة.' : e2 && e2.message === 'no_text' ? 'لا يحتوي الملف على نص قابل للقراءة (يبدو صورة أو ملفاً ممسوحاً ضوئياً). صدّر سيرتك من Word أو منشئ السيرة كملف PDF نصي ثم أعد المحاولة.' : e.status === 429 ? 'تجاوزت عدد المحاولات المسموح، حاول بعد قليل' : e.body && e.body.status === 503 ? 'الذكاء الاصطناعي مزدحم حالياً، حاول بعد دقيقة' : `تعذّر تحليل السيرة، حاول مرة أخرى${e.body && e.body.reason ? ` (${e.body.status || ''} ${e.body.reason})` : ''}`, res: null })
@@ -172,7 +172,7 @@ export default function Analyze({ go, seed, fix }) { // seed: the CV just built 
         )}
         <button type="button" className="btn s" style={{ marginTop: 14 }} disabled={!ready} onClick={() => setAsk(true)}>{st.busy ? <><span className="spin" aria-hidden="true" /> جارٍ التحليل…</> : '✦ حلّل سيرتي الذاتية'}</button>
       </aside>
-      {ask && <Consent text={AI_ASK} yes="نعم، أسمح" no="لا، حلّل في المتصفح" onChoose={(ok) => { setAsk(false); run(ok) }} onCancel={() => setAsk(false)} />}
+      {ask && <Consent text={AI_ASK} yes="نعم، أسمح بالاحتفاظ بنسخة" no="لا، التحليل فقط" onChoose={(ok) => { setAsk(false); run(ok) }} onCancel={() => setAsk(false)} />}
     </main>
   )
 }
