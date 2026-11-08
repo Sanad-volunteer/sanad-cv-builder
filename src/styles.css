@@ -108,6 +108,11 @@ select:disabled{opacity:.6;cursor:not-allowed}
 .tick{width:84px;height:84px;margin:0 auto 14px;display:block;animation:tickPop .5s .35s ease both}
 .tick circle{fill:rgba(58,219,192,.16);stroke:var(--teal);stroke-width:3;stroke-dasharray:151;animation:drawRing .6s ease-out both}
 .tick path{fill:none;stroke:var(--navy);stroke-width:4;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:42;animation:drawTick .4s .45s ease-out both}
+@keyframes fadeOut{from{opacity:1}to{opacity:0}}
+@keyframes popOut{from{opacity:1;transform:none}to{opacity:0;transform:translateY(10px) scale(.96)}}
+.modal-bg.out{animation:fadeOut .22s ease forwards;pointer-events:none}
+.modal-bg.out .modal{animation:popOut .22s cubic-bezier(.4,0,1,1) forwards}
+.modal-bg.out .tick,.modal-bg.out .tick circle,.modal-bg.out .tick path{animation:none}
 @media(prefers-reduced-motion:reduce){.modal-bg,.modal,.tick,.tick circle,.tick path{animation:none!important}}
 
 /* ---- month/year picker ---- */
@@ -493,3 +498,7 @@ button:not(:disabled):active,.btn:active:not(:disabled),.back:active,.add:active
 
 .adm-tag{display:inline-block;margin-inline-start:8px;padding:1px 8px;border-radius:999px;background:#E8FBF7;color:#0B6B5B;font-size:11px;font-style:normal;font-weight:700}
 .adm-t .adm-date{min-width:190px;white-space:nowrap}
+/* admin actions: three fixed columns (file, file, delete) so the delete button sits in the same place on every row, whatever the number of file buttons */
+.adm-act{display:grid;grid-template-columns:repeat(3,64px);gap:6px;justify-content:start;white-space:nowrap}
+.adm-act button{margin:0;width:100%;padding-inline:0;text-align:center}
+.adm-act .del{grid-column:3}

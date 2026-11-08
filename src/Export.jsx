@@ -1,14 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { post } from './api.js'
-import Consent, { KEEP_ASK } from './Notice.jsx'
+import Consent, { KEEP_ASK, useLeave } from './Notice.jsx'
 
 import { cvFileName as fileName } from '../api/_lists.js'
 const REQUIRED_MSG = 'أكمل الحقول المطلوبة المعلّمة بنجمة حمراء *'
 
 // Success pop-up: used after a download and after the e-mail is sent. title + one line of text (or children).
-function Success({ title, onClose, children }) {
+function Success({ title, onClose: close, children }) {
   const btn = useRef(null)
+  const [closing, leave] = useLeave()
+  const onClose = () => leave(close)
   useEffect(() => {
     btn.current?.focus()
     const onKey = (e) => e.key === 'Escape' && onClose()
@@ -16,7 +18,7 @@ function Success({ title, onClose, children }) {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
   return (
-    <div className="modal-bg no-print" onClick={onClose}>
+    <div className={`modal-bg no-print${closing ? ' out' : ''}`} onClick={onClose}>
       <div className="modal" role="dialog" aria-modal="true" aria-labelledby="ok-title" onClick={(e) => e.stopPropagation()}>
         <svg className="tick" viewBox="0 0 52 52" aria-hidden="true"><circle cx="26" cy="26" r="24" /><path d="M14 27l8 8 16-17" /></svg>
         <h3 id="ok-title">{title}</h3>
@@ -103,7 +105,7 @@ export default function Export({ cv, onValidate }) {
         <button type="button" className="btn exp-send" onClick={() => request('mail')} disabled={!!busy}>{busy === 'mail' ? <Spin /> : <MailIco />}{busy === 'mail' ? 'جارٍ الإرسال…' : 'إرسال'}</button>
       </div>
       {msg && <p className={msg.ok ? 'ok' : 'err'}>{msg.t}</p>}
-      {ask && <Consent text={KEEP_ASK} yes=" أوافق" no="لا شكراً" onChoose={answered} onCancel={() => setAsk('')} />}
+      {ask && <Consent text={KEEP_ASK} yes="نعم، أسمح" no="لا، شكراً" onChoose={answered} onCancel={() => setAsk('')} />}
       {done && createPortal(<Success title="تم التحميل بنجاح" onClose={() => setDone('')}>تم تحميل سيرتك الذاتية بصيغة <bdi>{done === 'pdf' ? 'PDF' : 'Word'}</bdi>.</Success>, document.body)}
       {sentTo && createPortal(<Success title="تم الإرسال بنجاح" onClose={() => setSentTo('')}>أُرسلت سيرتك الذاتية إلى <bdi dir="ltr">{sentTo}</bdi></Success>, document.body)}
     </div>
