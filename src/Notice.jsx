@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
-// Wording of the two questions (edit here).
+// Wording of the question
 export const KEEP_ASK ='هل توافق أن تحتفظ «سند» بملف سيرتك الذاتية؟'
-export const AI_ASK = 'هل توافق أن تحتفظ «سند» بملف سيرتك الذاتية؟'
 
 // Smooth closing for pop-ups: leave(fn) plays the fade-out (class "out") and calls fn when it ends. A second call while closing is ignored.
 export function useLeave(ms = 220) {
