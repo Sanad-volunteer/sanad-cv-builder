@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import mammoth from 'mammoth/mammoth.browser'
 import { post } from './api.js'
-import Consent, { AI_ASK } from './Notice.jsx'
+import Consent, { KEEP_ASK } from './Notice.jsx'
 
 // the back-office user (logged in at #admin in this tab) also sees which engine produced the result
 const isAdmin = () => { try { return !!sessionStorage.getItem('sanad-admin-pw') } catch { return false } }
