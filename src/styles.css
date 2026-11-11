@@ -502,3 +502,10 @@ button:not(:disabled):active,.btn:active:not(:disabled),.back:active,.add:active
 .adm-act{display:grid;grid-template-columns:repeat(3,64px);gap:6px;justify-content:start;white-space:nowrap}
 .adm-act button{margin:0;width:100%;padding-inline:0;text-align:center}
 .adm-act .del{grid-column:3}
+
+/* wizard: the current step uses the secondary orange (done = teal, current = orange, next = grey) so the page is not all blue */
+.steps button{transition:color .2s,border-color .2s}
+.steps .dot{transition:background .2s,color .2s,box-shadow .2s}
+.steps .cur button{border-bottom-color:var(--orange)}
+.steps .cur .dot{background:var(--orange);color:var(--navy);box-shadow:0 0 0 4px var(--orange-soft)}
+.steps button:focus-visible{outline:2px solid var(--orange);outline-offset:2px;border-radius:6px}
