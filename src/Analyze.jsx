@@ -168,7 +168,7 @@ export default function Analyze({ go, seed, fix }) { // seed: the CV just built 
           {st.res && st.res.source !== 'ai' && isAdmin() && <span className="badge local">⚙ تحليل المتصفح (للأدمن فقط)</span>}
         </div>
         {st.res ? <Result r={st.res} go={go} fix={file && file.builder ? fix : null} /> : (
-          <div className="card empty"><div className="big">✦</div><p>ارفع سيرتك وأضف الوظيفة المستهدفة ثم اضغط «حلّل» لترى نسبة المطابقة والاقتراحات.</p></div>
+          <div className="card empty"><div className="big">✦</div><p>ارفع سيرتك ثم اضغط «حلّل» لترى نسبة المطابقة مع نظام ATS والاقتراحات.</p></div>
         )}
         <button type="button" className="btn s" style={{ marginTop: 14 }} disabled={!ready} onClick={() => setAsk(true)}>{st.busy ? <><span className="spin" aria-hidden="true" /> جارٍ التحليل…</> : '✦ حلّل سيرتي الذاتية'}</button>
       </aside>
