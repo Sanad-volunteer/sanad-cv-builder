@@ -12,10 +12,8 @@ import Export from './Export.jsx'
 import { post } from './api.js'
 import { cvToText } from './cvText.js'
 import { DropMenu, Select, OTHER } from './Select.jsx'
-
 const LangCtx = createContext('ar') // language of the CV being written; the date pickers follow it
 const WarnCtx = createContext(() => {}) // shows the "wrong language" toast
-
 // English CV: refuse input that would ADD Arabic letters (text that is already there is never touched).
 const ARABIC = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/g
 const arCount = (s) => (String(s).match(ARABIC) || []).length
@@ -497,6 +495,22 @@ export default function App() {
     e.preventDefault()
     next()
   }
+  // Enter with nothing focused (the page itself) also goes to the next step; never while a pop-up is open or on the last step
+  const enterRef = useRef({})
+  enterRef.current = { on: view === 'create' && stage === 'form' && step < STEPS.length - 1, next }
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key !== 'Enter' || e.defaultPrevented || e.isComposing || e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return
+      const { on, next: go } = enterRef.current
+      if (!on || document.querySelector('.modal-bg')) return
+      const t = e.target
+      if (t && t !== document.body && t !== document.documentElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT|BUTTON|A|SUMMARY)$/.test(t.tagName) || t.closest('[role="dialog"],[role="listbox"],[role="menu"]'))) return
+      e.preventDefault()
+      go()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
   const validate = () => { // used by the export buttons
     const i = stepBad.findIndex(Boolean)
     if (i < 0) return true
