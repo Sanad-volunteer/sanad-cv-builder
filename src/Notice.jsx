@@ -16,6 +16,13 @@ export function useLeave(ms = 220) {
   return [closing, leave]
 }
 
+// Attention icon for the question pop-up (warm orange, exclamation mark)
+export const AlertIcon = () => (
+  <span className="alert-ic" aria-hidden="true">
+    <svg viewBox="0 0 24 24" width="38" height="38" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round"><path d="M12 5.5v8" /><circle cx="12" cy="18.2" r="1.5" fill="currentColor" stroke="none" /></svg>
+  </span>
+)
+
 export const InfoIcon = () => (
   <span className="info-ic" aria-hidden="true">
     <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M12 11v6" /><circle cx="12" cy="7" r="1.3" fill="currentColor" stroke="none" /></svg>
@@ -35,8 +42,8 @@ export default function Consent({ text, yes, no, onChoose, onCancel }) {
   }, [])
   return createPortal(
     <div className={`modal-bg no-print${closing ? ' out' : ''}`} onClick={cancel}>
-      <div className="modal" role="dialog" aria-modal="true" aria-labelledby="cs-title" onClick={(e) => e.stopPropagation()}>
-        <InfoIcon />
+      <div className="modal notice" role="dialog" aria-modal="true" aria-labelledby="cs-title" onClick={(e) => e.stopPropagation()}>
+        <AlertIcon />
         <h3 id="cs-title">خيارك</h3>
         <p>{text}</p>
         <button ref={btn} type="button" className="btn p" onClick={() => leave(() => onChoose(true))}>{yes}</button>

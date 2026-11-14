@@ -509,3 +509,9 @@ button:not(:disabled):active,.btn:active:not(:disabled),.back:active,.add:active
 .steps .cur button{border-bottom-color:var(--orange)}
 .steps .cur .dot{background:var(--orange);color:var(--navy);box-shadow:0 0 0 4px var(--orange-soft)}
 .steps button:focus-visible{outline:2px solid var(--orange);outline-offset:2px;border-radius:6px}
+
+/* question pop-up = a notice: warm orange accent so it draws attention */
+.modal.notice{border-top:6px solid #F28C28;padding-top:28px}
+.modal.notice h3{color:#B34700}
+.alert-ic{width:72px;height:72px;margin:0 auto 14px;border-radius:50%;display:grid;place-items:center;background:rgba(242,140,40,.16);color:#D9640A;box-shadow:0 0 0 6px rgba(242,140,40,.08)}
+.modal:has(.alert-ic) p{color:var(--ink);font-size:15px;line-height:1.8}
