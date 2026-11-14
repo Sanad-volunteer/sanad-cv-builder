@@ -3,9 +3,6 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "engines": {
-    "node": ">=20"
-  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -14,6 +11,7 @@
   },
   "dependencies": {
     "@sparticuz/chromium": "131.0.1",
+    "@vercel/speed-insights": "^2.1.0",
     "docx": "^9.10.0",
     "mammoth": "^1.13.0",
     "nodemailer": "^10.1.0",
