@@ -1,11 +1,12 @@
-import { createContext, useContext, useEffect, useId, useRef, useState } from 'react'
+import { createContext, lazy, Suspense, useContext, useDeferredValue, useEffect, useId, useRef, useState } from 'react'
 import logo from './assets/sanad-logo.svg'
 import Preview, { MONTH_NAMES, LEVELS, EDU_LEVELS } from './Preview.jsx'
 import LangPick from './LangPick.jsx'
 import TplPick from './TplPick.jsx'
 import Home from './Home.jsx'
-import Analyze from './Analyze.jsx'
-import Admin from './Admin.jsx'
+// loaded only when the person opens these pages (keeps the first page light: the Word reader, the Excel/ZIP builders and the admin table stay out of the main file)
+const Analyze = lazy(() => import('./Analyze.jsx'))
+const Admin = lazy(() => import('./Admin.jsx'))
 import { LANG_OPTIONS, isLangKey, langKeyFromText, SKILL_LEVELS, SKILL_LEVEL, cvFileName } from '../api/_lists.js'
 import Export from './Export.jsx'
 import { post } from './api.js'
@@ -240,7 +241,7 @@ function Chips({ label, items, onChange, placeholder, err, options, lvl = {}, on
       {options && other && <div className="gap" />}
       {other && (
         <input id={id} name={id} autoComplete="off" dir={v ? 'auto' : 'rtl'} value={v} placeholder={placeholder} onChange={(e) => setV(guard(e.target.value, v))} onBlur={add}
-          onKeyDown={(e) => { if (['Enter', ',', '،'].includes(e.key)) { e.preventDefault(); add() } }} />
+          onKeyDown={(e) => { if (['Enter', ',', '،'].includes(e.key)) { if (e.key === 'Enter' && !v.trim()) return; e.preventDefault(); add() } }} /> /* Enter with an empty box is left alone so it moves to the next step */
       )}
       {(() => {
         const chip = (s) => (
@@ -436,7 +437,14 @@ export default function App() {
   const [step, setStep] = useState(0) // wizard position
   const [maxStep, setMaxStep] = useState(0) // furthest step reached so far
   const [shown, setShown] = useState([]) // steps where the user tried to continue: only those show red asterisks
-  useEffect(() => { try { localStorage.setItem(KEY, JSON.stringify(cv)) } catch { /* storage unavailable */ } }, [cv])
+  // saved half a second after the last keystroke (not on every letter); also saved at once when the tab is closed or hidden
+  useEffect(() => {
+    const save = () => { try { localStorage.setItem(KEY, JSON.stringify(cv)) } catch { /* storage unavailable */ } }
+    const t = setTimeout(save, 500)
+    window.addEventListener('pagehide', save)
+    return () => { clearTimeout(t); window.removeEventListener('pagehide', save) }
+  }, [cv])
+  const previewCv = useDeferredValue(cv) // the live preview may lag a moment behind fast typing instead of blocking the form
 
   const [lvlOn, setLvlOn] = useState(() => Object.keys(cv.lvl || {}).length > 0) // "skill levels" switch
   const toggleLvl = (on) => { setLvlOn(on); if (!on) setCv((c) => ({ ...c, lvl: {} })) } // switching off removes the levels from the CV
@@ -481,6 +489,14 @@ export default function App() {
     if (stepBad[step]) { setShown((a) => (a.includes(step) ? a : [...a, step])); scrollInvalid(); return }
     goTo(step + 1)
   }
+  // Enter inside a one-line field = the "التالي" button (checks the step first, like the button). Not in text areas, buttons, the e-mail box of the last step, or while an Arabic/IME word is being composed.
+  const onEnter = (e) => {
+    if (e.key !== 'Enter' || e.defaultPrevented || e.nativeEvent.isComposing || e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return
+    const t = e.target
+    if (!t || t.tagName !== 'INPUT' || !['text', 'email', 'tel', 'url', 'search', 'number', ''].includes(t.type) || step >= STEPS.length - 1) return
+    e.preventDefault()
+    next()
+  }
   const validate = () => { // used by the export buttons
     const i = stepBad.findIndex(Boolean)
     if (i < 0) return true
@@ -498,9 +514,11 @@ export default function App() {
         <span className="cp">© 2026 جميع الحقوق محفوظة</span>
       </header>
 
+      <Suspense fallback={<main className="layout"><p className="card" role="status" style={{ textAlign: 'center' }}>جارٍ التحميل…</p></main>}>
       {view === 'home' && <Home go={goView} />}
       {view === 'analyze' && <Analyze go={goView} seed={seed} fix={(i) => { setSeed(null); setStage('form'); setView('create'); goTo(i) }} />}
       {view === 'admin' && <Admin />}
+      </Suspense>
       {view === 'create' && stage === 'lang' && <LangPick lang={cv.lang} onPick={(k) => { set('lang', k); setStage('tpl') }} onBack={() => setView('home')} />}
       {view === 'create' && stage === 'tpl' && <TplPick lang={cv.lang} tpl={cv.tpl || 'classic'} onPick={(k) => { set('tpl', k); setStage('form') }} onBack={() => setStage('lang')} />}
       {view === 'create' && stage === 'form' && (
@@ -520,7 +538,7 @@ export default function App() {
             <button type="button" className="link" onClick={() => setStage('tpl')}>القالب: {(cv.tpl || 'classic') === 'exec' ? 'تنفيذي' : 'كلاسيكي'}</button>
           </span>
         </div>
-        <section className="no-print">
+        <section className="no-print" onKeyDown={onEnter}>
           <div className="clear-row"><button type="button" className="link" onClick={reset}>مسح جميع البيانات</button></div>
           <Stepper step={step} max={maxStep} bad={stepBad} go={goTo} />
           <div key={step} className="step-in">
@@ -608,7 +626,7 @@ export default function App() {
 
         <aside className="side">
           <div className="ph no-print"><h2>معاينة مباشرة</h2></div>
-          <Preview cv={cv} />
+          <Preview cv={previewCv} />
         </aside>
       </main>
       {toast && <div className="toast no-print" role="status">{toast}</div>}
